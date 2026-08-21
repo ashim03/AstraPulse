@@ -74,7 +74,7 @@ export function DropdownItem({
 }: {
   icon?: ReactNode;
   children: ReactNode;
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   danger?: boolean;
   disabled?: boolean;
 }) {

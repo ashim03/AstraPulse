@@ -126,7 +126,7 @@ export async function buildPayrollRun(workspaceId: string, period: string) {
       gross: acc.gross + i.gross,
       deductions: acc.deductions + i.deductions + i.advanceDeduction,
       tax: acc.tax + i.tax,
-      net: acc.net,
+      net: acc.net + i.net,
       employer: acc.employer + i.employerCost,
     }),
     { gross: 0, deductions: 0, tax: 0, net: 0, employer: 0 }

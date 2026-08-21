@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
@@ -129,12 +128,13 @@ export async function registerAction(input: z.infer<typeof registerSchema>): Pro
 }
 
 export async function logoutAction() {
+  "use server";
   const session = await getSession();
   if (session) {
     await writeAudit({ session, action: "logout", module: "auth", description: `${session.name} signed out` });
   }
   await clearSession();
-  redirect("/login");
+  return { ok: true };
 }
 
 export async function forgotPasswordAction(email: string): Promise<ActionResult> {

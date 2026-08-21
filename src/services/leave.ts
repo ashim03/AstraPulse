@@ -20,7 +20,7 @@ export async function computeLeaveBalance(workspaceId: string, employeeId: strin
     where: {
       employeeId,
       startDate: { gte: start, lte: end },
-      status: { in: ["approved", "pending", "approved"] },
+      status: { in: ["approved", "pending"] },
     },
   });
 

@@ -26,7 +26,7 @@ export function AppShell({
   unreadCount,
   children,
 }: {
-  user: { name: string; email: string; role?: string; onLogout: () => void };
+  user: { name: string; email: string; role?: string; onLogout: () => Promise<{ ok: boolean }> };
   workspace: { name: string; plan?: string; status?: string };
   notifications: Notif[];
   unreadCount: number;

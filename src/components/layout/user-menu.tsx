@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { User, Settings, LogOut, Shield, KeyRound } from "lucide-react";
+import { useState } from "react";
+import { User, Settings, LogOut, KeyRound } from "lucide-react";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/dropdown";
 import { Avatar } from "@/components/ui/avatar";
 
@@ -14,9 +15,22 @@ export function UserMenu({
   name: string;
   email: string;
   role?: string;
-  onLogout: () => void;
+  onLogout: () => Promise<{ ok: boolean }>;
 }) {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await onLogout();
+    } catch {
+      // ignore errors
+    }
+    router.push("/login");
+    router.refresh();
+  };
+
   return (
     <Dropdown
       width="w-64"
@@ -49,8 +63,8 @@ export function UserMenu({
         </DropdownItem>
       </div>
       <DropdownSeparator />
-      <DropdownItem danger icon={<LogOut className="h-4 w-4" />} onClick={onLogout}>
-        Sign out
+      <DropdownItem danger icon={<LogOut className="h-4 w-4" />} onClick={handleLogout} disabled={loading}>
+        {loading ? "Signing out..." : "Sign out"}
       </DropdownItem>
     </Dropdown>
   );

@@ -1,0 +1,473 @@
+  ▲ Next.js 14.2.15
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ○ Compiling /src/middleware ...
+ ✓ Compiled /src/middleware in 1180ms (152 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 8.1s (951 modules)
+ GET /login 200 in 8782ms
+ ✓ Compiled in 735ms (334 modules)
+ GET /login 200 in 68ms
+ ✓ Compiled /_not-found in 483ms (627 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 726ms
+ ✓ Compiled in 700ms (334 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 1515ms (892 modules)
+ GET / 200 in 1847ms
+ ✓ Compiled /_not-found in 416ms (895 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 581ms
+ GET / 200 in 126ms
+ GET / 200 in 62ms
+ GET / 200 in 33ms
+ GET / 200 in 33ms
+ GET / 200 in 29ms
+ GET / 200 in 36ms
+ GET / 200 in 104ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 862ms (701 modules)
+ GET /login 200 in 1119ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 1646ms (906 modules)
+ ⨯ Internal error: Error: Can only set one of `children` or `props.dangerouslySetInnerHTML`.
+    at tA (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:12:45531)
+    at t2 (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:12:48767)
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:42125
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:42135
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:42822)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at aj (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:53793)
+    at aC (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:52874)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:50095)
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:45321)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at ab (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:11808)
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16871
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16908)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at ab (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:11808)
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16871
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16908)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at ab (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:11808)
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16871
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16908)
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:46505)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at aj (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:53793)
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:42336
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:42822)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at aj (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:53793)
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:42336
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:42822)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at aj (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:53793)
+    at aC (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:52874)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:50095)
+    at aj (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:53793)
+    at aC (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:52874)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:50095)
+    at aj (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:53793)
+    at aC (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:52874)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:50095)
+    at ac (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:11400)
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:14707)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at ab (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:11808)
+    at C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16871
+    at aw (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:16908)
+    at a_ (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:49776)
+    at aj (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:53793)
+    at aC (C:\Users\Lenovo\AstraPulse\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:52874)
+digest: "3168809612"
+ GET / 500 in 444ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 701ms (906 modules)
+ GET / 200 in 243ms
+ GET / 200 in 51ms
+ ✓ Compiled in 1068ms (906 modules)
+ ✓ Compiled in 646ms (906 modules)
+ GET / 200 in 174ms
+ GET / 200 in 58ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 885ms (701 modules)
+ GET /login 200 in 1134ms
+ GET /login 200 in 37ms
+ ✓ Compiled in 1010ms (1089 modules)
+ ⨯ src\app\(app)\layout.tsx (17:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:34:9)
+digest: "3496515659"
+[0m [90m 15 |[39m[0m
+[0m [90m 16 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   }[0m
+[0m [90m 19 |[39m[0m
+[0m [90m 20 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 705ms (1089 modules)
+ ⨯ src\app\(app)\layout.tsx (17:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:34:9)
+digest: "3496515659"
+[0m [90m 15 |[39m[0m
+[0m [90m 16 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   }[0m
+[0m [90m 19 |[39m[0m
+[0m [90m 20 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (17:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:34:9)
+digest: "3496515659"
+[0m [90m 15 |[39m[0m
+[0m [90m 16 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   }[0m
+[0m [90m 19 |[39m[0m
+[0m [90m 20 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ GET / 500 in 346ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 814ms (1089 modules)
+ ⨯ src\app\(app)\layout.tsx (17:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:34:9)
+digest: "3496515659"
+[0m [90m 15 |[39m[0m
+[0m [90m 16 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   }[0m
+[0m [90m 19 |[39m[0m
+[0m [90m 20 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (17:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:34:9)
+digest: "3496515659"
+[0m [90m 15 |[39m[0m
+[0m [90m 16 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   }[0m
+[0m [90m 19 |[39m[0m
+[0m [90m 20 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (17:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:34:9)
+digest: "3496515659"
+[0m [90m 15 |[39m[0m
+[0m [90m 16 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   }[0m
+[0m [90m 19 |[39m[0m
+[0m [90m 20 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (17:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:34:9)
+digest: "3496515659"
+[0m [90m 15 |[39m[0m
+[0m [90m 16 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 17 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 18 |[39m   }[0m
+[0m [90m 19 |[39m[0m
+[0m [90m 20 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ GET / 500 in 384ms
+ GET /login?next=%2F 200 in 76ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 798ms (1089 modules)
+ ⨯ src\app\(app)\layout.tsx (20:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:37:9)
+digest: "2711545832"
+[0m [90m 18 |[39m[0m
+[0m [90m 19 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 20 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 21 |[39m   }[0m
+[0m [90m 22 |[39m[0m
+[0m [90m 23 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (20:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:37:9)
+digest: "2711545832"
+[0m [90m 18 |[39m[0m
+[0m [90m 19 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 20 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 21 |[39m   }[0m
+[0m [90m 22 |[39m[0m
+[0m [90m 23 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (20:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:37:9)
+digest: "2711545832"
+[0m [90m 18 |[39m[0m
+[0m [90m 19 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 20 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 21 |[39m   }[0m
+[0m [90m 22 |[39m[0m
+[0m [90m 23 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (20:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:37:9)
+digest: "2711545832"
+[0m [90m 18 |[39m[0m
+[0m [90m 19 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 20 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 21 |[39m   }[0m
+[0m [90m 22 |[39m[0m
+[0m [90m 23 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ GET / 500 in 350ms
+ GET /login?next=%2F 200 in 66ms
+ ⨯ src\app\(app)\layout.tsx (20:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:37:9)
+digest: "2711545832"
+[0m [90m 18 |[39m[0m
+[0m [90m 19 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 20 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 21 |[39m   }[0m
+[0m [90m 22 |[39m[0m
+[0m [90m 23 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ ⨯ src\app\(app)\layout.tsx (20:5) @ redirect
+ ⨯ ReferenceError: redirect is not defined
+    at AppLayout (layout.tsx:37:9)
+digest: "2711545832"
+[0m [90m 18 |[39m[0m
+[0m [90m 19 |[39m   [36mif[39m ([33m![39muser) {[0m
+[0m[31m[1m>[22m[39m[90m 20 |[39m     redirect([32m"/login"[39m)[33m;[39m[0m
+[0m [90m    |[39m     [31m[1m^[22m[39m[0m
+[0m [90m 21 |[39m   }[0m
+[0m [90m 22 |[39m[0m
+[0m [90m 23 |[39m   [36mconst[39m notifications [33m=[39m [36mawait[39m prisma[33m.[39mnotification[33m.[39mfindMany({[0m
+ GET / 500 in 75ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 1310ms (1089 modules)
+ GET / 307 in 671ms
+ GET / 307 in 110ms
+ GET / 307 in 74ms
+ GET / 307 in 81ms
+ GET / 307 in 98ms
+ GET / 307 in 107ms
+ GET / 307 in 121ms
+ GET / 307 in 78ms
+ GET / 307 in 96ms
+ GET / 307 in 101ms
+ GET / 307 in 116ms
+ GET / 307 in 137ms
+ GET / 307 in 147ms
+ GET / 307 in 119ms
+ GET / 307 in 76ms
+ GET / 307 in 118ms
+ GET / 307 in 109ms
+ GET / 307 in 119ms
+ GET / 307 in 126ms
+ GET / 307 in 88ms
+ ✓ Compiled in 594ms (906 modules)
+ GET / 307 in 313ms
+ GET / 307 in 78ms
+ GET / 307 in 92ms
+ GET / 307 in 108ms
+ GET / 307 in 89ms
+ GET / 307 in 92ms
+ GET / 307 in 93ms
+ GET / 307 in 109ms
+ GET / 307 in 124ms
+ GET / 307 in 96ms
+ GET / 307 in 62ms
+ GET / 307 in 48ms
+ GET / 307 in 126ms
+ GET / 307 in 132ms
+ GET / 307 in 101ms
+ GET / 307 in 122ms
+ GET / 307 in 109ms
+ GET / 307 in 109ms
+ GET / 307 in 147ms
+ GET / 307 in 115ms
+ GET / 307 in 100ms
+ GET / 307 in 132ms
+ GET / 307 in 110ms
+ GET / 307 in 144ms
+ GET / 307 in 117ms
+ GET / 307 in 81ms
+ GET / 307 in 125ms
+ GET / 307 in 142ms
+ GET / 307 in 106ms
+ GET / 307 in 137ms
+ GET / 307 in 135ms
+ GET / 307 in 134ms
+ GET / 307 in 112ms
+ GET / 307 in 101ms
+ GET / 307 in 101ms
+ GET / 307 in 93ms
+ GET / 307 in 86ms
+ GET / 307 in 118ms
+ GET / 307 in 123ms
+ GET / 307 in 92ms
+ GET / 307 in 104ms
+ GET / 307 in 126ms
+ GET / 307 in 111ms
+ GET / 307 in 87ms
+ GET / 307 in 82ms
+ GET / 307 in 111ms
+ GET / 307 in 94ms
+ GET / 307 in 127ms
+ GET / 307 in 110ms
+ GET / 307 in 128ms
+ GET / 307 in 133ms
+ GET / 307 in 121ms
+ GET / 307 in 112ms
+ GET / 307 in 110ms
+ GET / 307 in 95ms
+ GET / 307 in 139ms
+ GET / 307 in 80ms
+ GET / 307 in 154ms
+ GET / 307 in 111ms
+ GET / 307 in 138ms
+ GET / 307 in 105ms
+ GET / 307 in 122ms
+ GET / 307 in 117ms
+ GET / 307 in 115ms
+ GET / 307 in 108ms
+ GET / 307 in 124ms
+ GET / 307 in 94ms
+ GET / 307 in 114ms
+ GET / 307 in 127ms
+ GET / 307 in 143ms
+ GET / 307 in 99ms
+ GET / 307 in 118ms
+ GET / 307 in 120ms
+ GET / 307 in 110ms
+ GET / 307 in 111ms
+ GET / 307 in 114ms
+ GET / 307 in 110ms
+ GET / 307 in 77ms
+ GET / 307 in 126ms
+ GET / 307 in 128ms
+ GET / 307 in 122ms
+ GET / 307 in 125ms
+ GET / 307 in 111ms
+ GET / 307 in 143ms
+ GET / 307 in 130ms
+ GET / 307 in 110ms
+ GET / 307 in 115ms
+ GET / 307 in 140ms
+ GET / 307 in 99ms
+ GET / 307 in 126ms
+ ✓ Compiled /login in 293ms (701 modules)
+ GET /login 200 in 644ms
+ POST /login 200 in 237ms
+ GET / 307 in 118ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 6.7s (2218 modules)
+ POST / 200 in 2140ms
+ GET /dashboard 200 in 7635ms
+ ○ Compiling /api/notifications/read ...
+ ✓ Compiled /api/notifications/read in 539ms (1343 modules)
+ POST /api/notifications/read 200 in 678ms
+ GET /dashboard 200 in 562ms
+ ✓ Compiled in 1391ms (2232 modules)
+ ✓ Compiled in 5.1s (2232 modules)
+ ✓ Compiled in 522ms (917 modules)
+ ✓ Compiled in 634ms (917 modules)
+ ✓ Compiled in 391ms (917 modules)
+ ✓ Compiled in 2.8s (2232 modules)
+ ✓ Compiled in 2.3s (2232 modules)
+ ✓ Compiled in 493ms (917 modules)
+ ✓ Compiled in 448ms (917 modules)
+ ✓ Compiled in 484ms (917 modules)
+ ✓ Compiled in 745ms (2232 modules)
+ ✓ Compiled in 332ms (917 modules)
+ ✓ Compiled in 385ms (917 modules)
+ ✓ Compiled in 446ms (917 modules)
+ ✓ Compiled in 395ms (917 modules)
+ ✓ Compiled in 477ms (917 modules)
+ ✓ Compiled in 860ms (2232 modules)
+ ✓ Compiled in 458ms (917 modules)
+ ✓ Compiled in 407ms (917 modules)
+ ✓ Compiled in 322ms (917 modules)
+ ✓ Compiled in 372ms (917 modules)
+ ✓ Compiled in 348ms (917 modules)
+ ✓ Compiled in 330ms (917 modules)
+ ✓ Compiled in 385ms (917 modules)
+ ✓ Compiled in 459ms (917 modules)
+ ✓ Compiled in 1349ms (2232 modules)
+ ✓ Compiled in 763ms (2232 modules)
+ ✓ Compiled in 404ms (917 modules)
+ ✓ Compiled in 2.4s (2232 modules)
+ GET /dashboard 200 in 1038ms
+ ✓ Compiled in 830ms (917 modules)
+ ✓ Compiled in 2s (2232 modules)
+ ✓ Compiled in 741ms (2232 modules)
+ ✓ Compiled in 670ms (2232 modules)
+ ✓ Compiled in 582ms (2232 modules)
+ ✓ Compiled in 1596ms (2232 modules)
+ ✓ Compiled in 366ms (917 modules)
+ ✓ Compiled in 310ms (917 modules)
+ ✓ Compiled in 1304ms (2232 modules)
+ ✓ Compiled in 604ms (2232 modules)
+ ✓ Compiled in 642ms (2232 modules)
+ ✓ Compiled in 662ms (2232 modules)
+ ✓ Compiled in 524ms (2232 modules)
+ ✓ Compiled in 992ms (2232 modules)
+ ✓ Compiled in 999ms (2232 modules)
+ ✓ Compiled in 854ms (2232 modules)
+ ✓ Compiled in 410ms (917 modules)
+ ✓ Compiled in 695ms (2232 modules)
+ ✓ Compiled in 804ms (2232 modules)
+ ✓ Compiled in 822ms (2232 modules)
+ ✓ Compiled in 789ms (2232 modules)
+ ✓ Compiled in 646ms (2232 modules)
+ ✓ Compiled in 620ms (2232 modules)
+ ✓ Compiled in 698ms (2232 modules)
+ ✓ Compiled in 545ms (2232 modules)
+ ✓ Compiled in 587ms (2232 modules)
+ ✓ Compiled in 296ms (917 modules)
+ ✓ Compiled in 289ms (917 modules)
+ ✓ Compiled in 399ms (917 modules)
+ ✓ Compiled in 315ms (917 modules)
+ ✓ Compiled in 341ms (917 modules)
+ ✓ Compiled in 383ms (917 modules)
+ ✓ Compiled in 266ms (917 modules)
+ ✓ Compiled in 290ms (917 modules)
+ ✓ Compiled in 293ms (917 modules)
+ ✓ Compiled in 295ms (917 modules)
+ ✓ Compiled in 288ms (917 modules)
+ ✓ Compiled in 273ms (917 modules)
+ ✓ Compiled in 271ms (917 modules)
+ ✓ Compiled in 330ms (917 modules)
+ ✓ Compiled in 305ms (917 modules)
+ ✓ Compiled in 275ms (917 modules)
+ ✓ Compiled in 321ms (917 modules)
+ ✓ Compiled in 268ms (917 modules)
+ ✓ Compiled in 290ms (917 modules)
+ ✓ Compiled in 312ms (917 modules)
+ ✓ Compiled in 392ms (917 modules)
+ ✓ Compiled in 339ms (917 modules)
+ ✓ Compiled in 313ms (917 modules)
+ ✓ Compiled in 313ms (917 modules)
+ ✓ Compiled in 299ms (917 modules)
+ ✓ Compiled in 376ms (917 modules)
+ ✓ Compiled in 383ms (917 modules)
+ ✓ Compiled in 305ms (917 modules)
+ ✓ Compiled in 297ms (917 modules)
+ ✓ Compiled in 279ms (917 modules)
+ ✓ Compiled in 269ms (917 modules)
+ ✓ Compiled in 392ms (917 modules)
+ ✓ Compiled in 1432ms (2232 modules)
+ ✓ Compiled in 509ms (917 modules)
+ ✓ Compiled in 706ms (917 modules)
+ ✓ Compiled in 439ms (917 modules)
+ ✓ Compiled in 549ms (917 modules)
+[?25h
