@@ -33,19 +33,25 @@ export default async function AttendancePage({
     prisma.user.findFirst({ where: { id: session.id, workspaceId: session.workspaceId }, include: { employee: true } }),
   ]);
 
+  const recordsMap = new Map(records.map((r) => [r.employeeId, r]));
+
   const myRecord = records.find((r) => r.employeeId === user?.employeeId);
 
-  const rows: SmartRow[] = records.map((r) => ({
-    id: r.id,
-    name: r.employee.name,
-    department: r.employee.department?.name ?? "—",
-    clockIn: r.clockIn ? format(r.clockIn, "h:mm a") : "—",
-    clockOut: r.clockOut ? format(r.clockOut, "h:mm a") : "—",
-    hours: r.hours.toFixed(2),
-    status: r.status,
-    source: r.source,
-    note: r.note ?? "—",
-  }));
+  const rows: SmartRow[] = employees.map((e) => {
+    const record = recordsMap.get(e.id);
+    return {
+      id: e.id,
+      name: e.name,
+      department: e.department?.name ?? "—",
+      clockIn: record?.clockIn ? format(record.clockIn, "h:mm a") : "—",
+      clockOut: record?.clockOut ? format(record.clockOut, "h:mm a") : "—",
+      hours: record?.hours?.toFixed(2) ?? "0.00",
+      status: record?.status ?? "absent",
+      source: record?.source ?? "system",
+      note: record?.note ?? "—",
+      employeeId: e.id,
+    };
+  });
 
   const columns: SmartColumn[] = [
     { key: "name", header: "Employee", kind: "avatar", avatarSubKey: "department", minWidth: 200 },
@@ -53,7 +59,6 @@ export default async function AttendancePage({
     { key: "clockIn", header: "Clock In" },
     { key: "clockOut", header: "Clock Out" },
     { key: "hours", header: "Hours", align: "right" },
-    { key: "source", header: "Source", kind: "badge", badgeMap: { self: { label: "Self", tone: "green" }, manual: { label: "Manual", tone: "sky" } }, badgeFallback: "Manual" },
     { key: "status", header: "Status", kind: "status" },
   ];
 
@@ -76,7 +81,7 @@ export default async function AttendancePage({
       <AttendanceStats stats={stats} employees={employees.length} />
 
       <Card>
-        <CardHeader title="Daily Records" subtitle={`${records.length} attendance entries for ${dayKey}`} />
+        <CardHeader title="Daily Records" subtitle={`${records.length} attendance entries + ${employees.length - records.length} employees for ${dayKey}`} />
         <CardBody className="p-0">
           <SmartTable
             rows={rows}
@@ -84,11 +89,11 @@ export default async function AttendancePage({
             rowKey="id"
             searchKeys={["name", "department"]}
             searchPlaceholder="Search by employee..."
-            emptyTitle="No records for this day"
-            emptyDescription="Attendance records will appear here once employees clock in."
+            emptyTitle="No employees found"
+            emptyDescription="All employees listed above. Employees with no record are marked absent."
             exportFilename={`attendance-${dayKey}.csv`}
             showToolbar
-            pageSize={10}
+            pageSize={employees.length}
           />
         </CardBody>
       </Card>

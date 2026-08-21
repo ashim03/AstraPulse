@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { startOfDay } from "date-fns";
+import { syncHikvisionAttendanceToDatabase } from "@/services/hikvision";
 
 export async function clockInAction(): Promise<ActionResult> {
   const session = await requireSession();
@@ -80,5 +81,42 @@ export async function attendanceAdjustAction(
     return ok(undefined, "Record updated");
   } catch (e) {
     return fail("Failed to update attendance record. Please try again.");
+  }
+}
+
+export async function syncHikvisionAttendanceAction(
+  ip: string,
+  port: number = 80,
+  username: string = "admin",
+  password: string = "",
+  beginDate?: string,
+  endDate?: string
+): Promise<{ ok: boolean; message: string; imported: number; created: number; updated: number; errors: string[] }> {
+  try {
+    const session = await requireSession();
+    const begin = beginDate ? new Date(beginDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+
+    const result = await syncHikvisionAttendanceToDatabase(ip, port, username, password, begin, end);
+
+    await writeAudit({ session, action: "create", module: "attendance", description: `Synced Hikvision attendance from ${ip}` });
+
+    return {
+      ok: true,
+      message: `Hikvision attendance synced: ${result.imported} records (${result.created} created, ${result.updated} updated)`,
+      imported: result.imported,
+      created: result.created,
+      updated: result.updated,
+      errors: result.errors,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      message: (e as Error).message || "Failed to sync Hikvision attendance",
+      imported: 0,
+      created: 0,
+      updated: 0,
+      errors: [(e as Error).message],
+    };
   }
 }

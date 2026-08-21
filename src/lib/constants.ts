@@ -112,6 +112,7 @@ export const TIMEZONES = [
   "Asia/Dubai",
   "Asia/Kolkata",
   "Asia/Dhaka",
+  "Asia/Kathmandu",
   "Asia/Singapore",
   "Australia/Sydney",
 ];

@@ -81,6 +81,40 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+export function isWeekend(date: Date, weekendDays: number[] = [0, 6]): boolean {
+  const day = date.getDay();
+  return weekendDays.includes(day);
+}
+
+export function isNepalWeekend(date: Date): boolean {
+  // In Nepal, Saturday (6) is typically off, Sunday (0) may vary by company
+  // Default: Saturday is off (day 6)
+  return date.getDay() === 6;
+}
+
+export function getNepalWeekendDays(): number[] {
+  return [6]; // Saturday
+}
+
+export function formatNepaliDate(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kathmandu",
+  };
+  return new Intl.DateTimeFormat("ne-NP", options).format(date);
+}
+
+export function formatDateTimeNepal(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? parseISO(date) : date;
+  return format(d, "yyyy-MM-dd HH:mm:ss", { timeZone: "Asia/Kathmandu" });
+}
+
 export function downloadCSV(filename: string, rows: (string | number)[][]) {
   const escape = (cell: string | number) => {
     const s = String(cell ?? "");
