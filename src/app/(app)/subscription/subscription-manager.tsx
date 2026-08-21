@@ -61,7 +61,7 @@ export function SubscriptionManager({
               {employeeCount} / {employeeLimit} employees • Renews {renewalDate} ({billingPeriod})
             </p>
           </div>
-          <div className="flex rounded-lg border border-slate-200 p-0.5">
+          <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
             {(["monthly", "yearly"] as const).map((p) => (
               <button
                 key={p}
@@ -90,13 +90,13 @@ export function SubscriptionManager({
                 <h3 className="font-semibold text-slate-800">{p.name}</h3>
                 {active && <Badge>Current</Badge>}
               </div>
-              <p className="mb-4 text-2xl font-bold text-slate-900">
+              <p className="mb-4 text-2xl font-bold text-slate-900 dark:text-slate-100">
                 {money(price)}
                 <span className="text-sm font-normal text-slate-400">/{period === "yearly" ? "year" : "month"}</span>
               </p>
               <ul className="mb-5 flex-1 space-y-2">
                 {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-slate-600">
+                  <li key={f} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
                     <Check className="mt-0.5 h-4 w-4 text-emerald-500" /> {f}
                   </li>
                 ))}

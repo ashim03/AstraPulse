@@ -198,7 +198,7 @@ export default async function DashboardPage() {
             {workspace?.name.charAt(0)}
           </span>
           <div>
-            <p className="text-sm font-semibold text-slate-900">{workspace?.name}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{workspace?.name}</p>
             <p className="text-xs text-slate-500">
               {workspace?.currency} · {workspace?.timezone} · {workspace?.country}
             </p>
@@ -251,7 +251,7 @@ export default async function DashboardPage() {
                   { label: "On leave", value: onLeave, tone: "text-violet-600" },
                   { label: "Absent", value: todayAttendance.absent, tone: "text-red-600" },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+                  <div key={s.label} className="rounded-lg border border-slate-100 bg-slate-50/60 dark:bg-slate-800/60 px-3 py-2.5">
                     <p className={`text-xl font-semibold ${s.tone}`}>{s.value}</p>
                     <p className="text-xs text-slate-400">{s.label}</p>
                   </div>
@@ -271,31 +271,31 @@ export default async function DashboardPage() {
               </div>
             </div>
             <div className="space-y-3">
-              <Link href="/leave" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-amber-200 hover:bg-amber-50/40">
+              <Link href="/leave" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-amber-200 hover:bg-amber-50/40 dark:hover:bg-slate-700">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><CalendarDays className="h-4 w-4" /></span>
                   <div>
-                    <p className="text-sm font-medium text-slate-700">Leave approvals</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Leave approvals</p>
                     <p className="text-xs text-slate-400">Pending requests</p>
                   </div>
                 </div>
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">{pendingLeaveCount}</span>
               </Link>
-              <Link href="/tasks" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-slate-200 hover:bg-slate-50">
+              <Link href="/tasks" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><ListTodo className="h-4 w-4" /></span>
                   <div>
-                    <p className="text-sm font-medium text-slate-700">Open tasks</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Open tasks</p>
                     <p className="text-xs text-slate-400">In backlog / in progress</p>
                   </div>
                 </div>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">{pendingTasks}</span>
               </Link>
-              <Link href="/advances" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-violet-200 hover:bg-violet-50/40">
+              <Link href="/advances" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-violet-200 hover:bg-violet-50/40 dark:hover:bg-slate-700">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600"><PiggyBank className="h-4 w-4" /></span>
                   <div>
-                    <p className="text-sm font-medium text-slate-700">Outstanding advances</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Outstanding advances</p>
                     <p className="text-xs text-slate-400">Awaiting repayment</p>
                   </div>
                 </div>

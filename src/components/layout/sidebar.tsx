@@ -20,13 +20,13 @@ export function WorkspaceSwitcher({ name, plan, collapsed }: { name: string; pla
     <Dropdown
       width="w-64"
       trigger={
-        <button className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-brand-200 hover:bg-brand-50/40">
+        <button className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-left transition hover:border-brand-200 hover:bg-brand-50/40">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
             {name.charAt(0)}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-slate-800">{name}</span>
-            <span className="block truncate text-[11px] text-slate-400">
+            <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{name}</span>
+            <span className="block truncate text-[11px] text-slate-400 dark:text-slate-500">
               {plan ?? "Free"} plan
             </span>
           </span>
@@ -129,7 +129,7 @@ export function Sidebar({
         {Object.values(NAV_SECTIONS).map((section) => (
           <div key={section.label}>
             {!collapsed && (
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 {section.label}
               </p>
             )}
@@ -151,7 +151,7 @@ export function Sidebar({
 
       {!collapsed && (
         <div className="shrink-0 p-3">
-          <div className="rounded-card border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4">
+          <div className="rounded-card border border-slate-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 p-4">
             {plan && (
               <>
                 <div className="flex items-center justify-between">
@@ -182,7 +182,7 @@ export function Sidebar({
       <button
         onClick={() => onCollapsedChange(!collapsed)}
         className={cn(
-          "flex items-center gap-2 border-t border-slate-100 px-4 py-3 text-xs font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-700",
+          "flex items-center gap-2 border-t border-slate-100 px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200",
           collapsed && "justify-center px-0"
         )}
       >
@@ -210,15 +210,15 @@ export function MobileDrawer({
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="absolute inset-y-0 left-0 flex w-[288px] flex-col bg-white shadow-modal animate-fade-in">
+      <div className="absolute inset-y-0 left-0 flex w-[288px] flex-col bg-white dark:bg-slate-800 shadow-modal animate-fade-in">
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-4">
           <Link href="/" className="flex items-center gap-2.5" onClick={onClose}>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
               <Zap className="h-5 w-5 text-white" />
             </div>
-            <p className="text-base font-bold tracking-tight text-slate-900">AstraPulse</p>
+              <p className="text-base font-bold tracking-tight text-slate-900 dark:text-white">AstraPulse</p>
           </Link>
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100" aria-label="Close menu">
+          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close menu">
             <X className="h-5 w-5" />
           </button>
         </div>

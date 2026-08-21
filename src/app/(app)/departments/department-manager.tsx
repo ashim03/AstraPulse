@@ -93,7 +93,7 @@ export function DepartmentManager({ initial }: { initial: DepartmentRow[] }) {
                 </button>
               </div>
             </div>
-            <h3 className="text-base font-semibold text-slate-900">{d.name}</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{d.name}</h3>
             {d.manager && (
               <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
                 <Avatar name={d.manager} size="xs" /> {d.manager}
@@ -102,7 +102,7 @@ export function DepartmentManager({ initial }: { initial: DepartmentRow[] }) {
             <p className="mt-2 line-clamp-2 text-sm text-slate-400">{d.description || "No description"}</p>
             <div className="mt-auto flex items-center justify-between pt-4">
               <Badge tone="indigo">{d.employeeCount} employees</Badge>
-              <span className="text-xs text-slate-400">Budget {d.budget > 0 ? `$${d.budget.toLocaleString()}` : "—"}</span>
+              <span className="text-xs text-slate-400">Budget {d.budget > 0 ? `Rs. ${d.budget.toLocaleString()}` : "—"}</span>
             </div>
           </div>
         ))}

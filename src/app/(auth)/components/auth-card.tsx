@@ -15,7 +15,7 @@ export function AuthCard({
   return (
     <div className="card animate-fade-in p-8">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
       </div>
       {children}
@@ -32,7 +32,7 @@ export function AuthLogo() {
           <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
         </svg>
       </div>
-      <p className="text-lg font-bold tracking-tight text-slate-900">AstraPulse</p>
+      <p className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">AstraPulse</p>
     </Link>
   );
 }

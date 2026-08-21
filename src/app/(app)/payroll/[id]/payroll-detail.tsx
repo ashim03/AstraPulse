@@ -43,7 +43,7 @@ export function PayrollDetailManager({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-800">Payslips</h2>
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Payslips</h2>
         <div className="flex gap-2">
           {status === "calculated" && (
             <Button variant="outline" onClick={() => setStatus("review")}>Send to review</Button>

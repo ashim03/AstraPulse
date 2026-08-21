@@ -52,11 +52,11 @@ export default async function PayrollDetailPage({ params }: { params: { id: stri
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs text-slate-500">Gross</p>
-          <p className="text-xl font-bold text-slate-900">{money(payroll.grossTotal)}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{money(payroll.grossTotal)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-slate-500">Deductions + Tax</p>
-          <p className="text-xl font-bold text-slate-900">{money(payroll.deductionTotal + payroll.taxTotal)}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{money(payroll.deductionTotal + payroll.taxTotal)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-slate-500">Net pay</p>
@@ -64,7 +64,7 @@ export default async function PayrollDetailPage({ params }: { params: { id: stri
         </Card>
         <Card className="p-4">
           <p className="text-xs text-slate-500">Employer cost</p>
-          <p className="text-xl font-bold text-slate-900">{money(payroll.employerCostTotal)}</p>
+          <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{money(payroll.employerCostTotal)}</p>
         </Card>
       </div>
 

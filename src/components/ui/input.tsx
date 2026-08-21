@@ -140,7 +140,7 @@ export function Checkbox({
     <label className="flex cursor-pointer items-start gap-2.5">
       <input
         type="checkbox"
-        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 accent-brand-600 focus:ring-brand-500"
+        className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-brand-600 accent-brand-600 focus:ring-brand-500"
         {...props}
       />
       {(label || description) && (

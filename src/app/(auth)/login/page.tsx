@@ -90,7 +90,7 @@ function LoginForm() {
               setNeed2fa(false);
               setFormError("");
             }}
-            className="w-full text-center text-sm text-slate-500 hover:text-slate-700"
+            className="w-full text-center text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           >
             Back to sign in
           </button>
@@ -145,7 +145,7 @@ function LoginForm() {
           </div>
         </FormField>
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
             <input type="checkbox" className="h-4 w-4 rounded border-slate-300 accent-brand-600" defaultChecked />
             Remember me
           </label>

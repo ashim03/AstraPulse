@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { ThemeProvider } from "next-themes";
 import "./globals.css";
+import { Providers } from "@/components/providers";
 import { ToastProvider } from "@/components/ui/toast";
 import { APP_NAME } from "@/lib/constants";
 
@@ -24,10 +24,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <body suppressHydrationWarning>
+        <Providers>
           <ToastProvider>{children}</ToastProvider>
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

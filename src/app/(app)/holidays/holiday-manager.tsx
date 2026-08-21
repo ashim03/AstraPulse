@@ -71,7 +71,7 @@ export function HolidayManager({ initial }: { initial: HolidayRow[] }) {
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
-            <h3 className="mt-3 text-base font-semibold text-slate-900">{h.name}</h3>
+            <h3 className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100">{h.name}</h3>
             <p className="text-sm text-slate-500">{h.date}</p>
             <div className="mt-auto flex items-center gap-2 pt-4">
               {h.recurring && <Badge tone="indigo">Recurring</Badge>}

@@ -238,7 +238,7 @@ export function DataTable<T>({
                         <span
                           className={cn(
                             "flex h-4 w-4 items-center justify-center rounded border",
-                            visibleColumns.has(c.key) ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300"
+                            visibleColumns.has(c.key) ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300 dark:border-slate-500"
                           )}
                         >
                           {visibleColumns.has(c.key) && <Check className="h-3 w-3" />}
@@ -290,7 +290,7 @@ export function DataTable<T>({
       ) : (
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full min-w-max border-collapse text-left">
-            <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0] shadow-slate-200/60">
+            <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 shadow-[0_1px_0_0] shadow-slate-200/60">
               <tr>
                 {onSelectionChange && (
                   <th className="th w-10 px-4">

@@ -20,12 +20,12 @@ import {
 } from "recharts";
 import { CHART_COLORS } from "@/lib/constants";
 
-const GRID = <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />;
+const GRID = <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-color, #e2e8f0)" vertical={false} />;
 
 function ChartTooltip({ active, payload, label, formatter }: TooltipProps<number, string> & { formatter?: (v: number) => string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-popover">
+    <div className="rounded-lg border border-slate-200 bg-white dark:bg-slate-800 px-3 py-2 shadow-popover">
       {label && <p className="mb-1 text-xs font-semibold text-slate-500">{label}</p>}
       {payload.map((entry) => (
         <p key={String(entry.name)} className="flex items-center gap-2 text-sm">
@@ -178,7 +178,7 @@ export function DonutChart({
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-semibold text-slate-900">{centerLabel}</span>
+        <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">{centerLabel}</span>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
         {data.map((d) => (
@@ -202,7 +202,7 @@ function formatMoney(v: number) {
 }
 
 function compactCurrency(v: number) {
-  if (Math.abs(v) >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
-  if (Math.abs(v) >= 1000) return `$${(v / 1000).toFixed(0)}k`;
-  return `$${v}`;
+  if (Math.abs(v) >= 1000000) return `Rs. ${(v / 1000000).toFixed(1)}M`;
+  if (Math.abs(v) >= 1000) return `Rs. ${(v / 1000).toFixed(0)}k`;
+  return `Rs. ${v}`;
 }

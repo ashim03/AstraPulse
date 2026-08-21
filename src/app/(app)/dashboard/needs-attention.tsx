@@ -76,7 +76,7 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
       items: unpaidInvoices.map((i) => ({
         title: `${i.number} · ${i.customer.name}`,
         sub: `Due ${formatDate(i.dueDate)}`,
-        badge: `$${(i.total - i.paid).toLocaleString()}`,
+        badge: `Rs. ${(i.total - i.paid).toLocaleString()}`,
       })),
     },
     {
@@ -87,7 +87,7 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
       items: pendingExpenses.map((e) => ({
         title: `${e.number} · ${e.vendor?.name ?? "—"}`,
         sub: e.category,
-        badge: `$${e.amount.toLocaleString()}`,
+        badge: `Rs. ${e.amount.toLocaleString()}`,
       })),
     },
     {
@@ -107,7 +107,7 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
       tone: "bg-violet-50 text-violet-600",
       items: outstandingAdvances.map((a) => ({
         title: a.employee.name,
-        sub: `Outstanding $${a.outstanding.toLocaleString()}`,
+        sub: `Outstanding Rs. ${a.outstanding.toLocaleString()}`,
       })),
     },
     {
@@ -147,7 +147,7 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
         {sections.map((section) =>
           section.items.length === 0 ? null : (
             <div key={section.label}>
-              <Link href={section.href} className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800 hover:text-brand-700">
+              <Link href={section.href} className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-brand-700">
                 <span className={`flex h-6 w-6 items-center justify-center rounded-md ${section.tone}`}>
                   <section.icon className="h-3.5 w-3.5" />
                 </span>
@@ -158,11 +158,11 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
               </Link>
               <div className="space-y-2">
                 {section.items.map((item, i) => (
-                  <Link key={i} href={section.href} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 transition hover:border-slate-200 hover:bg-white">
+                  <Link key={i} href={section.href} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 transition hover:border-slate-200 hover:bg-white dark:hover:bg-slate-800">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <Avatar name={item.title} size="xs" />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-700">{item.title}</p>
+                        <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-300">{item.title}</p>
                         {item.sub && <p className="truncate text-xs text-slate-400">{item.sub}</p>}
                       </div>
                     </div>

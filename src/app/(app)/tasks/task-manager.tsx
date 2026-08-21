@@ -70,13 +70,13 @@ export function TaskManager({
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-1">
           <button
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${view === "list" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${view === "list" ? "bg-brand-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
             onClick={() => setView("list")}
           >
             <List className="h-4 w-4" /> List
           </button>
           <button
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${view === "board" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${view === "board" ? "bg-brand-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
             onClick={() => setView("board")}
           >
             <KanbanSquare className="h-4 w-4" /> Board
@@ -174,8 +174,8 @@ function TaskBoard({ rows, onMove }: { rows: SmartRow[]; onMove: (id: string, st
             </div>
             <div className="flex flex-1 flex-col gap-2">
               {items.map((t) => (
-                <div key={String(t.id)} className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
-                  <p className="text-sm font-medium text-slate-800">{String(t.title)}</p>
+                <div key={String(t.id)} className="rounded-lg border border-slate-100 bg-white dark:bg-slate-800 p-3 shadow-sm">
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{String(t.title)}</p>
                   <p className="mt-0.5 text-xs text-slate-400">{String(t.assignee ?? "Unassigned")}</p>
                   <div className="mt-2 flex items-center justify-between">
                     <Badge tone={priorityTone(t.priority)}>{String(t.priority)}</Badge>
@@ -184,7 +184,7 @@ function TaskBoard({ rows, onMove }: { rows: SmartRow[]; onMove: (id: string, st
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {cols.map((c) =>
                       c === col ? null : (
-                        <button key={c} onClick={() => onMove(String(t.id), c)} className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] capitalize text-slate-500 hover:bg-slate-50">
+                        <button key={c} onClick={() => onMove(String(t.id), c)} className="rounded-md border border-slate-200 dark:border-slate-600 px-1.5 py-0.5 text-[10px] capitalize text-slate-500 hover:bg-slate-50">
                           {colLabel(c)}
                         </button>
                       )

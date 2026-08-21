@@ -111,8 +111,17 @@ export function formatNepaliDate(date: Date): string {
 
 export function formatDateTimeNepal(date: Date | string | null | undefined): string {
   if (!date) return "—";
-  const d = typeof date === "string" ? parseISO(date) : date;
-  return format(d, "yyyy-MM-dd HH:mm:ss", { timeZone: "Asia/Kathmandu" });
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kathmandu",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(d).replace(",", "");
 }
 
 export function downloadCSV(filename: string, rows: (string | number)[][]) {

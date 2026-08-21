@@ -12,7 +12,7 @@ export function SkeletonLoader({ rows = 6, columns = 4 }: { rows?: number; colum
         <Skeleton className="h-9 w-28" />
       </div>
       <div className="overflow-hidden rounded-lg border border-slate-100">
-        <div className="grid gap-4 border-b border-slate-100 bg-slate-50 px-4 py-3" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+        <div className="grid gap-4 border-b border-slate-100 bg-slate-50 dark:bg-slate-800 px-4 py-3" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
           {Array.from({ length: columns }).map((_, i) => (
             <Skeleton key={i} className="h-3 w-16" />
           ))}

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/layout/app-shell";
@@ -13,7 +14,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     include: { workspace: { include: { subscription: true } }, role: true },
   });
 
-  if (!user) return null;
+  if (!user) {
+    redirect("/login");
+  }
 
   const notifications = await prisma.notification.findMany({
     where: { userId: user.id, workspaceId: user.workspaceId },
@@ -42,8 +45,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }}
       workspace={{
         name: user.workspace.name,
-        plan: user.workspace.subscription?.plan,
-        status: user.workspace.subscription?.status,
+        plan: user.workspace.subscription?.plan ?? undefined,
+        status: user.workspace.subscription?.status ?? undefined,
       }}
       notifications={notifProps}
       unreadCount={unreadCount}

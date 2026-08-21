@@ -98,8 +98,8 @@ function parseHikvisionXml(xml: string): HikvisionAttendanceRecord[] {
     records.push({
       employeeId,
       date,
-      clockIn,
-      clockOut,
+      clockIn: clockIn ?? "",
+      clockOut: clockOut ?? "",
       status: statusText,
     });
   }

@@ -71,7 +71,7 @@ export function PaymentManager({
             <p className="text-xs text-slate-500">Outgoing</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-slate-900">{stats.reconciled}</p>
+            <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{stats.reconciled}</p>
             <p className="text-xs text-slate-500">Reconciled</p>
           </div>
         </div>

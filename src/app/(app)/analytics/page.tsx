@@ -61,9 +61,9 @@ export default async function AnalyticsPage() {
 
   const stats = [
     { label: "Headcount", value: employees.length, prefix: "" },
-    { label: "6-mo revenue", value: revTotal, prefix: "$" },
-    { label: "6-mo expenses", value: expTotal, prefix: "$" },
-    { label: "6-mo payroll", value: payrollTotal, prefix: "$" },
+    { label: "6-mo revenue", value: revTotal, prefix: "Rs." },
+    { label: "6-mo expenses", value: expTotal, prefix: "Rs." },
+    { label: "6-mo payroll", value: payrollTotal, prefix: "Rs." },
     { label: "Hours logged", value: attendanceHours, prefix: "" },
     { label: "Avg daily hours", value: avgAttendance, prefix: "" },
   ];

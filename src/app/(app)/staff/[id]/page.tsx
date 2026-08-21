@@ -67,7 +67,7 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
             <div className="mx-auto mb-3 flex justify-center">
               <Avatar name={employee.name} size="lg" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900">{employee.name}</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{employee.name}</h3>
             <p className="text-sm text-slate-500">{employee.position?.name ?? "—"}</p>
             <div className="mt-2 flex justify-center">
               <Badge tone={employee.status === "active" ? "green" : employee.status === "on_leave" ? "amber" : "red"}>
@@ -76,21 +76,21 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
             </div>
             <div className="mt-5 space-y-2.5 text-left text-sm">
               {employee.email && (
-                <p className="flex items-center gap-2 text-slate-600"><Mail className="h-4 w-4 text-slate-400" />{employee.email}</p>
+                <p className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><Mail className="h-4 w-4 text-slate-400" />{employee.email}</p>
               )}
               {employee.phone && (
-                <p className="flex items-center gap-2 text-slate-600"><Phone className="h-4 w-4 text-slate-400" />{employee.phone}</p>
+                <p className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><Phone className="h-4 w-4 text-slate-400" />{employee.phone}</p>
               )}
               {employee.address && (
-                <p className="flex items-center gap-2 text-slate-600"><MapPin className="h-4 w-4 text-slate-400" />{employee.address}</p>
+                <p className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><MapPin className="h-4 w-4 text-slate-400" />{employee.address}</p>
               )}
-              <p className="flex items-center gap-2 text-slate-600"><Briefcase className="h-4 w-4 text-slate-400" />{employee.department?.name ?? "No department"}</p>
-              <p className="flex items-center gap-2 text-slate-600"><Cake className="h-4 w-4 text-slate-400" />{employee.dateOfBirth ? formatDate(employee.dateOfBirth) : "—"}</p>
-              <p className="flex items-center gap-2 text-slate-600"><CalendarDays className="h-4 w-4 text-slate-400" />Joined {formatDate(employee.joinDate)}</p>
+              <p className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><Briefcase className="h-4 w-4 text-slate-400" />{employee.department?.name ?? "No department"}</p>
+              <p className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><Cake className="h-4 w-4 text-slate-400" />{employee.dateOfBirth ? formatDate(employee.dateOfBirth) : "—"}</p>
+              <p className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><CalendarDays className="h-4 w-4 text-slate-400" />Joined {formatDate(employee.joinDate)}</p>
             </div>
-            <div className="mt-5 rounded-lg bg-slate-50 p-3 text-left">
+            <div className="mt-5 rounded-lg bg-slate-50 dark:bg-slate-800 p-3 text-left">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Annual Salary</p>
-              <p className="text-xl font-semibold text-slate-900">{money(employee.baseSalary)}</p>
+              <p className="text-xl font-semibold text-slate-900 dark:text-slate-100">{money(employee.baseSalary)}</p>
               <p className="text-xs text-slate-400">{employee.employmentType.replace("_", " ")}</p>
             </div>
           </CardBody>
@@ -112,7 +112,7 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
                 {employee.leaveRequests.map((l) => (
                   <div key={l.id} className="flex items-center justify-between py-2.5">
                     <div>
-                      <p className="text-sm font-medium text-slate-700">{l.type.name}</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{l.type.name}</p>
                       <p className="text-xs text-slate-400">{formatDate(l.startDate)} → {formatDate(l.endDate)}</p>
                     </div>
                     <Badge tone={l.status === "approved" ? "green" : l.status === "rejected" ? "red" : "amber"}>{l.status}</Badge>
@@ -128,7 +128,7 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
                 {employee.payrollItems.map((p) => (
                   <div key={p.id} className="flex items-center justify-between py-2.5">
                     <div>
-                      <p className="text-sm font-medium text-slate-700">{formatDate(new Date(p.payroll.period + "-01"), "MMM yyyy")}</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{formatDate(new Date(p.payroll.period + "-01"), "MMM yyyy")}</p>
                       <p className="text-xs text-slate-400">Net pay</p>
                     </div>
                     <p className="text-sm font-semibold tabular-nums text-slate-800">{money(p.net)}</p>

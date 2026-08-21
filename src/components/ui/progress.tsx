@@ -27,8 +27,8 @@ export function ProgressBar({
     <div className={cn("w-full", className)}>
       {label && (
         <div className="mb-1 flex items-center justify-between text-xs">
-          <span className="font-medium text-slate-600">{label}</span>
-          <span className="text-slate-400">{pct.toFixed(0)}%</span>
+          <span className="font-medium text-slate-600 dark:text-slate-400">{label}</span>
+          <span className="text-slate-400 dark:text-slate-500">{pct.toFixed(0)}%</span>
         </div>
       )}
       <div
@@ -60,7 +60,7 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
                   "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
                   done && "border-emerald-500 bg-emerald-500 text-white",
                   active && "border-brand-600 bg-brand-600 text-white",
-                  !done && !active && "border-slate-300 bg-white text-slate-400"
+                  !done && !active && "border-slate-300 bg-white dark:bg-slate-700 text-slate-400"
                 )}
               >
                 {done ? "✓" : i + 1}
@@ -68,14 +68,14 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
               <span
                 className={cn(
                   "whitespace-nowrap text-xs font-medium",
-                  active ? "text-slate-900" : done ? "text-emerald-700" : "text-slate-400"
+                  active ? "text-slate-900 dark:text-slate-100" : done ? "text-emerald-700" : "text-slate-400"
                 )}
               >
                 {step}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={cn("mx-2 h-px flex-1", i < current ? "bg-emerald-400" : "bg-slate-200")} />
+              <div className={cn("mx-2 h-px flex-1", i < current ? "bg-emerald-400" : "bg-slate-200 dark:bg-slate-700")} />
             )}
           </li>
         );

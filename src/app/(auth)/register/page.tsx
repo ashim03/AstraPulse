@@ -25,7 +25,7 @@ export default function RegisterPage() {
     phone: "",
     country: "United States",
     currency: "NPR",
-    timezone: "America/New_York",
+    timezone: "Asia/Kathmandu",
     businessType: "Technology",
     password: "",
   });

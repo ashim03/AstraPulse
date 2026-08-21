@@ -59,7 +59,7 @@ export function AccountingManager({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex rounded-lg border border-slate-200 p-0.5">
+        <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
           {(["accounts", "journal", "banks"] as const).map((t) => (
             <button
               key={t}
@@ -99,9 +99,9 @@ export function AccountingManager({
                 {accounts.map((a) => (
                   <tr key={a.id} className="border-b border-slate-50">
                     <td className="px-4 py-2 font-mono text-xs text-slate-500">{a.code}</td>
-                    <td className="px-4 py-2 font-medium text-slate-800">{a.name}</td>
+                    <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-200">{a.name}</td>
                     <td className="px-4 py-2"><Badge tone={typeTone(a.type) as never}>{a.type}</Badge></td>
-                    <td className="px-4 py-2 text-right font-medium text-slate-800">{money(a.balance)}</td>
+                    <td className="px-4 py-2 text-right font-medium text-slate-800 dark:text-slate-200">{money(a.balance)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -128,7 +128,7 @@ export function AccountingManager({
                   <tr key={j.id} className="border-b border-slate-50">
                     <td className="px-4 py-2 font-mono text-xs text-slate-500">{j.number}</td>
                     <td className="px-4 py-2 text-slate-600">{j.date}</td>
-                    <td className="px-4 py-2 text-slate-800">{j.description}</td>
+                    <td className="px-4 py-2 text-slate-800 dark:text-slate-200">{j.description}</td>
                     <td className="px-4 py-2"><Badge>{j.status}</Badge></td>
                     <td className="px-4 py-2 text-right">
                       {j.status === "draft" && (
@@ -154,7 +154,7 @@ export function AccountingManager({
             <Card key={b.id} className="p-4">
               <p className="text-sm font-semibold text-slate-800">{b.name}</p>
               <p className="text-xs text-slate-500">{b.bank} • •••{b.accountNumber.slice(-4)}</p>
-              <p className="mt-3 text-lg font-bold text-slate-900">{money(b.currentBalance)}</p>
+              <p className="mt-3 text-lg font-bold text-slate-900 dark:text-slate-100">{money(b.currentBalance)}</p>
             </Card>
           ))}
           {banks.length === 0 && <p className="text-sm text-slate-400">No bank accounts yet.</p>}
@@ -188,7 +188,7 @@ export function AccountingManager({
             <Input label="Date" name="date" type="date" required error={errors.date} defaultValue={new Date().toISOString().slice(0, 10)} />
           </div>
           <Input label="Description" name="description" required error={errors.description} placeholder="e.g. Office rent for August" />
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 p-3">
             <p className="mb-2 text-xs font-medium uppercase text-slate-500">Lines</p>
             <div className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-[1fr_120px]">

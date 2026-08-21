@@ -70,7 +70,7 @@ export function AnnouncementManager({ rows, departments }: { rows: Row[]; depart
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-semibold text-slate-800">{r.title}</h3>
+                <h3 className="font-semibold text-slate-800 dark:text-slate-200">{r.title}</h3>
                 <Badge tone={tone(r.priority) as never}>{r.priority}</Badge>
                 <Badge>{r.audience}</Badge>
               </div>

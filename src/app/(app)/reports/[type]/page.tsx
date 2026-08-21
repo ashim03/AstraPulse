@@ -210,7 +210,7 @@ export default async function ReportPage({ params, searchParams }: { params: { t
             {rows.map((r, i) => (
               <tr key={i} className="border-b border-slate-50">
                 {columns.map((c) => (
-                  <td key={c} className="px-4 py-2 text-slate-700">
+                  <td key={c} className="px-4 py-2 text-slate-700 dark:text-slate-300">
                     {typeof r[c] === "number" ? money(r[c] as number) : (r[c] as string) || "—"}
                   </td>
                 ))}
@@ -224,7 +224,7 @@ export default async function ReportPage({ params, searchParams }: { params: { t
             <tfoot>
               <tr className="bg-slate-50">
                 <td colSpan={Math.max(1, columns.length - 1)} className="px-4 py-2 text-right font-semibold text-slate-800">{Object.keys(totals).join(" / ")}</td>
-                <td className="px-4 py-2 text-right font-bold text-slate-900">{money(Object.values(totals)[0] as number)}</td>
+                <td className="px-4 py-2 text-right font-bold text-slate-900 dark:text-slate-100">{money(Object.values(totals)[0] as number)}</td>
               </tr>
             </tfoot>
           )}

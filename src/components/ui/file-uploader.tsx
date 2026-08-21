@@ -42,7 +42,7 @@ export function FileUploader({
       />
       {fileName || value ? (
         <div className="flex items-center gap-3 rounded-input border border-slate-200 bg-slate-50 px-3 py-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white dark:bg-slate-700 text-slate-400 shadow-sm">
             <FileText className="h-4 w-4" />
           </span>
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">{fileName ?? value}</span>
@@ -113,7 +113,7 @@ export function MultiSelect({
         </span>
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-popover scrollbar-thin">
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white dark:bg-slate-800 py-1 shadow-popover scrollbar-thin">
           {options.map((o) => {
             const checked = value.includes(o.value);
             return (

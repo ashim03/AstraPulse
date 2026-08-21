@@ -51,7 +51,7 @@ export function Calendar({
   return (
     <div className={cn("select-none", className)}>
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-800">
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           {format(currentMonth, "MMMM yyyy")}
         </p>
         <div className="flex items-center gap-1">
@@ -90,7 +90,7 @@ export function Calendar({
               disabled={!onSelect}
               className={cn(
                 "relative flex flex-col items-center rounded-lg py-1.5 text-xs font-medium transition",
-                inMonth ? "text-slate-700 hover:bg-slate-100" : "text-slate-300",
+                inMonth ? "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" : "text-slate-300",
                 isSelected && "bg-brand-600 text-white hover:bg-brand-600",
                 !isSelected && isToday && "ring-1 ring-inset ring-brand-300"
               )}

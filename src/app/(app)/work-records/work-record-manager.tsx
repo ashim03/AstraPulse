@@ -142,7 +142,7 @@ export function WorkRecordManager({
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div>
-      <p className="text-lg font-bold text-slate-900">{value}</p>
+      <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{value}</p>
       <p className="text-xs text-slate-500">{label}</p>
     </div>
   );

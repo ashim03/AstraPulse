@@ -23,7 +23,7 @@ export default async function ReportsPage() {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-slate-800">{r.label}</h3>
-                  <ArrowRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-indigo-600" />
+                   <ArrowRight className="h-4 w-4 text-slate-400 transition-colors group-hover:text-indigo-600" />
                 </div>
               </div>
             </Card>

@@ -64,7 +64,7 @@ export function InvoiceDetailClient({
       </div>
 
       <Card className="p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-800">Payments</h3>
+        <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Payments</h3>
         {payments.length === 0 ? (
           <p className="text-sm text-slate-400">No payments recorded yet.</p>
         ) : (

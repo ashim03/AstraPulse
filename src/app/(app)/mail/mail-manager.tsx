@@ -72,7 +72,7 @@ export function MailManager({ rows, users, meId }: { rows: Row[]; users: UserOpt
         <Card className="p-5">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-lg font-semibold text-slate-800">{selected.subject}</h3>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">{selected.subject}</h3>
               <p className="text-sm text-slate-500">From {selected.sender} • {selected.date} {selected.time}</p>
               <p className="mt-1 text-xs text-slate-400">To: {selected.recipients}</p>
             </div>
@@ -83,7 +83,7 @@ export function MailManager({ rows, users, meId }: { rows: Row[]; users: UserOpt
               </Button>
             </div>
           </div>
-          <p className="whitespace-pre-wrap text-sm text-slate-700">{selected.body || "—"}</p>
+          <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{selected.body || "—"}</p>
         </Card>
       ) : (
         <div className="space-y-2">
@@ -109,7 +109,7 @@ export function MailManager({ rows, users, meId }: { rows: Row[]; users: UserOpt
         <form action={submit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Recipients</label>
-            <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+            <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 p-2">
               {users.filter((u) => u.id !== meId).map((u) => (
                 <label key={u.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-50">
                   <input type="checkbox" name="recipients" value={u.id} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />

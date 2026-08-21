@@ -5,10 +5,12 @@
 @layer base {
   :root {
     color-scheme: light;
+    --grid-color: #e2e8f0;
   }
 
   .dark {
     color-scheme: dark;
+    --grid-color: #334155;
   }
 
   * {
