@@ -11,4 +11,5 @@ out/
 tmp-*.mts
 tmp-*.txt
 smoke.*
+next-dev.log
 .DS_Store
