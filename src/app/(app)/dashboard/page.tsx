@@ -229,35 +229,37 @@ export default async function DashboardPage() {
 
       {/* Attendance pulse + coordination */}
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardBody className="px-5 py-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="section-title flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-brand-500" /> Attendance Pulse
-                </h3>
-                <p className="text-xs text-slate-400">Today across {activeEmployees} active employees</p>
-              </div>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                {todayAttendance.present}/{activeEmployees} present
-              </span>
-            </div>
-            <ProgressBar value={activeEmployees === 0 ? 0 : (todayAttendance.present / activeEmployees) * 100} tone="green" />
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: "Late", value: todayAttendance.late, tone: "text-amber-600" },
-                { label: "Remote", value: todayAttendance.remote, tone: "text-sky-600" },
-                { label: "On leave", value: onLeave, tone: "text-violet-600" },
-                { label: "Absent", value: todayAttendance.absent, tone: "text-red-600" },
-              ].map((s) => (
-                <div key={s.label} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5">
-                  <p className={`text-xl font-semibold ${s.tone}`}>{s.value}</p>
-                  <p className="text-xs text-slate-400">{s.label}</p>
+        <Link href="/attendance" className="block lg:col-span-2">
+          <Card className="transition hover:shadow-md">
+            <CardBody className="px-5 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="section-title flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-brand-500" /> Attendance Pulse
+                  </h3>
+                  <p className="text-xs text-slate-400">Today across {activeEmployees} active employees</p>
                 </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  {todayAttendance.present}/{activeEmployees} present
+                </span>
+              </div>
+              <ProgressBar value={activeEmployees === 0 ? 0 : (todayAttendance.present / activeEmployees) * 100} tone="green" />
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  { label: "Late", value: todayAttendance.late, tone: "text-amber-600" },
+                  { label: "Remote", value: todayAttendance.remote, tone: "text-sky-600" },
+                  { label: "On leave", value: onLeave, tone: "text-violet-600" },
+                  { label: "Absent", value: todayAttendance.absent, tone: "text-red-600" },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+                    <p className={`text-xl font-semibold ${s.tone}`}>{s.value}</p>
+                    <p className="text-xs text-slate-400">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        </Link>
         <Card>
           <CardBody className="px-5 py-4">
             <div className="mb-3 flex items-center justify-between">
@@ -306,14 +308,30 @@ export default async function DashboardPage() {
 
       {/* KPI row */}
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <StatCard title="Total Employees" value={totalEmployees} change={employeesGrowth > 0 ? employeesGrowth * 10 : 0} trend={employeesGrowth > 0 ? "up" : "flat"} icon={Users} tooltip="Total headcount" />
-        <StatCard title="Present Today" value={`${todayAttendance.present}`} trend="flat" icon={UserCheck} footer={<p className="text-xs text-emerald-600">{Math.round((todayAttendance.present / Math.max(1, activeEmployees)) * 100)}% attendance rate</p>} />
-        <StatCard title="Employees on Leave" value={onLeave} icon={CalendarDays} />
-        <StatCard title="Payroll This Month" value={money(payrollNet)} change={latestPayroll ? 2.4 : 0} trend="up" icon={Wallet} />
-        <StatCard title="Total Revenue" value={money(revenueThisMonth)} change={pct(revenueThisMonth, revenueLastMonth)} trend={revenueThisMonth >= revenueLastMonth ? "up" : "down"} icon={TrendingUp} />
-        <StatCard title="Total Expenses" value={money(expensesThisMonth)} change={pct(expensesThisMonth, expensesLastMonth)} trend={expensesThisMonth > expensesLastMonth ? "up" : "down"} icon={Receipt} />
-        <StatCard title="Cash Balance" value={money(cashBalance)} icon={PiggyBank} footer={<p className="text-xs text-slate-400">{bankAccounts.length} accounts</p>} />
-        <StatCard title="Outstanding Invoices" value={money(outstandingInvoices)} icon={FileText} />
+        <Link href="/staff" className="block transition hover:scale-[1.01]">
+          <StatCard title="Total Employees" value={totalEmployees} change={employeesGrowth > 0 ? employeesGrowth * 10 : 0} trend={employeesGrowth > 0 ? "up" : "flat"} icon={Users} tooltip="Total headcount" />
+        </Link>
+        <Link href="/attendance" className="block transition hover:scale-[1.01]">
+          <StatCard title="Present Today" value={`${todayAttendance.present}`} trend="flat" icon={UserCheck} footer={<p className="text-xs text-emerald-600">{Math.round((todayAttendance.present / Math.max(1, activeEmployees)) * 100)}% attendance rate</p>} />
+        </Link>
+        <Link href="/leave" className="block transition hover:scale-[1.01]">
+          <StatCard title="Employees on Leave" value={onLeave} icon={CalendarDays} />
+        </Link>
+        <Link href="/payroll" className="block transition hover:scale-[1.01]">
+          <StatCard title="Payroll This Month" value={money(payrollNet)} change={latestPayroll ? 2.4 : 0} trend="up" icon={Wallet} />
+        </Link>
+        <Link href="/income" className="block transition hover:scale-[1.01]">
+          <StatCard title="Total Revenue" value={money(revenueThisMonth)} change={pct(revenueThisMonth, revenueLastMonth)} trend={revenueThisMonth >= revenueLastMonth ? "up" : "down"} icon={TrendingUp} />
+        </Link>
+        <Link href="/expenses" className="block transition hover:scale-[1.01]">
+          <StatCard title="Total Expenses" value={money(expensesThisMonth)} change={pct(expensesThisMonth, expensesLastMonth)} trend={expensesThisMonth > expensesLastMonth ? "up" : "down"} icon={Receipt} />
+        </Link>
+        <Link href="/accounting" className="block transition hover:scale-[1.01]">
+          <StatCard title="Cash Balance" value={money(cashBalance)} icon={PiggyBank} footer={<p className="text-xs text-slate-400">{bankAccounts.length} accounts</p>} />
+        </Link>
+        <Link href="/invoices" className="block transition hover:scale-[1.01]">
+          <StatCard title="Outstanding Invoices" value={money(outstandingInvoices)} icon={FileText} />
+        </Link>
       </div>
 
       {/* Charts */}

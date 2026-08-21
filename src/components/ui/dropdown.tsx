@@ -19,14 +19,17 @@ export function Dropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    const onUp = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node) && !portalRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("mouseup", onUp);
+    return () => document.removeEventListener("mouseup", onUp);
   }, []);
 
   useEffect(() => {
@@ -46,6 +49,7 @@ export function Dropdown({
         coords &&
         createPortal(
           <div
+            ref={portalRef}
             className={cn(
               "fixed z-50 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-popover animate-fade-in-scale",
               width,

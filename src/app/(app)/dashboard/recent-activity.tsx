@@ -32,6 +32,21 @@ const moduleIcons: Record<string, React.ReactNode> = {
   attendance: <ClockIcon />,
 };
 
+const moduleLinks: Record<string, string> = {
+  staff: "/staff",
+  leave: "/leave",
+  payroll: "/payroll",
+  expenses: "/expenses",
+  invoices: "/invoices",
+  payments: "/payments",
+  accounting: "/accounting",
+  attendance: "/attendance",
+  tasks: "/tasks",
+  announcements: "/announcements",
+  mail: "/mail",
+  holidays: "/holidays",
+};
+
 export async function RecentActivity({ workspaceId }: { workspaceId: string }) {
   const logs = await prisma.auditLog.findMany({
     where: { workspaceId },
@@ -52,6 +67,7 @@ export async function RecentActivity({ workspaceId }: { workspaceId: string }) {
             actor: log.user ? { name: log.user.name } : undefined,
             icon: moduleIcons[log.module],
             tone: (moduleIcons[log.module] ? "indigo" : "gray") as "indigo" | "gray",
+            href: moduleLinks[log.module] ?? "/audit-logs",
           }))}
         />
       </CardBody>

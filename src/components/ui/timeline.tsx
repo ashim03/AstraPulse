@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { cn, timeAgo } from "@/lib/utils";
 import { Avatar } from "./avatar";
 
@@ -10,6 +11,7 @@ export type ActivityItem = {
   actor?: { name: string; avatar?: string | null };
   icon?: ReactNode;
   tone?: "indigo" | "green" | "amber" | "red" | "sky" | "gray";
+  href?: string;
 };
 
 const tones = {
@@ -40,12 +42,25 @@ export function Timeline({ items }: { items: ActivityItem[] }) {
             )}
           </div>
           <div className="min-w-0 flex-1 pt-1">
-            <div className="text-sm text-slate-800">{item.title}</div>
-            {item.description && <div className="mt-0.5 text-sm text-slate-500">{item.description}</div>}
-            <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-              {item.actor && <span className="font-medium text-slate-500">{item.actor.name}</span>}
-              {item.timestamp && <span>{timeAgo(item.timestamp)}</span>}
-            </div>
+            {item.href ? (
+              <Link href={item.href} className="block rounded-md p -m-1 transition hover:bg-slate-50">
+                <div className="text-sm text-slate-800">{item.title}</div>
+                {item.description && <div className="mt-0.5 text-sm text-slate-500">{item.description}</div>}
+                <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+                  {item.actor && <span className="font-medium text-slate-500">{item.actor.name}</span>}
+                  {item.timestamp && <span>{timeAgo(item.timestamp)}</span>}
+                </div>
+              </Link>
+            ) : (
+              <>
+                <div className="text-sm text-slate-800">{item.title}</div>
+                {item.description && <div className="mt-0.5 text-sm text-slate-500">{item.description}</div>}
+                <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+                  {item.actor && <span className="font-medium text-slate-500">{item.actor.name}</span>}
+                  {item.timestamp && <span>{timeAgo(item.timestamp)}</span>}
+                </div>
+              </>
+            )}
           </div>
         </li>
       ))}

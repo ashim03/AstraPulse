@@ -158,7 +158,7 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
               </Link>
               <div className="space-y-2">
                 {section.items.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                  <Link key={i} href={section.href} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 transition hover:border-slate-200 hover:bg-white">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <Avatar name={item.title} size="xs" />
                       <div className="min-w-0">
@@ -169,7 +169,7 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
                     {item.badge && (
                       <span className="shrink-0 text-xs font-semibold text-slate-600">{item.badge}</span>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

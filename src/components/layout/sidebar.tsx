@@ -43,8 +43,8 @@ export function WorkspaceSwitcher({ name, plan, collapsed }: { name: string; pla
         This workspace is the only one in this demo. Invite teammates to collaborate.
       </div>
       <DropdownSeparator />
-      <DropdownItem icon={<Sparkles className="h-4 w-4" />}>Upgrade workspace</DropdownItem>
-      <DropdownItem icon={<Building2 className="h-4 w-4" />}>Create new workspace</DropdownItem>
+      <DropdownItem icon={<Sparkles className="h-4 w-4" />} onClick={() => window.location.href = "/subscription"}>Upgrade workspace</DropdownItem>
+      <DropdownItem icon={<Building2 className="h-4 w-4" />} onClick={() => window.location.href = "/subscription"}>Create new workspace</DropdownItem>
     </Dropdown>
   );
 }

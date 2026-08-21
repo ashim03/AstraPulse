@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Users, CalendarCheck, Wallet, Menu, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -86,16 +87,26 @@ export function AppShell({
         {BOTTOM_NAV.map((item) => {
           const active = item.href !== "" && pathname.startsWith(item.href);
           const Icon = item.icon;
+          if (!item.href) {
+            return (
+              <button
+                key={item.label}
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open menu"
+                className={cn(
+                  "relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+                  "text-slate-500 active:text-brand-600"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                {item.label}
+              </button>
+            );
+          }
           return (
-            <a
+            <Link
               key={item.label}
-              href={item.href || undefined}
-              onClick={(e) => {
-                if (!item.href) {
-                  e.preventDefault();
-                  setMobileOpen(true);
-                }
-              }}
+              href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
@@ -105,7 +116,7 @@ export function AppShell({
               <Icon className={cn("h-5 w-5", active && "text-brand-600")} />
               {item.label}
               {active && <span className="absolute inset-x-0 top-0 h-0.5 bg-brand-600" />}
-            </a>
+            </Link>
           );
         })}
       </nav>
