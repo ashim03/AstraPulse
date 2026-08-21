@@ -21,7 +21,7 @@ export default async function SettingsPage() {
           email: workspace?.email ?? "",
           phone: workspace?.phone ?? "",
           country: workspace?.country ?? "",
-          currency: workspace?.currency ?? "USD",
+          currency: workspace?.currency ?? "NPR",
           timezone: workspace?.timezone ?? "America/New_York",
           dateFormat: workspace?.dateFormat ?? "MM/DD/YYYY",
           fiscalYearStart: workspace?.fiscalYearStart ?? 1,

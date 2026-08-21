@@ -6,6 +6,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useState } from "react";
+import { CURRENCIES, TIMEZONES } from "@/lib/constants";
 import { updateWorkspaceSettingsAction, updateProfileAction } from "./actions";
 
 export type WorkspaceSettings = {
@@ -56,7 +57,7 @@ export function SettingsManager({ workspace, profile }: { workspace: WorkspaceSe
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Currency" name="currency" defaultValue={workspace.currency}>
-              {["USD", "EUR", "GBP", "JPY", "CAD", "AUD"].map((c) => <option key={c} value={c}>{c}</option>)}
+              {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
             <Select label="Date format" name="dateFormat" defaultValue={workspace.dateFormat}>
               <option value="MM/DD/YYYY">MM/DD/YYYY</option>
@@ -65,7 +66,7 @@ export function SettingsManager({ workspace, profile }: { workspace: WorkspaceSe
             </Select>
           </div>
           <Select label="Timezone" name="timezone" defaultValue={workspace.timezone}>
-            {["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Asia/Tokyo", "Asia/Singapore"].map((t) => <option key={t} value={t}>{t}</option>)}
+            {TIMEZONES.map((t) => <option key={t} value={t}>{t}</option>)}
           </Select>
           <Input label="Fiscal year start (month 1-12)" name="fiscalYearStart" type="number" min={1} max={12} defaultValue={workspace.fiscalYearStart} />
           <div className="flex justify-end">

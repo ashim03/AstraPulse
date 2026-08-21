@@ -29,7 +29,7 @@ export default async function ExpensesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Expenses" subtitle={`${expenses.length} expenses • ${total.toLocaleString("en-US", { style: "currency", currency: "USD" })} total`} breadcrumb="Finance" />
+      <PageHeader title="Expenses" subtitle={`${expenses.length} expenses • ${total.toLocaleString("en-US", { style: "currency", currency: "NPR" })} total`} breadcrumb="Finance" />
       <ExpenseManager rows={rows} />
     </div>
   );

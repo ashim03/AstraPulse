@@ -66,13 +66,13 @@ export function SidebarLink({ href, label, icon: Icon, collapsed, onNavigate }: 
       className={cn(
         "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
         active
-          ? "bg-brand-50 text-brand-700"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+          ? "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200",
         collapsed && "justify-center px-2"
       )}
     >
       {active && <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-600" />}
-      <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand-600" : "text-slate-400 group-hover:text-slate-600")} />
+      <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand-600 dark:text-brand-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")} />
       {!collapsed && <span className="truncate">{label}</span>}
     </Link>
   );
@@ -99,11 +99,11 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-slate-200 bg-white transition-all duration-200 lg:flex",
+        "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-slate-200 bg-white transition-all duration-200 lg:flex dark:border-slate-700 dark:bg-slate-800",
         collapsed ? "w-[68px]" : "w-[248px]"
       )}
     >
-      <div className={cn("flex h-16 shrink-0 items-center border-b border-slate-100 px-4", collapsed && "justify-center px-0")}>
+      <div className={cn("flex h-16 shrink-0 items-center border-b border-slate-100 px-4 dark:border-slate-700", collapsed && "justify-center px-0")}>
         {collapsed ? (
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
             <Zap className="h-5 w-5 text-white" />
@@ -114,8 +114,8 @@ export function Sidebar({
               <Zap className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-base font-bold leading-tight tracking-tight text-slate-900">AstraPulse</p>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">HR · Payroll · Finance</p>
+              <p className="text-base font-bold leading-tight tracking-tight text-slate-900 dark:text-white">AstraPulse</p>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">HR · Payroll · Finance</p>
             </div>
           </Link>
         )}

@@ -28,7 +28,7 @@ export default async function IncomePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Income" subtitle={`${incomes.length} entries • ${total.toLocaleString("en-US", { style: "currency", currency: "USD" })} total`} breadcrumb="Finance" />
+      <PageHeader title="Income" subtitle={`${incomes.length} entries • ${total.toLocaleString("en-US", { style: "currency", currency: "NPR" })} total`} breadcrumb="Finance" />
       <IncomeManager rows={rows} />
     </div>
   );

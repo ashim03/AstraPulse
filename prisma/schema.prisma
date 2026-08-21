@@ -17,7 +17,7 @@ model Workspace {
   slug            String   @unique
   phone           String?
   country         String?
-  currency        String   @default("USD")
+currency    String @default("NPR")
   timezone        String   @default("America/New_York")
   businessType    String?
   fiscalYearStart Int      @default(1)
@@ -531,7 +531,7 @@ model BankAccount {
   name          String
   bank          String
   accountNumber String
-  currency      String    @default("USD")
+  currency      String    @default("NPR")
   openingBalance Float    @default(0)
   currentBalance Float    @default(0)
   payments      Payment[]

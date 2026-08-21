@@ -100,8 +100,9 @@ export const PLANS = [
   },
 ];
 
-export const CURRENCIES = ["USD", "EUR", "GBP", "INR", "AED", "CAD", "AUD", "SGD", "BDT"];
+export const CURRENCIES = ["NPR", "USD", "EUR", "GBP", "INR", "AED", "CAD", "AUD", "SGD", "BDT"];
 export const TIMEZONES = [
+  "Asia/Kathmandu",
   "America/New_York",
   "America/Chicago",
   "America/Denver",

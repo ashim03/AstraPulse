@@ -20,7 +20,7 @@ export function AnalyticsClient({
   headcount: { name: string; value: number }[];
   categoryBreakdown: { name: string; value: number }[];
 }) {
-  const fmt = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const fmt = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "NPR" });
 
   return (
     <div className="space-y-6">

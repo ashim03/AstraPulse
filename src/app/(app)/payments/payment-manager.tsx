@@ -63,11 +63,11 @@ export function PaymentManager({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-6 text-sm">
           <div>
-            <p className="text-lg font-bold text-emerald-600">{stats.incoming.toLocaleString("en-US", { style: "currency", currency: "USD" })}</p>
+            <p className="text-lg font-bold text-emerald-600">{stats.incoming.toLocaleString("en-US", { style: "currency", currency: "NPR" })}</p>
             <p className="text-xs text-slate-500">Incoming</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-red-500">{stats.outgoing.toLocaleString("en-US", { style: "currency", currency: "USD" })}</p>
+            <p className="text-lg font-bold text-red-500">{stats.outgoing.toLocaleString("en-US", { style: "currency", currency: "NPR" })}</p>
             <p className="text-xs text-slate-500">Outgoing</p>
           </div>
           <div>

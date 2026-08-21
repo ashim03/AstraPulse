@@ -43,7 +43,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           <p className="text-xs text-slate-400">© {new Date().getFullYear()} AstraPulse Inc. All rights reserved.</p>
         </div>
       </div>
-      <div className="flex w-full items-center justify-center bg-slate-50 px-4 py-10 lg:w-1/2">
+      <div className="flex w-full items-center justify-center bg-slate-50 px-4 py-10 dark:bg-slate-900 lg:w-1/2">
         <div className="w-full max-w-md">{children}</div>
       </div>
     </div>

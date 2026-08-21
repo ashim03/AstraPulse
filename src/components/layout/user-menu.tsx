@@ -21,20 +21,20 @@ export function UserMenu({
     <Dropdown
       width="w-64"
       trigger={
-        <button className="flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-slate-100" aria-label="Account menu">
+        <button className="flex items-center gap-2 rounded-lg p-1.5 transition hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Account menu">
           <Avatar name={name} size="sm" />
           <span className="hidden text-left md:block">
-            <span className="block max-w-[140px] truncate text-sm font-semibold text-slate-800">{name}</span>
-            <span className="block text-[11px] text-slate-400">{role}</span>
+            <span className="block max-w-[140px] truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{name}</span>
+            <span className="block text-[11px] text-slate-400 dark:text-slate-500">{role}</span>
           </span>
         </button>
       }
     >
-      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-700">
         <Avatar name={name} />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-800">{name}</p>
-          <p className="truncate text-xs text-slate-500">{email}</p>
+          <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{name}</p>
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{email}</p>
         </div>
       </div>
       <div className="py-1">

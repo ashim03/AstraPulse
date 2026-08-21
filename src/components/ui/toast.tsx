@@ -42,17 +42,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {toasts.map((t) => (
               <div
                 key={t.id}
-                className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-modal animate-fade-in-scale"
+                className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-modal animate-fade-in-scale dark:border-slate-700 dark:bg-slate-800"
                 role="status"
               >
                 <div className="mt-0.5 shrink-0">{icons[t.type]}</div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900">{t.title}</p>
-                  {t.description && <p className="mt-0.5 text-sm text-slate-500">{t.description}</p>}
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t.title}</p>
+                  {t.description && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{t.description}</p>}
                 </div>
                 <button
                   onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
-                  className="rounded p-0.5 text-slate-400 hover:text-slate-600"
+                  className="rounded p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   aria-label="Dismiss"
                 >
                   <X className="h-4 w-4" />

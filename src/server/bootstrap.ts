@@ -25,7 +25,7 @@ export async function bootstrapWorkspace(input: BootstrapInput) {
       slug,
       phone: input.phone,
       country: input.country,
-      currency: input.currency ?? "USD",
+      currency: input.currency ?? "NPR",
       timezone: input.timezone ?? "America/New_York",
       businessType: input.businessType,
       status: "active",
@@ -101,8 +101,8 @@ export async function bootstrapWorkspace(input: BootstrapInput) {
   // Default bank accounts
   await prisma.bankAccount.createMany({
     data: [
-      { workspaceId: workspace.id, name: "Business Checking", bank: "Primary Bank", accountNumber: "****0001", currency: input.currency ?? "USD", openingBalance: 0, currentBalance: 0 },
-      { workspaceId: workspace.id, name: "Cash on Hand", bank: "Petty Cash", accountNumber: "CASH", currency: input.currency ?? "USD", openingBalance: 0, currentBalance: 0 },
+      { workspaceId: workspace.id, name: "Business Checking", bank: "Primary Bank", accountNumber: "****0001", currency: input.currency ?? "NPR", openingBalance: 0, currentBalance: 0 },
+      { workspaceId: workspace.id, name: "Cash on Hand", bank: "Petty Cash", accountNumber: "CASH", currency: input.currency ?? "NPR", openingBalance: 0, currentBalance: 0 },
     ],
   });
 

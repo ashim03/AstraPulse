@@ -198,7 +198,7 @@ export function chartMoney(v: number) {
 }
 
 function formatMoney(v: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "NPR", maximumFractionDigits: 0 }).format(v);
 }
 
 function compactCurrency(v: number) {

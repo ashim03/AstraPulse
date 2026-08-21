@@ -11,7 +11,7 @@ export async function updateWorkspaceSettingsAction(formData: FormData): Promise
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "");
   const country = String(formData.get("country") ?? "");
-  const currency = String(formData.get("currency") ?? "USD");
+  const currency = String(formData.get("currency") ?? "NPR");
   const timezone = String(formData.get("timezone") ?? "America/New_York");
   const dateFormat = String(formData.get("dateFormat") ?? "MM/DD/YYYY");
   const fiscalYearStart = Number(formData.get("fiscalYearStart") ?? 1);

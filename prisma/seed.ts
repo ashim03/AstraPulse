@@ -18,7 +18,7 @@ async function main() {
       slug: "nova-retail-group",
       phone: "+1 212 555 0100",
       country: "United States",
-      currency: "USD",
+      currency: "NPR",
       timezone: "America/New_York",
       businessType: "Retail",
       status: "active",

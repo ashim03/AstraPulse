@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 let currencyFormatter: Intl.NumberFormat | null = null;
 let numberFormatter: Intl.NumberFormat | null = null;
 
-export function setLocale(currency = "USD", locale = "en-US") {
+export function setLocale(currency = "NPR", locale = "en-US") {
   currencyFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
@@ -21,7 +21,7 @@ export function setLocale(currency = "USD", locale = "en-US") {
   });
 }
 
-export function money(value: number | null | undefined, currency = "USD"): string {
+export function money(value: number | null | undefined, currency = "NPR"): string {
   const v = value ?? 0;
   return (currencyFormatter ?? new Intl.NumberFormat("en-US", { style: "currency", currency })).format(v);
 }

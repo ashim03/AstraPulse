@@ -31,7 +31,7 @@ export default async function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Invoices" subtitle={`${invoices.length} invoices • ${outstanding.toLocaleString("en-US", { style: "currency", currency: "USD" })} outstanding`} breadcrumb="Finance" />
+      <PageHeader title="Invoices" subtitle={`${invoices.length} invoices • ${outstanding.toLocaleString("en-US", { style: "currency", currency: "NPR" })} outstanding`} breadcrumb="Finance" />
       <InvoiceManager rows={rows} customers={customers as CustomerOption[]} />
     </div>
   );

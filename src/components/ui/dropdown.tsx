@@ -51,7 +51,7 @@ export function Dropdown({
           <div
             ref={portalRef}
             className={cn(
-              "fixed z-50 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-popover animate-fade-in-scale",
+              "fixed z-50 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-popover animate-fade-in-scale dark:border-slate-700 dark:bg-slate-800",
               width,
               className
             )}
@@ -83,7 +83,7 @@ export function DropdownItem({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50",
         danger ? "text-red-600" : "text-slate-700"
       )}
     >

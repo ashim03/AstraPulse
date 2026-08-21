@@ -12,11 +12,11 @@ export const CurrencyInput = forwardRef<HTMLInputElement, {
   className?: string;
   disabled?: boolean;
   min?: number;
-}>(function CurrencyInput({ value, onChangeValue, currency = "USD", className, ...props }, ref) {
+}>(function CurrencyInput({ value, onChangeValue, currency = "NPR", className, ...props }, ref) {
   return (
     <div className="relative">
       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-        {currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency}
+        {currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency === "NPR" ? "Rs." : currency}
       </span>
       <Input
         ref={ref}

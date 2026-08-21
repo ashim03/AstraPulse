@@ -24,7 +24,7 @@ export default function RegisterPage() {
     adminName: "",
     phone: "",
     country: "United States",
-    currency: "USD",
+    currency: "NPR",
     timezone: "America/New_York",
     businessType: "Technology",
     password: "",

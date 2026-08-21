@@ -20,7 +20,7 @@ const variants: Record<Variant, string> = {
   secondary: "btn-secondary",
   ghost: "btn-ghost",
   danger: "btn-danger",
-  outline: "btn border border-slate-300 bg-transparent text-slate-700 shadow-sm hover:bg-slate-50 focus:ring-slate-400/30",
+  outline: "btn border border-slate-300 bg-transparent text-slate-700 shadow-sm hover:bg-slate-50 focus:ring-slate-400/30 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700",
   success: "btn bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 focus:ring-emerald-500/40",
 };
 

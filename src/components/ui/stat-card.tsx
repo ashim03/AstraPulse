@@ -42,15 +42,15 @@ export function StatCard({
         <>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-500" title={tooltip}>
+              <p className="truncate text-sm font-medium text-slate-500 dark:text-slate-400" title={tooltip}>
                 {title}
               </p>
-              <p className="mt-1.5 truncate text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+              <p className="mt-1.5 truncate text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{value}</p>
             </div>
             {Icon && (
               <span
                 className={cn(
-                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500",
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
                   iconClass
                 )}
               >
@@ -64,7 +64,7 @@ export function StatCard({
               <span className={cn("font-medium", trendColor)}>
                 {change !== undefined ? `${Math.abs(change).toFixed(1)}%` : ""}
               </span>
-              <span className="text-slate-400">vs previous period</span>
+              <span className="text-slate-400 dark:text-slate-500">vs previous period</span>
             </div>
           )}
           {footer}
