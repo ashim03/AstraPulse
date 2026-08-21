@@ -43,7 +43,7 @@ export function Timeline({ items }: { items: ActivityItem[] }) {
           </div>
           <div className="min-w-0 flex-1 pt-1">
             {item.href ? (
-              <Link href={item.href} className="block rounded-md p -m-1 transition hover:bg-slate-50">
+              <Link href={item.href} className="block rounded-md -m-1 p-1 transition hover:bg-slate-50">
                 <div className="text-sm text-slate-800">{item.title}</div>
                 {item.description && <div className="mt-0.5 text-sm text-slate-500">{item.description}</div>}
                 <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">

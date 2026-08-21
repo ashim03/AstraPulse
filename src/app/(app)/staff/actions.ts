@@ -147,16 +147,20 @@ export async function deleteEmployeeAction(id: string): Promise<ActionResult> {
 }
 
 export async function createDepartmentAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
-  const name = String(formData.get("name") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  if (!name) return fail("Department name is required", { name: "Required" });
-  const existing = await prisma.department.findFirst({ where: { workspaceId: session.workspaceId, name } });
-  if (existing) return fail("Department already exists", { name: "Already exists" });
-  await prisma.department.create({ data: { workspaceId: session.workspaceId, name, description: description || null } });
-  await writeAudit({ session, action: "create", module: "departments", description: `Created department ${name}` });
-  revalidatePath("/departments");
-  return ok(undefined, "Department created");
+  try {
+    const session = await requireSession();
+    const name = String(formData.get("name") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim();
+    if (!name) return fail("Department name is required", { name: "Required" });
+    const existing = await prisma.department.findFirst({ where: { workspaceId: session.workspaceId, name } });
+    if (existing) return fail("Department already exists", { name: "Already exists" });
+    await prisma.department.create({ data: { workspaceId: session.workspaceId, name, description: description || null } });
+    await writeAudit({ session, action: "create", module: "departments", description: `Created department ${name}` });
+    revalidatePath("/departments");
+    return ok(undefined, "Department created");
+  } catch (e) {
+    return fail("Failed to create department. Please try again.");
+  }
 }
 
 export async function updateDepartmentAction(id: string, formData: FormData): Promise<ActionResult> {
@@ -172,13 +176,17 @@ export async function updateDepartmentAction(id: string, formData: FormData): Pr
 }
 
 export async function deleteDepartmentAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
-  const dept = await prisma.department.findFirst({ where: { id, workspaceId: session.workspaceId } });
-  if (!dept) return fail("Department not found");
-  await prisma.department.delete({ where: { id } });
-  await writeAudit({ session, action: "delete", module: "departments", recordId: id, description: `Deleted department ${dept.name}` });
-  revalidatePath("/departments");
-  return ok(undefined, "Department deleted");
+  try {
+    const session = await requireSession();
+    const dept = await prisma.department.findFirst({ where: { id, workspaceId: session.workspaceId } });
+    if (!dept) return fail("Department not found");
+    await prisma.department.delete({ where: { id } });
+    await writeAudit({ session, action: "delete", module: "departments", recordId: id, description: `Deleted department ${dept.name}` });
+    revalidatePath("/departments");
+    return ok(undefined, "Department deleted");
+  } catch (e) {
+    return fail("Failed to delete department. It may have employees assigned to it.");
+  }
 }
 
 function toFieldErrors(err: z.ZodError): Record<string, string> {

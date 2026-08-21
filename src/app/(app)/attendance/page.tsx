@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { attendanceStatsForDay } from "@/services/attendance";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
-import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { SmartTable, type SmartColumn, type SmartRow } from "@/components/app/smart-table";
 import { AttendanceDayPicker } from "./attendance-day-picker";

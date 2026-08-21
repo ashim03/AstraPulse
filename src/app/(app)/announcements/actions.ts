@@ -17,37 +17,45 @@ const schema = z.object({
 });
 
 export async function createAnnouncementAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
-  const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
-  const d = parsed.data;
-  const announcement = await prisma.announcement.create({
-    data: {
-      workspaceId: session.workspaceId,
-      title: d.title,
-      message: d.message,
-      audience: d.audience,
-      departmentId: d.departmentId || null,
-      priority: d.priority,
-      publishDate: d.publishDate ? new Date(d.publishDate) : null,
-      expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
-      status: "published",
-      authorId: session.id,
-    },
-  });
-  await writeAudit({ session, action: "create", module: "announcements", recordId: announcement.id, description: `Published announcement: ${d.title}` });
-  revalidatePath("/announcements");
-  return ok(undefined, "Announcement published");
+  try {
+    const session = await requireSession();
+    const parsed = schema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
+    const d = parsed.data;
+    const announcement = await prisma.announcement.create({
+      data: {
+        workspaceId: session.workspaceId,
+        title: d.title,
+        message: d.message,
+        audience: d.audience,
+        departmentId: d.departmentId || null,
+        priority: d.priority,
+        publishDate: d.publishDate ? new Date(d.publishDate) : null,
+        expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
+        status: "published",
+        authorId: session.id,
+      },
+    });
+    await writeAudit({ session, action: "create", module: "announcements", recordId: announcement.id, description: `Published announcement: ${d.title}` });
+    revalidatePath("/announcements");
+    return ok(undefined, "Announcement published");
+  } catch (e) {
+    return fail("Failed to create announcement. Please try again.");
+  }
 }
 
 export async function deleteAnnouncementAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
-  const announcement = await prisma.announcement.findFirst({ where: { id, workspaceId: session.workspaceId } });
-  if (!announcement) return fail("Announcement not found");
-  await prisma.announcement.delete({ where: { id } });
-  await writeAudit({ session, action: "delete", module: "announcements", recordId: id, description: `Deleted announcement: ${announcement.title}` });
-  revalidatePath("/announcements");
-  return ok(undefined, "Announcement deleted");
+  try {
+    const session = await requireSession();
+    const announcement = await prisma.announcement.findFirst({ where: { id, workspaceId: session.workspaceId } });
+    if (!announcement) return fail("Announcement not found");
+    await prisma.announcement.delete({ where: { id } });
+    await writeAudit({ session, action: "delete", module: "announcements", recordId: id, description: `Deleted announcement: ${announcement.title}` });
+    revalidatePath("/announcements");
+    return ok(undefined, "Announcement deleted");
+  } catch (e) {
+    return fail("Failed to delete announcement. Please try again.");
+  }
 }
 
 function toErrors(err: z.ZodError): Record<string, string> {

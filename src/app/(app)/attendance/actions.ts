@@ -67,14 +67,18 @@ export async function attendanceAdjustAction(
   id: string,
   data: { hours: number; status: string; note?: string }
 ): Promise<ActionResult> {
-  const session = await requireSession();
-  const record = await prisma.attendance.findFirst({ where: { id, workspaceId: session.workspaceId } });
-  if (!record) return fail("Record not found");
-  await prisma.attendance.update({
-    where: { id },
-    data: { hours: data.hours, status: data.status as never, note: data.note || null },
-  });
-  await writeAudit({ session, action: "edit", module: "attendance", recordId: id, description: `Adjusted attendance record` });
-  revalidatePath("/attendance");
-  return ok(undefined, "Record updated");
+  try {
+    const session = await requireSession();
+    const record = await prisma.attendance.findFirst({ where: { id, workspaceId: session.workspaceId } });
+    if (!record) return fail("Record not found");
+    await prisma.attendance.update({
+      where: { id },
+      data: { hours: data.hours, status: data.status as never, note: data.note || null },
+    });
+    await writeAudit({ session, action: "edit", module: "attendance", recordId: id, description: `Adjusted attendance record` });
+    revalidatePath("/attendance");
+    return ok(undefined, "Record updated");
+  } catch (e) {
+    return fail("Failed to update attendance record. Please try again.");
+  }
 }

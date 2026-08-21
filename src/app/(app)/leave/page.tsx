@@ -5,7 +5,6 @@ import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LeaveManager } from "./leave-manager";
 import { CalendarCheck, Hourglass, CalendarX, UserCheck } from "lucide-react";
 import type { SmartRow } from "@/components/app/smart-table";

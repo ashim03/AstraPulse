@@ -34,8 +34,15 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
 
   const totalLeaveDays = employee.leaveRequests.filter((l) => l.status === "approved").reduce((a, b) => a + b.days, 0);
   const outstandingAdvances = employee.advances.reduce((a, b) => a + b.outstanding, 0);
-  const totalOvertimeHours = 0;
   const totalWorkedHours = employee.workRecords.reduce((a, b) => a + b.hours, 0);
+
+  const recentAttendance = await prisma.attendance.findMany({
+    where: { employeeId: employee.id, workspaceId: session.workspaceId },
+    orderBy: { date: "desc" },
+    take: 30,
+    select: { overtime: true },
+  });
+  const totalOvertimeHours = recentAttendance.reduce((a, b) => a + b.overtime, 0);
 
   const editHref = `/staff/${employee.id}/edit`;
 

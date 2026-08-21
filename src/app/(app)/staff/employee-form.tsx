@@ -49,8 +49,6 @@ export function EmployeeForm({
   const [pending, setPending] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const action = isEdit ? updateEmployeeAction : createEmployeeAction;
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);

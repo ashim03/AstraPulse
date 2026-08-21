@@ -37,10 +37,10 @@ export default async function AnalyticsPage() {
   const attendanceByMonth = months.map((m) => ({ month: m, hours: 0 }));
   const invoiceByMonth = months.map((m) => ({ month: m, value: 0 }));
 
-  for (const i of income) revenueByMonth.find((x) => x.month === monthKey(i.date))!.value += i.amount;
-  for (const e of expenses) expenseByMonth.find((x) => x.month === monthKey(e.date))!.value += e.amount;
-  for (const a of attendance) attendanceByMonth.find((x) => x.month === monthKey(a.date))!.hours += a.hours;
-  for (const inv of invoices) invoiceByMonth.find((x) => x.month === monthKey(inv.date))!.value += inv.total;
+  for (const i of income) { const m = revenueByMonth.find((x) => x.month === monthKey(i.date)); if (m) m.value += i.amount; }
+  for (const e of expenses) { const m = expenseByMonth.find((x) => x.month === monthKey(e.date)); if (m) m.value += e.amount; }
+  for (const a of attendance) { const m = attendanceByMonth.find((x) => x.month === monthKey(a.date)); if (m) m.hours += a.hours; }
+  for (const inv of invoices) { const m = invoiceByMonth.find((x) => x.month === monthKey(inv.date)); if (m) m.value += inv.total; }
 
   const deptCount = new Map<string, number>();
   for (const e of employees) {

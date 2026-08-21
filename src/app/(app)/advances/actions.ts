@@ -15,27 +15,31 @@ const schema = z.object({
 });
 
 export async function createAdvanceAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
-  const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
-  const d = parsed.data;
-  const installment = Math.round((d.amount / d.months) * 100) / 100;
-  const advance = await prisma.employeeAdvance.create({
-    data: {
-      workspaceId: session.workspaceId,
-      employeeId: d.employeeId,
-      amount: d.amount,
-      date: new Date(d.date),
-      months: d.months,
-      installment,
-      outstanding: d.amount,
-      reason: d.reason || null,
-      status: "pending",
-    },
-  });
-  await writeAudit({ session, action: "create", module: "advances", recordId: advance.id, description: `Advance of ${d.amount} for ${d.months} month(s)` });
-  revalidatePath("/advances");
-  return ok(undefined, "Advance requested");
+  try {
+    const session = await requireSession();
+    const parsed = schema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
+    const d = parsed.data;
+    const installment = Math.round((d.amount / d.months) * 100) / 100;
+    const advance = await prisma.employeeAdvance.create({
+      data: {
+        workspaceId: session.workspaceId,
+        employeeId: d.employeeId,
+        amount: d.amount,
+        date: new Date(d.date),
+        months: d.months,
+        installment,
+        outstanding: d.amount,
+        reason: d.reason || null,
+        status: "pending",
+      },
+    });
+    await writeAudit({ session, action: "create", module: "advances", recordId: advance.id, description: `Advance of ${d.amount} for ${d.months} month(s)` });
+    revalidatePath("/advances");
+    return ok(undefined, "Advance requested");
+  } catch (e) {
+    return fail("Failed to create advance. Please try again.");
+  }
 }
 
 export async function reviewAdvanceAction(id: string, status: "approved" | "rejected"): Promise<ActionResult> {

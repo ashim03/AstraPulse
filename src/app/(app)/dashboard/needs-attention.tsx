@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, FileText, HandCoins, Receipt, UserX, FileWarning, ChevronRight, AlertTriangle } from "lucide-react";
+import { CalendarClock, FileText, HandCoins, Receipt, UserX, FileWarning, ChevronRight, CheckCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -140,7 +140,7 @@ export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
       <CardBody className="space-y-4 px-5 py-4">
         {!hasItems && (
           <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
-            <AlertTriangle className="h-5 w-5" />
+            <CheckCircle className="h-5 w-5" />
             <span>All caught up — nothing needs your attention.</span>
           </div>
         )}
