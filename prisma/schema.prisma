@@ -1,0 +1,706 @@
+// AstraPulse - HR + Accounting & Payroll data model
+// Uses string-based enums for maximum portability (SQLite dev / PostgreSQL prod).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  slug            String   @unique
+  phone           String?
+  country         String?
+  currency        String   @default("USD")
+  timezone        String   @default("America/New_York")
+  businessType    String?
+  fiscalYearStart Int      @default(1)
+  dateFormat      String   @default("MM/DD/YYYY")
+  logo            String?
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users                  User[]
+  roles                  Role[]
+  employees              Employee[]
+  departments            Department[]
+  positions              Position[]
+  attendances            Attendance[]
+  attendanceAdjustments  AttendanceAdjustment[]
+  leaveTypes             LeaveType[]
+  leaveRequests          LeaveRequest[]
+  holidays               Holiday[]
+  tasks                  Task[]
+  workRecords            WorkRecord[]
+  advances               EmployeeAdvance[]
+  payrolls               Payroll[]
+  expenses               Expense[]
+  incomes                Income[]
+  customers              Customer[]
+  vendors                Vendor[]
+  invoices               Invoice[]
+  payments               Payment[]
+  bankAccounts           BankAccount[]
+  accounts               Account[]
+  journalEntries         JournalEntry[]
+  auditLogs              AuditLog[]
+  announcements          Announcement[]
+  messages               Message[]
+  notifications          Notification[]
+  subscription           Subscription?
+  paymentRequests        PaymentRequest[]
+  documents              Document[]
+}
+
+model User {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name             String
+  email            String
+  phone            String?
+  passwordHash     String
+  roleId           String?
+  role             Role?     @relation(fields: [roleId], references: [id])
+  employeeId       String?
+  employee         Employee? @relation(fields: [employeeId], references: [id])
+  twoFactorSecret  String?
+  twoFactorEnabled Boolean   @default(false)
+  status           String    @default("active")
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sentMessages     Message[]           @relation("SentMessages")
+  receivedMessages MessageRecipient[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  taskComments     TaskComment[]
+  announcements    Announcement[]
+
+  @@unique([workspaceId, email])
+  @@unique([employeeId])
+  @@index([workspaceId])
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isSystem    Boolean @default(false)
+  permissions String  @default("[]")
+  users       User[]
+
+  @@unique([workspaceId, name])
+}
+
+model Department {
+  id          String  @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  managerId   String?
+  manager     Employee?  @relation("DeptManager", fields: [managerId], references: [id])
+  parentId    String?
+  employees   Employee[]
+  positions   Position[]
+  tasks       Task[]
+  announcements Announcement[]
+
+  @@unique([workspaceId, name])
+}
+
+model Position {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  name         String
+  level        String?
+  salaryMin    Float?
+  salaryMax    Float?
+  employees    Employee[]
+}
+
+model Employee {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId        String
+  name              String
+  email             String
+  phone             String?
+  avatar            String?
+  address           String?
+  city              String?
+  country           String?
+  dateOfBirth       DateTime?
+  gender            String?
+  emergencyName     String?
+  emergencyPhone    String?
+  emergencyRelation String?
+  departmentId      String?
+  department        Department? @relation(fields: [departmentId], references: [id])
+  positionId        String?
+  position          Position?  @relation(fields: [positionId], references: [id])
+  managerId         String?
+  reportsTo         Employee?  @relation("ReportsTo", fields: [managerId], references: [id])
+  directReports     Employee[] @relation("ReportsTo")
+  employmentType    String     @default("full_time")
+  joinDate          DateTime
+  contractEndDate   DateTime?
+  status            String     @default("active")
+  workLocation      String?
+  baseSalary        Float      @default(0)
+  paymentMethod     String?
+  bankName          String?
+  bankAccountNumber String?
+  accountHolder     String?
+  taxId             String?
+  createdBy         String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  user              User?
+  salaryComponents  SalaryComponent[]
+  attendances       Attendance[]
+  adjustments       AttendanceAdjustment[]
+  leaveRequests     LeaveRequest[]
+  tasks             Task[]
+  workRecords       WorkRecord[]
+  advances          EmployeeAdvance[]
+  payrollItems      PayrollItem[]
+  expenses          Expense[]
+  managedDepartments Department[] @relation("DeptManager")
+
+  @@unique([workspaceId, employeeId])
+  @@index([workspaceId])
+}
+
+model SalaryComponent {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type          String
+  name          String
+  amount        Float
+  effectiveFrom DateTime @default(now())
+  recurring     Boolean  @default(true)
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date         DateTime
+  clockIn      DateTime?
+  clockOut     DateTime?
+  status       String   @default("present")
+  hours        Float    @default(0)
+  overtime     Float    @default(0)
+  breakMinutes Int      @default(0)
+  location     String?
+  note         String?
+  source       String   @default("self")
+  approvedById String?
+
+  @@unique([employeeId, date])
+  @@index([workspaceId])
+}
+
+model AttendanceAdjustment {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date        DateTime
+  type        String
+  reason      String?
+  status      String   @default("pending")
+  reviewedBy  String?
+  reviewedAt  DateTime?
+}
+
+model LeaveType {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  daysPerYear  Float         @default(0)
+  carryForward Boolean       @default(false)
+  color        String        @default("#6366f1")
+  icon         String?
+  requests     LeaveRequest[]
+}
+
+model LeaveRequest {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  typeId      String
+  type        LeaveType @relation(fields: [typeId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  days        Float
+  reason      String?
+  attachment  String?
+  status      String    @default("pending")
+  approverId  String?
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+}
+
+model Holiday {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  date        DateTime
+  recurring   Boolean  @default(false)
+  region      String?
+}
+
+model Task {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  assigneeId   String?
+  assignee     Employee?     @relation(fields: [assigneeId], references: [id])
+  departmentId String?
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  priority     String        @default("medium")
+  dueDate      DateTime?
+  status       String        @default("todo")
+  labels       String        @default("[]")
+  attachment   String?
+  createdBy    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  comments     TaskComment[]
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model WorkRecord {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  project     String
+  date        DateTime
+  startTime   String?
+  endTime     String?
+  hours       Float
+  description String?
+  billable    Boolean  @default(true)
+  status      String   @default("pending")
+  approvedBy  String?
+  approvedAt  DateTime?
+
+  @@index([workspaceId])
+}
+
+model EmployeeAdvance {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  amount      Float
+  date        DateTime
+  reason      String?
+  months      Int      @default(1)
+  installment Float    @default(0)
+  outstanding Float    @default(0)
+  status      String   @default("pending")
+  approvedBy  String?
+  approvedAt  DateTime?
+
+  @@index([workspaceId])
+}
+
+model Payroll {
+  id                String        @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  period            String
+  name              String
+  status            String        @default("draft")
+  grossTotal        Float         @default(0)
+  deductionTotal    Float         @default(0)
+  taxTotal          Float         @default(0)
+  netTotal          Float         @default(0)
+  employerCostTotal Float         @default(0)
+  processedAt       DateTime?
+  lockedAt          DateTime?
+  approvedBy        String?
+  approvedAt        DateTime?
+  items             PayrollItem[]
+
+  @@unique([workspaceId, period])
+  @@index([workspaceId])
+}
+
+model PayrollItem {
+  id              String   @id @default(cuid())
+  payrollId       String
+  payroll         Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  baseSalary      Float    @default(0)
+  allowances      Float    @default(0)
+  bonuses         Float    @default(0)
+  overtime        Float    @default(0)
+  gross           Float    @default(0)
+  deductions      Float    @default(0)
+  tax             Float    @default(0)
+  advanceDeduction Float   @default(0)
+  benefits        Float    @default(0)
+  net             Float    @default(0)
+  employerCost    Float    @default(0)
+  paymentStatus   String   @default("pending")
+}
+
+model Expense {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  number        String
+  employeeId    String?
+  employee      Employee? @relation(fields: [employeeId], references: [id])
+  vendorId      String?
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  category      String
+  date          DateTime
+  amount        Float
+  tax           Float     @default(0)
+  paymentMethod String?
+  accountId     String?
+  account       Account?  @relation(fields: [accountId], references: [id])
+  description   String?
+  receipt       String?
+  status        String    @default("draft")
+  approvedBy    String?
+  approvedAt    DateTime?
+  payments      Payment[]
+
+  @@index([workspaceId])
+}
+
+model Income {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  number        String
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  category      String
+  date          DateTime
+  amount        Float
+  tax           Float     @default(0)
+  paymentMethod String?
+  accountId     String?
+  account       Account?  @relation(fields: [accountId], references: [id])
+  description   String?
+  attachment    String?
+
+  @@index([workspaceId])
+}
+
+model Customer {
+  id       String    @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name     String
+  email    String?
+  phone    String?
+  address  String?
+  taxId    String?
+  invoices Invoice[]
+  payments Payment[]
+  incomes  Income[]
+}
+
+model Vendor {
+  id       String   @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name     String
+  email    String?
+  phone    String?
+  address  String?
+  taxId    String?
+  expenses Expense[]
+  payments Payment[]
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  number      String
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  date        DateTime
+  dueDate     DateTime
+  status      String        @default("draft")
+  subtotal    Float         @default(0)
+  discount    Float         @default(0)
+  tax         Float         @default(0)
+  total       Float         @default(0)
+  paid        Float         @default(0)
+  terms       String?
+  notes       String?
+  items       InvoiceItem[]
+  payments    Payment[]
+
+  @@index([workspaceId])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float   @default(1)
+  unitPrice   Float   @default(0)
+  tax         Float   @default(0)
+  amount      Float   @default(0)
+}
+
+model Payment {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  reference     String
+  date          DateTime
+  amount        Float
+  direction     String       @default("in")
+  customerId    String?
+  customer      Customer?    @relation(fields: [customerId], references: [id])
+  vendorId      String?
+  vendor        Vendor?      @relation(fields: [vendorId], references: [id])
+  invoiceId     String?
+  invoice       Invoice?     @relation(fields: [invoiceId], references: [id])
+  expenseId     String?
+  expense       Expense?     @relation(fields: [expenseId], references: [id])
+  method        String
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+  notes         String?
+  reconciled    Boolean      @default(false)
+  reconciledAt  DateTime?
+
+  @@index([workspaceId])
+}
+
+model BankAccount {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name          String
+  bank          String
+  accountNumber String
+  currency      String    @default("USD")
+  openingBalance Float    @default(0)
+  currentBalance Float    @default(0)
+  payments      Payment[]
+}
+
+model Account {
+  id            String        @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code          String
+  name          String
+  type          String
+  parentId      String?
+  openingBalance Float        @default(0)
+  balance       Float         @default(0)
+  status        String        @default("active")
+  isSystem      Boolean       @default(false)
+  journalLines  JournalLine[]
+  expenses      Expense[]
+  incomes       Income[]
+
+  @@unique([workspaceId, code])
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  number      String
+  date        DateTime
+  description String
+  status      String        @default("draft")
+  attachment  String?
+  createdBy   String?
+  createdAt   DateTime      @default(now())
+  lines       JournalLine[]
+
+  @@index([workspaceId])
+}
+
+model JournalLine {
+  id        String       @id @default(cuid())
+  journalId String
+  journal   JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account      @relation(fields: [accountId], references: [id])
+  debit     Float        @default(0)
+  credit    Float        @default(0)
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  module      String
+  recordId    String?
+  description String
+  before      String?
+  after       String?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
+}
+
+model Announcement {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title        String
+  message      String
+  audience     String      @default("all")
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  priority     String      @default("normal")
+  publishDate  DateTime?
+  expiryDate   DateTime?
+  attachment   String?
+  status       String      @default("draft")
+  authorId     String?
+  author       User?       @relation(fields: [authorId], references: [id])
+  createdAt    DateTime    @default(now())
+}
+
+model Message {
+  id          String            @id @default(cuid())
+  workspaceId String
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User              @relation("SentMessages", fields: [senderId], references: [id])
+  subject     String
+  body        String?
+  attachment  String?
+  parentId    String?
+  createdAt   DateTime          @default(now())
+  recipients  MessageRecipient[]
+}
+
+model MessageRecipient {
+  id          String   @id @default(cuid())
+  messageId   String
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User     @relation(fields: [recipientId], references: [id])
+  readAt      DateTime?
+
+  @@unique([messageId, recipientId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  body        String?
+  type        String   @default("info")
+  link        String?
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Subscription {
+  id              String    @id @default(cuid())
+  workspaceId     String    @unique
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  plan            String    @default("starter")
+  status          String    @default("active")
+  billingPeriod   String    @default("monthly")
+  price           Float     @default(49)
+  employeeLimit   Int       @default(15)
+  startDate       DateTime  @default(now())
+  renewalDate     DateTime
+  paymentRequests PaymentRequest[]
+}
+
+model PaymentRequest {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  amount         Float
+  method         String        @default("card")
+  reference      String
+  qrCode         String?
+  status         String        @default("pending")
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  entityType  String
+  entityId    String
+  name        String
+  filePath    String
+  type        String?
+  size        Int      @default(0)
+  expiresAt   DateTime?
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, entityType, entityId])
+}

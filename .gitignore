@@ -1,0 +1,14 @@
+﻿node_modules/
+.next/
+out/
+.env
+.env.local
+.env.development.local
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+tmp-*.mts
+tmp-*.txt
+smoke.*
+.DS_Store
