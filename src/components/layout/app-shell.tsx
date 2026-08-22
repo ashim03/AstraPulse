@@ -22,12 +22,16 @@ const BOTTOM_NAV = [
 export function AppShell({
   user,
   workspace,
+  permissions,
+  showSubscription,
   notifications,
   unreadCount,
   children,
 }: {
   user: { name: string; email: string; role?: string; onLogout: () => Promise<{ ok: boolean }> };
   workspace: { name: string; plan?: string; status?: string };
+  permissions?: string[];
+  showSubscription?: boolean;
   notifications: Notif[];
   unreadCount: number;
   children: ReactNode;
@@ -44,6 +48,8 @@ export function AppShell({
         workspaceName={workspace.name}
         workspacePlan={workspace.plan}
         unreadCount={unreadCount}
+        permissions={permissions}
+        showSubscription={showSubscription}
       />
       <MobileDrawer
         open={mobileOpen}
@@ -51,6 +57,7 @@ export function AppShell({
         workspaceName={workspace.name}
         workspacePlan={workspace.plan}
         unreadCount={unreadCount}
+        permissions={permissions}
       />
 
       <div className={cn("flex min-h-screen flex-col transition-all duration-200", collapsed ? "lg:pl-[68px]" : "lg:pl-[248px]")}>

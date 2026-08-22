@@ -2,13 +2,27 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { startOfDay } from "date-fns";
 import { syncHikvisionAttendanceToDatabase } from "@/services/hikvision";
 
-export async function clockInAction(): Promise<ActionResult> {
+async function requirePermission(module: string, action: PermissionAction = "view") {
   const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
+
+export async function clockInAction(): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("attendance", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const user = await prisma.user.findFirst({
     where: { id: session.id, workspaceId: session.workspaceId },
     include: { employee: true },
@@ -38,7 +52,12 @@ export async function clockInAction(): Promise<ActionResult> {
 }
 
 export async function clockOutAction(): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("attendance", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const user = await prisma.user.findFirst({
     where: { id: session.id, workspaceId: session.workspaceId },
     include: { employee: true },
@@ -69,7 +88,7 @@ export async function attendanceAdjustAction(
   data: { hours: number; status: string; note?: string }
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession();
+    const session = await requirePermission("attendance", "edit");
     const record = await prisma.attendance.findFirst({ where: { id, workspaceId: session.workspaceId } });
     if (!record) return fail("Record not found");
     await prisma.attendance.update({
@@ -93,7 +112,7 @@ export async function syncHikvisionAttendanceAction(
   endDate?: string
 ): Promise<{ ok: boolean; message: string; imported: number; created: number; updated: number; errors: string[] }> {
   try {
-    const session = await requireSession();
+    const session = await requirePermission("attendance", "create");
     const begin = beginDate ? new Date(beginDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
 

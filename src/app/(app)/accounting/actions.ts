@@ -2,10 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { postJournalEntry, recomputeAccountBalance } from "@/services/accounting";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const accountSchema = z.object({
   code: z.string().min(1, "Code is required"),
@@ -15,7 +24,12 @@ const accountSchema = z.object({
 });
 
 export async function createAccountAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("accounting", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = accountSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
@@ -47,7 +61,12 @@ const journalSchema = z.object({
 });
 
 export async function createJournalEntryAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("accounting", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = journalSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
@@ -77,7 +96,12 @@ export async function createJournalEntryAction(formData: FormData): Promise<Acti
 }
 
 export async function postJournalAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("accounting", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const entry = await prisma.journalEntry.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!entry) return fail("Journal entry not found");
   try {
@@ -91,7 +115,12 @@ export async function postJournalAction(id: string): Promise<ActionResult> {
 }
 
 export async function createBankAccountAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("accounting", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const name = String(formData.get("name") ?? "");
   const bank = String(formData.get("bank") ?? "");
   const accountNumber = String(formData.get("accountNumber") ?? "");

@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth";
 import { bootstrapWorkspace } from "@/server/bootstrap";
 import { fail, ok, writeAudit, type ActionResult } from "@/lib/actions";
+import { parsePermissions } from "@/lib/permissions";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -20,7 +21,7 @@ const loginSchema = z.object({
   code: z.string().optional(),
 });
 
-export async function loginAction(input: { email: string; password: string }): Promise<ActionResult<{ need2fa: boolean; userId?: string }>> {
+export async function loginAction(input: { email: string; password: string }): Promise<ActionResult<{ need2fa: boolean; userId?: string; accountType?: string }>> {
   const parsed = loginSchema.pick({ email: true, password: true }).safeParse(input);
   if (!parsed.success) {
     return fail("Please check your details", Object.fromEntries(parsed.error.issues.map((i) => [i.path[0], i.message])));
@@ -42,6 +43,8 @@ export async function loginAction(input: { email: string; password: string }): P
       name: user.name,
       email: user.email,
       role: user.role?.name ?? "",
+      rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
+      accountType: user.accountType ?? "organization",
       employeeId: user.employeeId ?? null,
     },
     action: "login",
@@ -59,13 +62,15 @@ export async function loginAction(input: { email: string; password: string }): P
     name: user.name,
     email: user.email,
     role: user.role?.name ?? "Employee",
+    rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
+    accountType: user.accountType ?? "organization",
     employeeId: user.employeeId ?? null,
   });
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-  return ok(undefined, "Welcome back!");
+  return ok({ need2fa: false, accountType: user.accountType ?? "organization" }, "Welcome back!");
 }
 
-export async function verifyTwoFactorAction(userId: string, code: string): Promise<ActionResult> {
+export async function verifyTwoFactorAction(userId: string, code: string): Promise<ActionResult<{ accountType: string }>> {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { role: true } });
   if (!user?.twoFactorSecret) return fail("Two-factor is not enabled for this account");
   if (!verifyTotp(user.twoFactorSecret, code)) return fail("Invalid verification code");
@@ -76,10 +81,12 @@ export async function verifyTwoFactorAction(userId: string, code: string): Promi
     name: user.name,
     email: user.email,
     role: user.role?.name ?? "Employee",
+    rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
+    accountType: user.accountType ?? "organization",
     employeeId: user.employeeId ?? null,
   });
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-  return ok(undefined, "Authenticated");
+  return ok({ accountType: user.accountType ?? "organization" }, "Authenticated");
 }
 
 const registerSchema = z.object({
@@ -121,6 +128,8 @@ export async function registerAction(input: z.infer<typeof registerSchema>): Pro
     name: user.name,
     email: user.email,
     role: "Workspace Admin",
+    rolePermissions: [],
+    accountType: "organization",
     employeeId: null,
   });
 

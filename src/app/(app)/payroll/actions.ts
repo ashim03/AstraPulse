@@ -2,13 +2,27 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { buildPayrollRun } from "@/services/payroll";
 import { z } from "zod";
 
-export async function runPayrollAction(formData: FormData): Promise<ActionResult> {
+async function requirePermission(module: string, action: PermissionAction = "view") {
   const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
+
+export async function runPayrollAction(formData: FormData): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const period = String(formData.get("period") ?? "");
   if (!/^\d{4}-\d{2}$/.test(period)) return fail("Period must be YYYY-MM");
 
@@ -40,7 +54,12 @@ export async function runPayrollAction(formData: FormData): Promise<ActionResult
 }
 
 export async function updatePayrollStatusAction(id: string, status: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("payroll", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const payroll = await prisma.payroll.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!payroll) return fail("Payroll not found");
 

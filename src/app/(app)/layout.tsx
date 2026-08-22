@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/layout/app-shell";
 import { logoutAction } from "../(auth)/actions";
+import { parsePermissions } from "@/lib/permissions";
 import type { Notif } from "@/components/layout/notifications";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) {
     redirect("/login");
   }
+
+  // Parse permissions from the role
+  const rolePermissions = parsePermissions(user.role?.permissions ?? "[]");
+  const isAdmin = user.role?.name === "Workspace Admin";
 
   const notifications = await prisma.notification.findMany({
     where: { userId: user.id, workspaceId: user.workspaceId },
@@ -48,6 +53,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         plan: user.workspace.subscription?.plan ?? undefined,
         status: user.workspace.subscription?.status ?? undefined,
       }}
+      permissions={rolePermissions}
+      showSubscription={isAdmin}
       notifications={notifProps}
       unreadCount={unreadCount}
     >

@@ -71,6 +71,7 @@ async function main() {
   console.log("\n=== Seed complete ===");
   console.table(counts);
   console.log("\nDemo logins (password: Admin@123):");
+  console.log("  superadmin@astrapulse.com - Super Admin");
   console.log("  admin@nova.local        - Workspace Admin");
   console.log("  hr@nova.local           - HR Manager");
   console.log("  accountant@nova.local   - Accountant");

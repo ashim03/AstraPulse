@@ -2,9 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const schema = z.object({
   direction: z.string().min(1),
@@ -17,7 +26,12 @@ const schema = z.object({
 });
 
 export async function recordPaymentAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("payments", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
@@ -61,7 +75,12 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
 }
 
 export async function reconcilePaymentAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("payments", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const payment = await prisma.payment.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!payment) return fail("Payment not found");
   await prisma.payment.update({ where: { id }, data: { reconciled: true, reconciledAt: new Date() } });

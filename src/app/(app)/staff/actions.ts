@@ -2,10 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -31,7 +40,12 @@ const schema = z.object({
 });
 
 export async function createEmployeeAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("staff", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toFieldErrors(parsed.error));
 
@@ -96,7 +110,12 @@ export async function createEmployeeAction(formData: FormData): Promise<ActionRe
 }
 
 export async function updateEmployeeStatusAction(id: string, status: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("staff", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const current = await prisma.employee.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!current) return fail("Employee not found");
   await prisma.employee.update({ where: { id }, data: { status: status as never } });
@@ -106,7 +125,12 @@ export async function updateEmployeeStatusAction(id: string, status: string): Pr
 }
 
 export async function updateEmployeeAction(id: string, formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("staff", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toFieldErrors(parsed.error));
   const d = parsed.data;
@@ -137,7 +161,12 @@ export async function updateEmployeeAction(id: string, formData: FormData): Prom
 }
 
 export async function deleteEmployeeAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("staff", "delete");
+  } catch {
+    return fail("You don't have permission");
+  }
   const employee = await prisma.employee.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!employee) return fail("Employee not found");
   await prisma.employee.delete({ where: { id } });
@@ -148,7 +177,7 @@ export async function deleteEmployeeAction(id: string): Promise<ActionResult> {
 
 export async function createDepartmentAction(formData: FormData): Promise<ActionResult> {
   try {
-    const session = await requireSession();
+    const session = await requirePermission("departments", "create");
     const name = String(formData.get("name") ?? "").trim();
     const description = String(formData.get("description") ?? "").trim();
     if (!name) return fail("Department name is required", { name: "Required" });
@@ -164,7 +193,12 @@ export async function createDepartmentAction(formData: FormData): Promise<Action
 }
 
 export async function updateDepartmentAction(id: string, formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("departments", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return fail("Department name is required", { name: "Required" });
   const dept = await prisma.department.findFirst({ where: { id, workspaceId: session.workspaceId } });
@@ -177,7 +211,7 @@ export async function updateDepartmentAction(id: string, formData: FormData): Pr
 
 export async function deleteDepartmentAction(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession();
+    const session = await requirePermission("departments", "delete");
     const dept = await prisma.department.findFirst({ where: { id, workspaceId: session.workspaceId } });
     if (!dept) return fail("Department not found");
     await prisma.department.delete({ where: { id } });

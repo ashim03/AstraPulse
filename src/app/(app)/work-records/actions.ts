@@ -2,9 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const schema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -18,7 +27,12 @@ const schema = z.object({
 });
 
 export async function createWorkRecordAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("work-records", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
@@ -42,7 +56,12 @@ export async function createWorkRecordAction(formData: FormData): Promise<Action
 }
 
 export async function approveWorkRecordAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("work-records", "approve");
+  } catch {
+    return fail("You don't have permission");
+  }
   const record = await prisma.workRecord.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!record) return fail("Record not found");
   await prisma.workRecord.update({ where: { id }, data: { status: "approved", approvedBy: session.id, approvedAt: new Date() } });
@@ -52,7 +71,12 @@ export async function approveWorkRecordAction(id: string): Promise<ActionResult>
 }
 
 export async function deleteWorkRecordAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("work-records", "delete");
+  } catch {
+    return fail("You don't have permission");
+  }
   const record = await prisma.workRecord.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!record) return fail("Record not found");
   await prisma.workRecord.delete({ where: { id } });

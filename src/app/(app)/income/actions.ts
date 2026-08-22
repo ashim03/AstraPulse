@@ -2,9 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const schema = z.object({
   customerName: z.string().optional().or(z.literal("")),
@@ -17,7 +26,12 @@ const schema = z.object({
 });
 
 export async function createIncomeAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("income", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
@@ -48,7 +62,12 @@ export async function createIncomeAction(formData: FormData): Promise<ActionResu
 }
 
 export async function deleteIncomeAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("income", "delete");
+  } catch {
+    return fail("You don't have permission");
+  }
   const income = await prisma.income.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!income) return fail("Income not found");
   await prisma.income.delete({ where: { id } });

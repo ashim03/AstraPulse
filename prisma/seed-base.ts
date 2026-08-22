@@ -115,6 +115,23 @@ export async function seedBase(ctx: SeedContext): Promise<void> {
     ctx.userIds[u.email] = user.id;
   }
 
+  // Super Admin user
+  const superAdminRole = await prisma.role.findFirst({ where: { workspaceId: ctx.workspace.id, name: "Super Admin" } });
+  await prisma.user.upsert({
+    where: { workspaceId_email: { workspaceId: ctx.workspace.id, email: "superadmin@astrapulse.com" } },
+    update: {},
+    create: {
+      workspaceId: ctx.workspace.id,
+      name: "Super Admin",
+      email: "superadmin@astrapulse.com",
+      passwordHash,
+      roleId: superAdminRole?.id,
+      accountType: "super_admin",
+      status: "active",
+    },
+  });
+  ctx.userIds["superadmin@astrapulse.com"] = (await prisma.user.findFirst({ where: { email: "superadmin@astrapulse.com", workspaceId: ctx.workspace.id } }))!.id;
+
   // Departments & positions
   for (const d of DEPARTMENTS) {
     const dept = await prisma.department.create({

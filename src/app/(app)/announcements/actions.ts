@@ -2,9 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -18,7 +27,7 @@ const schema = z.object({
 
 export async function createAnnouncementAction(formData: FormData): Promise<ActionResult> {
   try {
-    const session = await requireSession();
+    const session = await requirePermission("announcements", "create");
     const parsed = schema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
     const d = parsed.data;
@@ -46,7 +55,7 @@ export async function createAnnouncementAction(formData: FormData): Promise<Acti
 
 export async function deleteAnnouncementAction(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession();
+    const session = await requirePermission("announcements", "delete");
     const announcement = await prisma.announcement.findFirst({ where: { id, workspaceId: session.workspaceId } });
     if (!announcement) return fail("Announcement not found");
     await prisma.announcement.delete({ where: { id } });

@@ -2,11 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
 import { computeLeaveBalance } from "@/services/leave";
 import { differenceInCalendarDays } from "date-fns";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const schema = z.object({
   employeeId: z.string().min(1, "Employee is required"),
@@ -17,7 +26,12 @@ const schema = z.object({
 });
 
 export async function createLeaveRequestAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("leave", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
@@ -64,7 +78,12 @@ export async function createLeaveRequestAction(formData: FormData): Promise<Acti
 }
 
 export async function approveLeaveRequestAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("leave", "approve");
+  } catch {
+    return fail("You don't have permission");
+  }
   const request = await prisma.leaveRequest.findFirst({
     where: { id, workspaceId: session.workspaceId },
     include: { employee: { include: { user: true } } },
@@ -81,7 +100,12 @@ export async function approveLeaveRequestAction(id: string): Promise<ActionResul
 }
 
 export async function rejectLeaveRequestAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("leave", "approve");
+  } catch {
+    return fail("You don't have permission");
+  }
   const request = await prisma.leaveRequest.findFirst({
     where: { id, workspaceId: session.workspaceId },
     include: { employee: { include: { user: true } } },
@@ -97,7 +121,12 @@ export async function rejectLeaveRequestAction(id: string): Promise<ActionResult
 }
 
 export async function cancelLeaveRequestAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("leave", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const request = await prisma.leaveRequest.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!request) return fail("Request not found");
   await prisma.leaveRequest.update({ where: { id }, data: { status: "cancelled" } });
@@ -107,7 +136,12 @@ export async function cancelLeaveRequestAction(id: string): Promise<ActionResult
 }
 
 export async function createLeaveTypeAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("leave", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const name = String(formData.get("name") ?? "").trim();
   const daysPerYear = Number(formData.get("daysPerYear") ?? 0);
   if (!name) return fail("Leave type name is required", { name: "Required" });

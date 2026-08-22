@@ -42,6 +42,7 @@ export function DemoAccounts() {
     <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3.5 text-xs">
       <p className="mb-2 font-semibold text-slate-600">Demo accounts (password: Admin@123)</p>
       <ul className="space-y-1 font-mono text-slate-500">
+        <li>superadmin@astrapulse.com — Super Admin</li>
         <li>admin@nova.local — Workspace Admin</li>
         <li>hr@nova.local — HR Manager</li>
         <li>accountant@nova.local — Accountant</li>

@@ -2,11 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 
-export async function updateWorkspaceSettingsAction(formData: FormData): Promise<ActionResult> {
+async function requirePermission(module: string, action: PermissionAction = "view") {
   const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
+
+export async function updateWorkspaceSettingsAction(formData: FormData): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("settings", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "");
@@ -29,7 +43,12 @@ export async function updateWorkspaceSettingsAction(formData: FormData): Promise
 }
 
 export async function updateProfileAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("settings", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return fail("Name is required");
   await prisma.user.update({ where: { id: session.id }, data: { name } });

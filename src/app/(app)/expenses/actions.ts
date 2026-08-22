@@ -2,9 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
 import { z } from "zod";
+
+async function requirePermission(module: string, action: PermissionAction = "view") {
+  const session = await requireSession();
+  if (!hasPermission(session, module, action)) {
+    throw new Error("FORBIDDEN");
+  }
+  return session;
+}
 
 const schema = z.object({
   vendorName: z.string().optional().or(z.literal("")),
@@ -17,7 +26,12 @@ const schema = z.object({
 });
 
 export async function createExpenseAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("expenses", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
@@ -49,7 +63,12 @@ export async function createExpenseAction(formData: FormData): Promise<ActionRes
 }
 
 export async function updateExpenseStatusAction(id: string, status: "approved" | "paid" | "rejected"): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("expenses", "approve");
+  } catch {
+    return fail("You don't have permission");
+  }
   const expense = await prisma.expense.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!expense) return fail("Expense not found");
   await prisma.expense.update({ where: { id }, data: { status } });
@@ -59,7 +78,12 @@ export async function updateExpenseStatusAction(id: string, status: "approved" |
 }
 
 export async function deleteExpenseAction(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requirePermission("expenses", "delete");
+  } catch {
+    return fail("You don't have permission");
+  }
   const expense = await prisma.expense.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!expense) return fail("Expense not found");
   await prisma.expense.delete({ where: { id } });

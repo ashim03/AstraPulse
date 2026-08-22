@@ -16,6 +16,8 @@ export type SessionUser = {
   name: string;
   email: string;
   role: string;
+  rolePermissions: string[];
+  accountType: string;
   employeeId: string | null;
 };
 

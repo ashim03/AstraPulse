@@ -44,7 +44,11 @@ function LoginForm() {
     }
     toast({ type: "success", title: res.message ?? "Signed in" });
     const next = searchParams.get("next");
-    router.push(next || "/");
+    if (next) {
+      router.push(next);
+    } else {
+      router.push("/");
+    }
     router.refresh();
   };
 

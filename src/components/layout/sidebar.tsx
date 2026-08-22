@@ -8,6 +8,43 @@ import { cn } from "@/lib/utils";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/dropdown";
 import { Badge } from "@/components/ui/badge";
 
+function filterNavigationByPermissions(items: typeof NAVIGATION, permissions: string[]): typeof NAVIGATION {
+  if (permissions.includes("*")) return items;
+
+  return items.filter((item) => {
+    if (item.href === "/") return true;
+
+    const moduleMap: Record<string, string> = {
+      "Dashboard": "dashboard",
+      "Analytics": "analytics",
+      "Staff": "staff",
+      "Departments": "departments",
+      "Attendance": "attendance",
+      "Leave": "leave",
+      "Holidays": "holidays",
+      "Tasks": "tasks",
+      "Work Records": "work-records",
+      "Employee Advances": "advances",
+      "Payroll": "payroll",
+      "Expenses": "expenses",
+      "Income": "income",
+      "Accounting": "accounting",
+      "Invoices": "invoices",
+      "Payments": "payments",
+      "Financial Reports": "reports",
+      "Announcements": "announcements",
+      "Internal Mail": "mail",
+      "Audit Logs": "audit-logs",
+      "Settings": "settings",
+    };
+
+    const module = moduleMap[item.label];
+    if (!module) return true;
+
+    return permissions.includes(module) || permissions.includes(`${module}:view`);
+  });
+}
+
 export function WorkspaceSwitcher({ name, plan, collapsed }: { name: string; plan?: string; collapsed?: boolean }) {
   if (collapsed) {
     return (
@@ -85,6 +122,8 @@ export function Sidebar({
   workspacePlan,
   onNavigate,
   unreadCount,
+  permissions = ["*"],
+  showSubscription = true,
 }: {
   collapsed: boolean;
   onCollapsedChange: (v: boolean) => void;
@@ -92,9 +131,12 @@ export function Sidebar({
   workspacePlan?: string;
   onNavigate?: () => void;
   unreadCount?: number;
+  permissions?: string[];
+  showSubscription?: boolean;
 }) {
   const pathname = usePathname();
   const plan = PLANS.find((p) => p.name === workspacePlan);
+  const filteredNav = filterNavigationByPermissions(NAVIGATION, permissions);
 
   return (
     <aside
@@ -126,30 +168,34 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4 scrollbar-thin">
-        {Object.values(NAV_SECTIONS).map((section) => (
-          <div key={section.label}>
-            {!collapsed && (
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {section.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {NAVIGATION.filter((item) => section.items.includes(item.label)).map((item) => (
-                <SidebarLink
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  icon={item.icon}
-                  collapsed={collapsed}
-                  onNavigate={onNavigate}
-                />
-              ))}
+        {Object.values(NAV_SECTIONS).map((section) => {
+          const visibleItems = filteredNav.filter((item) => section.items.includes(item.label));
+          if (visibleItems.length === 0) return null;
+          return (
+            <div key={section.label}>
+              {!collapsed && (
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {section.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {visibleItems.map((item) => (
+                  <SidebarLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    icon={item.icon}
+                    collapsed={collapsed}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
-      {!collapsed && (
+      {!collapsed && showSubscription && (
         <div className="shrink-0 p-3">
           <div className="rounded-card border border-slate-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 p-4">
             {plan && (
@@ -199,14 +245,17 @@ export function MobileDrawer({
   workspaceName,
   workspacePlan,
   unreadCount,
+  permissions = ["*"],
 }: {
   open: boolean;
   onClose: () => void;
   workspaceName: string;
   workspacePlan?: string;
   unreadCount?: number;
+  permissions?: string[];
 }) {
   if (!open) return null;
+  const filteredNav = filterNavigationByPermissions(NAVIGATION, permissions);
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
@@ -226,18 +275,22 @@ export function MobileDrawer({
           <WorkspaceSwitcher name={workspaceName} plan={workspacePlan} />
         </div>
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4 scrollbar-thin">
-          {Object.values(NAV_SECTIONS).map((section) => (
-            <div key={section.label}>
-              <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                {section.label}
-              </p>
-              <div className="space-y-0.5">
-                {NAVIGATION.filter((item) => section.items.includes(item.label)).map((item) => (
-                  <SidebarLink key={item.href} href={item.href} label={item.label} icon={item.icon} onNavigate={onClose} />
-                ))}
+          {Object.values(NAV_SECTIONS).map((section) => {
+            const visibleItems = filteredNav.filter((item) => section.items.includes(item.label));
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={section.label}>
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  {section.label}
+                </p>
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => (
+                    <SidebarLink key={item.href} href={item.href} label={item.label} icon={item.icon} onNavigate={onClose} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
       </div>
     </div>

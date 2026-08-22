@@ -18,10 +18,13 @@ export async function middleware(request: NextRequest) {
   if (isPublic) {
     if (token) {
       try {
-        await jwtVerify(token, SECRET);
+        const { payload } = await jwtVerify(token, SECRET);
+        const accountType = payload.accountType as string;
+        
+        // Redirect logged-in users away from public pages
         if (pathname.startsWith("/login") || pathname === "/") {
           const url = request.nextUrl.clone();
-          url.pathname = "/";
+          url.pathname = accountType === "super_admin" ? "/super-admin" : "/";
           url.search = "";
           return NextResponse.redirect(url);
         }
@@ -40,7 +43,27 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, SECRET);
+    const accountType = payload.accountType as string;
+    const isSuperAdmin = accountType === "super_admin";
+    const isSuperAdminRoute = pathname.startsWith("/super-admin");
+
+    // Super admin can only access /super-admin routes
+    if (isSuperAdmin && !isSuperAdminRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/super-admin";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
+    // Non-super-admin cannot access /super-admin routes
+    if (!isSuperAdmin && isSuperAdminRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
     return NextResponse.next();
   } catch {
     const url = request.nextUrl.clone();
