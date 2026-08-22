@@ -97,7 +97,7 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
         </Card>
 
         <div className="lg:col-span-2">
-          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
             <StatCard title="Approved Leave" value={`${totalLeaveDays}d`} icon={CalendarDays} />
             <StatCard title="Outstanding Advances" value={money(outstandingAdvances)} icon={CreditCard} />
 <StatCard title="Time Worked (last 5)" value={`${totalWorkedHours.toFixed(1)}h`} icon={Briefcase} />

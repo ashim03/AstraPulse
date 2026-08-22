@@ -49,7 +49,7 @@ export default async function PayrollDetailPage({ params }: { params: { id: stri
         breadcrumb={<>{"Payroll"} / {payroll.period}</>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs text-slate-500">Gross</p>
           <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{money(payroll.grossTotal)}</p>

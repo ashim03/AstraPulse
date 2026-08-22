@@ -80,7 +80,7 @@ export function SubscriptionManager({
         )}
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         {PLANS.map((p) => {
           const active = p.name === currentPlan;
           const price = period === "yearly" ? p.yearly : p.monthly;

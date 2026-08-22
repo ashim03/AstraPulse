@@ -67,16 +67,16 @@ export function TaskManager({
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-1">
           <button
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${view === "list" ? "bg-brand-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium ${view === "list" ? "bg-brand-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
             onClick={() => setView("list")}
           >
             <List className="h-4 w-4" /> List
           </button>
           <button
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${view === "board" ? "bg-brand-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium ${view === "board" ? "bg-brand-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"}`}
             onClick={() => setView("board")}
           >
             <KanbanSquare className="h-4 w-4" /> Board
@@ -163,11 +163,11 @@ function TaskBoard({ rows, onMove }: { rows: SmartRow[]; onMove: (id: string, st
   const cols = ["backlog", "todo", "in_progress", "review", "completed"];
   const colLabel = (c: string) => c.replace("_", " ");
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5">
       {cols.map((col) => {
         const items = rows.filter((r) => r.status === col);
         return (
-          <div key={col} className="card flex flex-col p-3">
+          <div key={col} className="card flex flex-col p-3 min-w-0">
             <div className="mb-3 flex items-center justify-between px-1">
               <h3 className="text-sm font-semibold capitalize text-slate-700">{colLabel(col)}</h3>
               <Badge>{items.length}</Badge>

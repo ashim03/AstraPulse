@@ -66,7 +66,7 @@ export function WorkRecordManager({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-6 text-sm">
+        <div className="flex flex-wrap gap-4 text-sm sm:gap-6">
           <Stat label="Total hours" value={stats.total.toFixed(1)} />
           <Stat label="Billable" value={stats.billable.toFixed(1)} tone="green" />
           <Stat label="Approved" value={stats.approved.toFixed(1)} tone="green" />

@@ -31,7 +31,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
         breadcrumb={<>{"Invoices"} / {invoice.number}</>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs text-slate-500">Total</p>
           <p className="text-xl font-bold text-slate-900 dark:text-slate-100">{money(invoice.total)}</p>
@@ -51,7 +51,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
       </div>
 
       <Card className="overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto scrollbar-thin">
+          <table className="w-full min-w-max text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs uppercase text-slate-500">
               <th className="px-4 py-2">Description</th>
@@ -78,7 +79,8 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
             <tr><td colSpan={3} className="px-4 py-2 text-right text-slate-500">Tax</td><td className="px-4 py-2 text-right font-medium">{money(invoice.tax)}</td></tr>
             <tr className="bg-slate-50"><td colSpan={3} className="px-4 py-2 text-right font-semibold text-slate-800">Total</td><td className="px-4 py-2 text-right font-bold text-slate-900 dark:text-slate-100">{money(invoice.total)}</td></tr>
           </tfoot>
-        </table>
+          </table>
+        </div>
       </Card>
 
       <Card className="p-4">

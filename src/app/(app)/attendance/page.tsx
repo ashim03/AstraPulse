@@ -10,6 +10,7 @@ import { AttendanceDayPicker } from "./attendance-day-picker";
 import { ClockButtons } from "./clock-buttons";
 import { LogIn, LogOut } from "lucide-react";
 import { AttendanceStats } from "./attendance-stats";
+import { DeviceManager } from "./device-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,7 @@ export default async function AttendancePage({
         title="Attendance"
         subtitle={`Records for ${format(selected, "EEEE, MMMM d, yyyy")}`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ClockButtons
               myRecord={myRecord ? { clockIn: !!myRecord.clockIn, clockOut: !!myRecord.clockOut } : null}
               hasEmployee={!!user?.employeeId}
@@ -97,6 +98,8 @@ export default async function AttendancePage({
           />
         </CardBody>
       </Card>
+
+      <DeviceManager />
     </>
   );
 }

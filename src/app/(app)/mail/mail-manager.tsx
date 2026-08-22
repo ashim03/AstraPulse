@@ -76,7 +76,7 @@ export function MailManager({ rows, users, meId }: { rows: Row[]; users: UserOpt
               <p className="text-sm text-slate-500">From {selected.sender} • {selected.date} {selected.time}</p>
               <p className="mt-1 text-xs text-slate-400">To: {selected.recipients}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <Button variant="outline" size="sm" onClick={() => setSelected(null)}>Back</Button>
               <Button variant="ghost" size="sm" onClick={() => remove(selected.id)}>
                 <Trash2 className="h-4 w-4 text-red-500" />

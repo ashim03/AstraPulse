@@ -59,12 +59,12 @@ export function AccountingManager({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 p-0.5">
+        <div className="flex overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600 p-0.5 scrollbar-thin">
           {(["accounts", "journal", "banks"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize ${tab === t ? "bg-indigo-600 text-white" : "text-slate-600 hover:text-slate-900"}`}
+              className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium capitalize ${tab === t ? "bg-indigo-600 text-white" : "text-slate-600 hover:text-slate-900"}`}
             >
               {t}
             </button>

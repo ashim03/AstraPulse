@@ -215,7 +215,7 @@ export const ROLE_DEFS = [
     name: "HR Manager",
     description: "Manage employees, attendance, leave and documents.",
     isSystem: true,
-    permissions: ["staff", "departments", "attendance", "leave", "holidays", "tasks", "work-records", "advances", "documents", "announcements"],
+    permissions: ["staff", "departments", "attendance", "leave", "holidays", "tasks", "work-records", "advances", "documents", "announcements", "payroll"],
   },
   {
     name: "Accountant",

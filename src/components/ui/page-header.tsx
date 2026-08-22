@@ -28,16 +28,16 @@ export function PageHeader({
 
 export function Breadcrumb({ items }: { items: Array<{ label: string; href?: string }> }) {
   return (
-    <nav className="flex items-center gap-1.5 text-xs text-slate-500" aria-label="Breadcrumb">
+    <nav className="flex items-center gap-1.5 overflow-hidden text-xs text-slate-500" aria-label="Breadcrumb">
       {items.map((item, i) => (
-        <span key={`${item.label}-${i}`} className="flex items-center gap-1.5">
+        <span key={`${item.label}-${i}`} className="flex shrink-0 items-center gap-1.5">
           {i > 0 && <span className="text-slate-300">/</span>}
           {item.href ? (
-            <a href={item.href} className="font-medium text-slate-500 transition hover:text-brand-600">
+            <a href={item.href} className="truncate font-medium text-slate-500 transition hover:text-brand-600">
               {item.label}
             </a>
           ) : (
-            <span className="font-semibold text-slate-700">{item.label}</span>
+            <span className="truncate font-semibold text-slate-700">{item.label}</span>
           )}
         </span>
       ))}

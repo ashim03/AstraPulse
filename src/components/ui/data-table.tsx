@@ -184,7 +184,7 @@ export function DataTable<T>({
               value={activeSearch}
               onChange={setActiveSearch}
               placeholder={searchPlaceholder}
-              className="w-full sm:w-72"
+              className="w-full min-w-0 sm:w-72"
             />
             {filters && filters.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
@@ -208,7 +208,7 @@ export function DataTable<T>({
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {toolbar}
             <Button variant="secondary" size="sm" onClick={exportRows} leftIcon={<Download className="h-4 w-4" />}>
               Export

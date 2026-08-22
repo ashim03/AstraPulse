@@ -155,7 +155,7 @@
   }
 
   .section-title {
-    @apply text-sm font-semibold text-slate-900;
+    @apply truncate text-sm font-semibold text-slate-900;
   }
 
   .dark .section-title {

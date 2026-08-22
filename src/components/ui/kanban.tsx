@@ -21,9 +21,9 @@ export function KanbanBoard({
   className?: string;
 }) {
   return (
-    <div className={cn("grid gap-4 overflow-x-auto pb-2 md:grid-cols-2 xl:grid-cols-4", className)}>
+    <div className={cn("grid gap-4 overflow-x-auto pb-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-4", className)}>
       {columns.map((col) => (
-        <div key={col.id} className="flex min-w-[260px] flex-col rounded-card bg-slate-100/70 p-3">
+        <div key={col.id} className="flex min-w-0 sm:min-w-[260px] flex-col rounded-card bg-slate-100/70 p-3">
           <div className="mb-3 flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
               <span className={cn("h-2 w-2 rounded-full", `bg-${col.tone ?? "gray"}-400`)} />

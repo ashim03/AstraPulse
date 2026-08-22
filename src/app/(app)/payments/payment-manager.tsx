@@ -61,7 +61,7 @@ export function PaymentManager({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-6 text-sm">
+        <div className="flex flex-wrap gap-4 text-sm sm:gap-6">
           <div>
             <p className="text-lg font-bold text-emerald-600">{stats.incoming.toLocaleString("en-US", { style: "currency", currency: "NPR" })}</p>
             <p className="text-xs text-slate-500">Incoming</p>

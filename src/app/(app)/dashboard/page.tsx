@@ -231,15 +231,15 @@ export default async function DashboardPage() {
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <Link href="/attendance" className="block lg:col-span-2">
           <Card className="transition hover:shadow-md">
-            <CardBody className="px-5 py-4">
-              <div className="mb-3 flex items-center justify-between">
+            <CardBody className="p-4 sm:px-5 sm:py-4">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="section-title flex items-center gap-2">
                     <Activity className="h-4 w-4 text-brand-500" /> Attendance Pulse
                   </h3>
                   <p className="text-xs text-slate-400">Today across {activeEmployees} active employees</p>
                 </div>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                   {todayAttendance.present}/{activeEmployees} present
                 </span>
               </div>
@@ -261,7 +261,7 @@ export default async function DashboardPage() {
           </Card>
         </Link>
         <Card>
-          <CardBody className="px-5 py-4">
+          <CardBody className="p-4 sm:px-5 sm:py-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h3 className="section-title flex items-center gap-2">
@@ -340,7 +340,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Needs attention + recent activity */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
         <NeedsAttention workspaceId={wsId} />
         <div className="space-y-4">
           <RecentActivity workspaceId={wsId} />

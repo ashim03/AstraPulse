@@ -13,7 +13,7 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Financial Reports" subtitle="Generate and download financial statements and management reports." breadcrumb="Finance" />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {REPORTS.map((r) => (
           <Link key={r.value} href={`/reports/${r.value}`} className="group">
             <Card className="flex h-full items-start gap-3 p-4 transition-shadow hover:shadow-md">

@@ -61,7 +61,7 @@ export function AppShell({
       />
 
       <div className={cn("flex min-h-screen flex-col transition-all duration-200", collapsed ? "lg:pl-[68px]" : "lg:pl-[248px]")}>
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur dark:border-slate-700 dark:bg-slate-800/90 lg:px-6">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur dark:border-slate-700 dark:bg-slate-800/90 sm:h-16 lg:px-6">
           <button
             onClick={() => setMobileOpen(true)}
             className="rounded-md p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
@@ -83,7 +83,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 px-4 pb-24 pt-6 lg:px-8 lg:pb-6">{children}</main>
+        <main className="flex-1 px-3 pb-24 pt-4 sm:px-4 sm:pt-6 lg:px-8 lg:pb-6">{children}</main>
 
         <footer className="hidden lg:block">
           <div className="border-t border-slate-200 px-8 py-4 text-center text-xs text-slate-400 dark:border-slate-700 dark:text-slate-500">
@@ -103,7 +103,7 @@ export function AppShell({
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open menu"
                 className={cn(
-                  "relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+                  "relative flex min-h-[44px] flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
                   "text-slate-500 active:text-brand-600"
                 )}
               >
@@ -118,7 +118,7 @@ export function AppShell({
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+                "relative flex min-h-[44px] flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
                 active ? "text-brand-600 dark:text-brand-400" : "text-slate-500 active:text-brand-600 dark:text-slate-400 dark:active:text-brand-400"
               )}
             >

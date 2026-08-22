@@ -24,7 +24,7 @@ export function AnalyticsClient({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {stats.map((s) => (
           <Card key={s.label} className="p-4">
             <p className="text-xs text-slate-500">{s.label}</p>
@@ -36,7 +36,7 @@ export function AnalyticsClient({
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Revenue vs Expenses</h3>
           <TrendChart
@@ -65,7 +65,7 @@ export function AnalyticsClient({
 
       <Card className="p-4">
         <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Expenses by Category</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {categoryBreakdown.map((c) => (
             <div key={c.name} className="rounded-lg border border-slate-100 p-3">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{c.name}</p>

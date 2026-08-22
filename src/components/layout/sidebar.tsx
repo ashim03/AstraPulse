@@ -101,7 +101,7 @@ export function SidebarLink({ href, label, icon: Icon, collapsed, onNavigate }: 
       onClick={onNavigate}
       title={collapsed ? label : undefined}
       className={cn(
-        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
         active
           ? "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400"
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200",
@@ -259,7 +259,7 @@ export function MobileDrawer({
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="absolute inset-y-0 left-0 flex w-[288px] flex-col bg-white dark:bg-slate-800 shadow-modal animate-fade-in">
+      <div className="absolute inset-y-0 left-0 flex w-[288px] max-w-[85vw] flex-col bg-white dark:bg-slate-800 shadow-modal animate-fade-in">
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-4">
           <Link href="/" className="flex items-center gap-2.5" onClick={onClose}>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
