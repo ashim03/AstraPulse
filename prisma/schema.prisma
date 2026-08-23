@@ -65,6 +65,11 @@ currency    String @default("NPR")
   payrollPeriods         PayrollPeriod[]
   salaryConfigs          SalaryConfig[]
   attendanceReminders    AttendanceReminder[]
+  emailConfigs           EmailConfig[]
+  authSettings           AuthSettings?
+  otpVerifications       OtpVerification[]
+  passwordResets         PasswordResetToken[]
+  authAuditLogs          AuthAuditLog[]
 }
 
 model User {
@@ -81,9 +86,14 @@ model User {
   employee         Employee? @relation(fields: [employeeId], references: [id])
   twoFactorSecret  String?
   twoFactorEnabled Boolean   @default(false)
-  status           String    @default("active")
+  status           String    @default("active") // active, inactive, pending
   accountType      String    @default("organization") // "super_admin" or "organization"
+  emailVerified    Boolean   @default(false)
+  emailVerifiedAt  DateTime?
   lastLoginAt      DateTime?
+  lastPasswordChange DateTime?
+  failedLoginAttempts Int   @default(0)
+  lockedUntil      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -93,6 +103,8 @@ model User {
   auditLogs        AuditLog[]
   taskComments     TaskComment[]
   announcements    Announcement[]
+  otpVerifications OtpVerification[]
+  passwordResets   PasswordResetToken[]
 
   @@unique([workspaceId, email])
   @@unique([employeeId])
@@ -916,6 +928,98 @@ model OvertimeRecord {
 
   @@index([workspaceId])
   @@index([employeeId, date])
+}
+
+model EmailConfig {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider        String   @default("brevo")
+  apiKey          String
+  senderName      String
+  senderEmail     String
+  replyToEmail    String?
+  isEnabled       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([workspaceId])
+}
+
+model AuthSettings {
+  id                    String   @id @default(cuid())
+  workspaceId           String   @unique
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  emailVerificationRequired Boolean @default(true)
+  loginOtpEnabled       Boolean  @default(false)
+  otpExpirationMinutes  Int      @default(5)
+  otpLength             Int      @default(6)
+  maxOtpAttempts        Int      @default(5)
+  otpResendCooldownSeconds Int  @default(60)
+  maxOtpResends         Int      @default(3)
+  passwordMinLength     Int      @default(8)
+  passwordRequireUppercase Boolean @default(true)
+  passwordRequireLowercase Boolean @default(true)
+  passwordRequireNumber Boolean  @default(true)
+  passwordRequireSpecial Boolean @default(true)
+  passwordResetExpirationMinutes Int @default(15)
+  sessionTimeoutMinutes Int      @default(480) // 8 hours
+  forceLogoutOnPasswordChange Boolean @default(true)
+  maxFailedLoginAttempts Int     @default(5)
+  lockoutDurationMinutes Int    @default(30)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model OtpVerification {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email       String
+  codeHash    String
+  type        String   // registration, login, password_reset, email_verify
+  expiresAt   DateTime
+  attempts    Int      @default(0)
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([email, type])
+  @@index([workspaceId])
+}
+
+model PasswordResetToken {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String
+  expiresAt   DateTime
+  used        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model AuthAuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String?
+  email       String
+  action      String   // register, verify_email, login, login_otp, forgot_password, reset_password, change_password, admin_verify, admin_disable, admin_force_reset
+  success     Boolean
+  ip          String?
+  userAgent   String?
+  metadata    String?  // JSON string for extra data
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([userId])
 }
 
 model PayrollPeriod {

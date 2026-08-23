@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { UserPlus, Users, UserCheck, UserMinus, Clock } from "lucide-react";
+import { UserPlus, Users, UserCheck, UserMinus, Clock, MailCheck, MailX } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { SmartTable, type SmartColumn, type SmartRow } from "@/components/app/smart-table";
 import { StaffFilters } from "./staff-filters";
+import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ export default async function StaffPage({
   const gender = typeof searchParams.gender === "string" ? searchParams.gender : "";
   const sortBy = typeof searchParams.sortBy === "string" ? searchParams.sortBy : "name";
   const sortOrder = typeof searchParams.sortOrder === "string" ? searchParams.sortOrder : "asc";
+  const verificationFilter = typeof searchParams.verification === "string" ? searchParams.verification : "";
+  const accountStatusFilter = typeof searchParams.accountStatus === "string" ? searchParams.accountStatus : "";
 
   const where: Record<string, unknown> = { workspaceId: session.workspaceId };
   if (search) {
@@ -41,12 +44,33 @@ export default async function StaffPage({
   if (gender) where.gender = gender;
   if (letter) where.name = { startsWith: letter, mode: "insensitive" };
 
+  if (verificationFilter === "verified") {
+    where.user = { is: { emailVerified: true } };
+  } else if (verificationFilter === "unverified") {
+    where.user = { is: { emailVerified: false } };
+  }
+
+  if (accountStatusFilter) {
+    where.user = { ...(where.user as Record<string, unknown>), is: { status: accountStatusFilter } };
+  }
+
   const orderBy: Record<string, string> = { [sortBy]: sortOrder };
 
   const [employees, departments] = await Promise.all([
     prisma.employee.findMany({
       where,
-      include: { department: true, position: true },
+      include: {
+        department: true,
+        position: true,
+        user: {
+          select: {
+            emailVerified: true,
+            emailVerifiedAt: true,
+            status: true,
+            lastLoginAt: true,
+          },
+        },
+      },
       orderBy,
     }),
     prisma.department.findMany({
@@ -59,6 +83,8 @@ export default async function StaffPage({
   const active = employees.filter((e) => e.status === "active").length;
   const onLeave = employees.filter((e) => e.status === "on_leave").length;
   const contract = employees.filter((e) => e.employmentType === "contract").length;
+  const verifiedCount = employees.filter((e) => e.user?.emailVerified).length;
+  const unverifiedCount = employees.filter((e) => e.user && !e.user.emailVerified).length;
 
   const rows: SmartRow[] = employees.map((e) => ({
     id: e.id,
@@ -71,6 +97,9 @@ export default async function StaffPage({
     status: e.status,
     joinDate: e.joinDate ? formatDate(e.joinDate, "yyyy-MM-dd") : "",
     salary: e.baseSalary,
+    emailVerified: e.user?.emailVerified ?? false,
+    accountStatus: e.user?.status ?? "active",
+    lastLogin: e.user?.lastLoginAt ? formatDate(e.user.lastLoginAt, "MMM dd, yyyy HH:mm") : "Never",
   }));
 
   const columns: SmartColumn[] = [
@@ -95,6 +124,27 @@ export default async function StaffPage({
         probation: { label: "Probation" },
       },
     },
+    {
+      key: "emailVerified",
+      header: "Email Verified",
+      kind: "badge",
+      badgeMap: {
+        true: { label: "Verified", tone: "green" },
+        false: { label: "Unverified", tone: "red" },
+      },
+      badgeFallback: "Pending",
+    },
+    {
+      key: "accountStatus",
+      header: "Account Status",
+      kind: "badge",
+      badgeMap: {
+        active: { label: "Active", tone: "green" },
+        inactive: { label: "Inactive", tone: "red" },
+        pending: { label: "Pending", tone: "amber" },
+      },
+    },
+    { key: "lastLogin", header: "Last Login" },
     { key: "status", header: "Status", kind: "status" },
     { key: "joinDate", header: "Joined", kind: "date" },
     { key: "salary", header: "Salary", kind: "money", align: "right" },
@@ -112,7 +162,7 @@ export default async function StaffPage({
         }
       />
 
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Total Employees"
           value={total}
@@ -130,7 +180,26 @@ export default async function StaffPage({
           }
         />
         <StatCard title="On Leave" value={onLeave} icon={UserMinus} />
-        <StatCard title="Contractors" value={contract} icon={Clock} />
+        <StatCard
+          title="Verified"
+          value={verifiedCount}
+          icon={MailCheck}
+          footer={
+            <Badge tone="green" dot className="mt-1">
+              Email verified
+            </Badge>
+          }
+        />
+        <StatCard
+          title="Unverified"
+          value={unverifiedCount}
+          icon={MailX}
+          footer={
+            <Badge tone="red" dot className="mt-1">
+              Pending verification
+            </Badge>
+          }
+        />
       </div>
 
       <StaffFilters departments={departments} />
@@ -143,6 +212,25 @@ export default async function StaffPage({
           rowHrefPrefix="/staff/"
           searchKeys={["name", "email", "department", "position", "employeeId"]}
           searchPlaceholder="Search by name, email, department..."
+          filters={[
+            {
+              key: "emailVerified",
+              label: "Verification Status",
+              options: [
+                { value: "true", label: "Verified" },
+                { value: "false", label: "Unverified" },
+              ],
+            },
+            {
+              key: "accountStatus",
+              label: "Account Status",
+              options: [
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+                { value: "pending", label: "Pending" },
+              ],
+            },
+          ]}
           emptyTitle="No employees found"
           emptyDescription="Add your first employee to get started."
           exportFilename="employees.csv"
