@@ -97,11 +97,11 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 px-3 pb-24 pt-4 sm:px-4 sm:pt-6 lg:px-8 lg:pb-6">{children}</main>
+        <main className="flex-1 px-3 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] pt-4 sm:px-4 sm:pt-6 lg:px-8 lg:pb-6">{children}</main>
 
         <footer className="hidden lg:block">
           <div className="border-t border-slate-200 px-8 py-4 text-center text-xs text-slate-400 dark:border-slate-700 dark:text-slate-500">
-            AstraPulse · Nova Retail Group · HR, Payroll & Finance platform
+            AstraPulse · HR, Payroll & Finance platform
           </div>
         </footer>
       </div>

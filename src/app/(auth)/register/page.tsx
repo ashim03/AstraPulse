@@ -23,7 +23,7 @@ export default function RegisterPage() {
     email: "",
     adminName: "",
     phone: "",
-    country: "United States",
+    country: "Nepal",
     currency: "NPR",
     timezone: "Asia/Kathmandu",
     businessType: "Technology",

@@ -89,7 +89,7 @@ export function Calendar({
               onClick={() => onSelect?.(date)}
               disabled={!onSelect}
               className={cn(
-                "relative flex flex-col items-center rounded-lg py-1.5 text-xs font-medium transition",
+                "relative flex flex-col items-center justify-center rounded-lg py-2 sm:py-1.5 text-xs font-medium transition min-h-[44px]",
                 inMonth ? "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" : "text-slate-300",
                 isSelected && "bg-brand-600 text-white hover:bg-brand-600",
                 !isSelected && isToday && "ring-1 ring-inset ring-brand-300"

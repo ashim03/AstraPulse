@@ -28,7 +28,7 @@ export function PageHeader({
 
 export function Breadcrumb({ items }: { items: Array<{ label: string; href?: string }> }) {
   return (
-    <nav className="flex items-center gap-1.5 overflow-hidden text-xs text-slate-500" aria-label="Breadcrumb">
+    <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin text-xs text-slate-500" aria-label="Breadcrumb">
       {items.map((item, i) => (
         <span key={`${item.label}-${i}`} className="flex shrink-0 items-center gap-1.5">
           {i > 0 && <span className="text-slate-300">/</span>}

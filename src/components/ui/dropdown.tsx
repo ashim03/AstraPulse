@@ -83,7 +83,7 @@ export function DropdownItem({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 min-h-[44px]",
         danger ? "text-red-600" : "text-slate-700"
       )}
     >

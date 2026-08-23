@@ -30,7 +30,7 @@ export function Tabs({
             key={item.value}
             onClick={() => onChange(item.value)}
             className={cn(
-              "relative -mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition",
+              "relative -mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition min-h-[44px]",
               active
                 ? "border-brand-600 text-brand-700"
                 : "border-transparent text-slate-500 hover:border-slate-200 hover:text-slate-700"

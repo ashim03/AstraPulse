@@ -195,7 +195,7 @@ export default async function DashboardPage() {
       <div className="card mb-4 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white">
-            {workspace?.name.charAt(0)}
+            {workspace?.name?.charAt(0) ?? "?"}
           </span>
           <div>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{workspace?.name}</p>

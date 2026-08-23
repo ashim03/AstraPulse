@@ -6,7 +6,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useState } from "react";
-import { CURRENCIES, TIMEZONES } from "@/lib/constants";
+import { CURRENCIES, TIMEZONES, COUNTRIES } from "@/lib/constants";
 import { updateWorkspaceSettingsAction, updateProfileAction } from "./actions";
 
 export type WorkspaceSettings = {
@@ -53,7 +53,10 @@ export function SettingsManager({ workspace, profile }: { workspace: WorkspaceSe
           <Input label="Email" name="email" type="email" defaultValue={workspace.email} required />
           <div className="grid gap-4 sm:grid-cols-2">
             <Input label="Phone" name="phone" defaultValue={workspace.phone} />
-            <Input label="Country" name="country" defaultValue={workspace.country} />
+            <Select label="Country" name="country" defaultValue={workspace.country}>
+              <option value="">Select country</option>
+              {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Currency" name="currency" defaultValue={workspace.currency}>

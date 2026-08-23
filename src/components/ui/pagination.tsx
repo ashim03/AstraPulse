@@ -33,7 +33,7 @@ export function Pagination({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white dark:bg-slate-800 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white dark:bg-slate-800 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>
@@ -58,7 +58,7 @@ export function Pagination({
               key={p}
               onClick={() => onPageChange(p)}
               className={cn(
-                "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm font-medium transition",
+                "inline-flex h-10 min-w-10 items-center justify-center rounded-md px-2 text-sm font-medium transition",
                 p === page ? "bg-brand-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
               )}
             >

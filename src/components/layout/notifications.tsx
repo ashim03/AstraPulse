@@ -36,7 +36,7 @@ export function NotificationsPopover({ notifications, unread }: { notifications:
 
   return (
     <Dropdown
-      width="w-96"
+      width="w-full max-w-96"
       trigger={
         <button className="relative rounded-md p-2 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700" aria-label="Notifications">
           <Bell className="h-5 w-5" />

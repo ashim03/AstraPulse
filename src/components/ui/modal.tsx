@@ -56,16 +56,16 @@ export function Modal({
             </div>
             <button
               onClick={onClose}
-              className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+              className="rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
               aria-label="Close"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-6 py-5 scrollbar-thin">{children}</div>
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 scrollbar-thin">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 dark:bg-slate-800 px-6 py-3.5">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50 dark:bg-slate-800 px-4 py-3 sm:px-6 sm:py-3.5">
             {footer}
           </div>
         )}

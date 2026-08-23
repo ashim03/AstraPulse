@@ -74,7 +74,7 @@ export default async function PayrollDetailPage({ params }: { params: { id: stri
         <div className="flex flex-wrap gap-2 text-xs text-slate-500">
           <span>Status:</span>
           <Badge>{statusLabel}</Badge>
-          <span className="ml-2">Approved by: {payroll.approvedBy ? "—" : "Not yet"}</span>
+          <span className="ml-2">Approved by: {payroll.approvedBy ?? "Not yet"}</span>
           <span>Processed: {payroll.processedAt ? payroll.processedAt.toLocaleDateString() : "—"}</span>
         </div>
       </Card>

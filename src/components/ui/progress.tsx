@@ -33,7 +33,7 @@ export function ProgressBar({
       )}
       <div
         className={cn(
-          "w-full overflow-hidden rounded-full bg-slate-100",
+          "w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700",
           size === "sm" ? "h-1.5" : "h-2.5"
         )}
       >

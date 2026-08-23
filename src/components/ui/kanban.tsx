@@ -26,7 +26,7 @@ export function KanbanBoard({
         <div key={col.id} className="flex min-w-0 sm:min-w-[260px] flex-col rounded-card bg-slate-100/70 p-3">
           <div className="mb-3 flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <span className={cn("h-2 w-2 rounded-full", `bg-${col.tone ?? "gray"}-400`)} />
+              <span className={cn("h-2 w-2 rounded-full", { "bg-slate-400 dark:bg-slate-500": !col.tone || col.tone === "gray", "bg-blue-400": col.tone === "blue", "bg-emerald-400": col.tone === "green", "bg-amber-400": col.tone === "amber", "bg-red-400": col.tone === "red", "bg-violet-400": col.tone === "violet", "bg-sky-400": col.tone === "sky", "bg-indigo-400": col.tone === "indigo" })} />
               <h4 className="text-sm font-semibold text-slate-800">{col.title}</h4>
             </div>
             {typeof col.count === "number" && <Badge tone="gray">{col.count}</Badge>}

@@ -50,7 +50,7 @@ export default async function StaffPage() {
     <>
       <PageHeader
         title="Staff"
-        subtitle={`${total} employees in ${new Set(employees.map((e) => e.department?.name)).size} departments`}
+        subtitle={`${total} employees in ${new Set(employees.map((e) => e.department?.name).filter(Boolean)).size} departments`}
         actions={
           <Link href="/staff/new">
             <Button leftIcon={<UserPlus className="h-4 w-4" />}>Add Employee</Button>

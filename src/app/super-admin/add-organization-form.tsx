@@ -6,6 +6,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { addOrganizationAction } from "./actions";
+import { COUNTRIES, CURRENCIES, TIMEZONES } from "@/lib/constants";
 
 export function AddOrganizationForm() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export function AddOrganizationForm() {
           <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-700">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Add Organization</h2>
-              <button onClick={() => setOpen(false)} className="rounded-md p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+              <button onClick={() => setOpen(false)} className="rounded-md p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -77,34 +78,33 @@ export function AddOrganizationForm() {
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                  <Input
+                  <Select
                     label="Country"
                     value={form.country}
                     onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    placeholder="Nepal"
-                  />
+                  >
+                    <option value="">Select country</option>
+                    {COUNTRIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </Select>
                   <Select
                     label="Currency"
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
                   >
-                    <option value="NPR">NPR</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="INR">INR</option>
+                    {CURRENCIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </Select>
                   <Select
                     label="Timezone"
                     value={form.timezone}
                     onChange={(e) => setForm({ ...form, timezone: e.target.value })}
                   >
-                    <option value="Asia/Kathmandu">Asia/Kathmandu</option>
-                    <option value="America/New_York">America/New_York</option>
-                    <option value="America/Chicago">America/Chicago</option>
-                    <option value="America/Denver">America/Denver</option>
-                    <option value="America/Los_Angeles">America/Los_Angeles</option>
-                    <option value="Europe/London">Europe/London</option>
+                    {TIMEZONES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
                   </Select>
                 </div>
 

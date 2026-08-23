@@ -52,7 +52,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               </div>
               <button
                 onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
-                className="rounded p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="rounded p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 aria-label="Dismiss"
               >
                 <X className="h-4 w-4" />

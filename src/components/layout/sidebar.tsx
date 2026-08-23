@@ -267,7 +267,7 @@ export function MobileDrawer({
             </div>
               <p className="text-base font-bold tracking-tight text-slate-900 dark:text-white">AstraPulse</p>
           </Link>
-          <button onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close menu">
+          <button onClick={onClose} className="rounded-md p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Close menu">
             <X className="h-5 w-5" />
           </button>
         </div>
