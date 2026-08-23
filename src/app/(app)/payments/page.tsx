@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaymentManager } from "./payment-manager";
 
@@ -7,6 +9,9 @@ export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "payments", "view")) {
+    redirect("/?error=access_denied");
+  }
   const [payments, invoices, expenses] = await Promise.all([
     prisma.payment.findMany({
       where: { workspaceId: session.workspaceId },

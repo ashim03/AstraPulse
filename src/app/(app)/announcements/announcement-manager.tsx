@@ -25,7 +25,7 @@ export type Row = {
   createdAt: string;
 };
 
-export function AnnouncementManager({ rows, departments }: { rows: Row[]; departments: DepartmentOption[] }) {
+export function AnnouncementManager({ rows, departments, canCreate = true, canDelete = true }: { rows: Row[]; departments: DepartmentOption[]; canCreate?: boolean; canDelete?: boolean }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,9 +57,11 @@ export function AnnouncementManager({ rows, departments }: { rows: Row[]; depart
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" /> New announcement
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4" /> New announcement
+          </Button>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -79,9 +81,11 @@ export function AnnouncementManager({ rows, departments }: { rows: Row[]; depart
                 By {r.author} • {r.createdAt}{r.department ? ` • ${r.department}` : ""}
               </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => remove(r.id)}>
-              <Trash2 className="h-4 w-4 text-red-500" />
-            </Button>
+            {canDelete && (
+              <Button variant="ghost" size="sm" onClick={() => remove(r.id)}>
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </Button>
+            )}
           </Card>
         ))}
         {rows.length === 0 && <p className="text-sm text-slate-400">No announcements yet.</p>}

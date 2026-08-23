@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { AccountingManager, type AccountOption } from "./accounting-manager";
 import { recomputeAccountBalance } from "@/services/accounting";
@@ -8,6 +10,9 @@ export const dynamic = "force-dynamic";
 
 export default async function AccountingPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "accounting", "view")) {
+    redirect("/?error=access_denied");
+  }
   const [accounts, journals, banks] = await Promise.all([
     prisma.account.findMany({ where: { workspaceId: session.workspaceId }, orderBy: { code: "asc" } }),
     prisma.journalEntry.findMany({

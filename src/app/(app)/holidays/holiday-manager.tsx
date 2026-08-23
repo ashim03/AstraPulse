@@ -13,7 +13,7 @@ import { createHolidayAction, deleteHolidayAction } from "./actions";
 
 export type HolidayRow = { id: string; name: string; date: string; recurring: boolean; region: string | null; upcoming: boolean };
 
-export function HolidayManager({ initial }: { initial: HolidayRow[] }) {
+export function HolidayManager({ initial, canCreate = true, canDelete = true }: { initial: HolidayRow[]; canCreate?: boolean; canDelete?: boolean }) {
   const [items, setItems] = useState<HolidayRow[]>(initial);
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState<HolidayRow | null>(null);
@@ -54,7 +54,9 @@ export function HolidayManager({ initial }: { initial: HolidayRow[] }) {
   return (
     <>
       <div className="mb-4 flex justify-end">
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)}>Add Holiday</Button>
+        {canCreate && (
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setOpen(true)}>Add Holiday</Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -64,12 +66,14 @@ export function HolidayManager({ initial }: { initial: HolidayRow[] }) {
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                 <PartyPopper className="h-5 w-5" />
               </span>
-              <button
-                className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                onClick={() => setDeleting(h)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {canDelete && (
+                <button
+                  className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                  onClick={() => setDeleting(h)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <h3 className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100">{h.name}</h3>
             <p className="text-sm text-slate-500">{h.date}</p>

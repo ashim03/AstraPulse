@@ -1,5 +1,7 @@
-﻿import { requireSession } from "@/lib/auth";
+﻿import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDataScope, hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { AdvanceManager, type EmployeeOption } from "./advance-manager";
 
@@ -7,9 +9,21 @@ export const dynamic = "force-dynamic";
 
 export default async function AdvancesPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "advances", "view")) {
+    redirect("/?error=access_denied");
+  }
+  const scope = getDataScope(session);
+
+  const advanceWhere: Record<string, unknown> = { workspaceId: session.workspaceId };
+  if (scope === "self") {
+    advanceWhere.employeeId = session.employeeId;
+  } else if (scope === "department" && session.departmentId) {
+    advanceWhere.employee = { departmentId: session.departmentId };
+  }
+
   const [advances, employees] = await Promise.all([
     prisma.employeeAdvance.findMany({
-      where: { workspaceId: session.workspaceId },
+      where: advanceWhere,
       orderBy: { date: "desc" },
       include: { employee: { select: { id: true, name: true } } },
     }),

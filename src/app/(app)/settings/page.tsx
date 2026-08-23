@@ -14,6 +14,8 @@ export default async function SettingsPage() {
     redirect("/?error=access_denied");
   }
 
+  const canEdit = hasPermission(session, "settings", "edit");
+
   const [workspace, user] = await Promise.all([
     prisma.workspace.findUnique({ where: { id: session.workspaceId } }),
     prisma.user.findUnique({ where: { id: session.id }, include: { role: true } }),
@@ -37,6 +39,7 @@ export default async function SettingsPage() {
           fiscalYearStart: workspace?.fiscalYearStart ?? 1,
         }}
         profile={{ name: user?.name ?? "", email: user?.email ?? "" }}
+        canEdit={canEdit}
       />
     </div>
   );

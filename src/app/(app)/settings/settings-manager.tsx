@@ -41,7 +41,7 @@ const strengthBarColors: Record<string, string> = {
   green: "bg-emerald-500",
 };
 
-export function SettingsManager({ workspace, profile }: { workspace: WorkspaceSettings; profile: ProfileSettings }) {
+export function SettingsManager({ workspace, profile, canEdit = true }: { workspace: WorkspaceSettings; profile: ProfileSettings; canEdit?: boolean }) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, setPending] = useState(false);
@@ -96,32 +96,34 @@ export function SettingsManager({ workspace, profile }: { workspace: WorkspaceSe
         <h2 className="mb-1 text-lg font-semibold text-slate-800 dark:text-slate-200">Workspace</h2>
         <p className="mb-4 text-sm text-slate-500">Company-wide information used across reports and documents.</p>
         <form action={saveWorkspace} className="space-y-4">
-          <Input label="Company name" name="name" defaultValue={workspace.name} required />
-          <Input label="Email" name="email" type="email" defaultValue={workspace.email} required />
+          <Input label="Company name" name="name" defaultValue={workspace.name} required disabled={!canEdit} />
+          <Input label="Email" name="email" type="email" defaultValue={workspace.email} required disabled={!canEdit} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Phone" name="phone" defaultValue={workspace.phone} />
-            <Select label="Country" name="country" defaultValue={workspace.country}>
+            <Input label="Phone" name="phone" defaultValue={workspace.phone} disabled={!canEdit} />
+            <Select label="Country" name="country" defaultValue={workspace.country} disabled={!canEdit}>
               <option value="">Select country</option>
               {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Currency" name="currency" defaultValue={workspace.currency}>
+            <Select label="Currency" name="currency" defaultValue={workspace.currency} disabled={!canEdit}>
               {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
-            <Select label="Date format" name="dateFormat" defaultValue={workspace.dateFormat}>
+            <Select label="Date format" name="dateFormat" defaultValue={workspace.dateFormat} disabled={!canEdit}>
               <option value="MM/DD/YYYY">MM/DD/YYYY</option>
               <option value="DD/MM/YYYY">DD/MM/YYYY</option>
               <option value="YYYY-MM-DD">YYYY-MM-DD</option>
             </Select>
           </div>
-          <Select label="Timezone" name="timezone" defaultValue={workspace.timezone}>
+          <Select label="Timezone" name="timezone" defaultValue={workspace.timezone} disabled={!canEdit}>
             {TIMEZONES.map((t) => <option key={t} value={t}>{t}</option>)}
           </Select>
-          <Input label="Fiscal year start (month 1-12)" name="fiscalYearStart" type="number" min={1} max={12} defaultValue={workspace.fiscalYearStart} />
-          <div className="flex justify-end">
-            <Button type="submit" loading={pending}>Save workspace</Button>
-          </div>
+          <Input label="Fiscal year start (month 1-12)" name="fiscalYearStart" type="number" min={1} max={12} defaultValue={workspace.fiscalYearStart} disabled={!canEdit} />
+          {canEdit && (
+            <div className="flex justify-end">
+              <Button type="submit" loading={pending}>Save workspace</Button>
+            </div>
+          )}
         </form>
       </Card>
 
@@ -129,11 +131,13 @@ export function SettingsManager({ workspace, profile }: { workspace: WorkspaceSe
         <h2 className="mb-1 text-lg font-semibold text-slate-800 dark:text-slate-200">Your profile</h2>
         <p className="mb-4 text-sm text-slate-500">How you appear across the workspace.</p>
         <form action={saveProfile} className="space-y-4">
-          <Input label="Display name" name="name" defaultValue={profile.name} required />
+          <Input label="Display name" name="name" defaultValue={profile.name} required disabled={!canEdit} />
           <Input label="Email" value={profile.email} disabled />
-          <div className="flex justify-end">
-            <Button type="submit" loading={pending}>Save profile</Button>
-          </div>
+          {canEdit && (
+            <div className="flex justify-end">
+              <Button type="submit" loading={pending}>Save profile</Button>
+            </div>
+          )}
         </form>
       </Card>
 

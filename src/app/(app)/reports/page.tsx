@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { REPORTS } from "@/lib/constants";
@@ -9,6 +11,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "reports", "view")) {
+    redirect("/?error=access_denied");
+  }
 
   return (
     <div className="space-y-6">

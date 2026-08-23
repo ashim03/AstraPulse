@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnnouncementManager, type DepartmentOption } from "./announcement-manager";
 
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AnnouncementsPage() {
   const session = await requireSession();
+  const canCreate = hasPermission(session, "announcements", "create");
+  const canDelete = hasPermission(session, "announcements", "delete");
   const [announcements, departments] = await Promise.all([
     prisma.announcement.findMany({
       where: { workspaceId: session.workspaceId },
@@ -31,7 +34,7 @@ export default async function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Announcements" subtitle="Share updates with your team." breadcrumb="Company" />
-      <AnnouncementManager rows={rows} departments={departments as DepartmentOption[]} />
+      <AnnouncementManager rows={rows} departments={departments as DepartmentOption[]} canCreate={canCreate} canDelete={canDelete} />
     </div>
   );
 }

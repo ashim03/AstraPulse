@@ -266,7 +266,7 @@ export async function getStaffWithFiltersAction(filters: {
         { email: { contains: q, mode: "insensitive" } },
       ];
     }
-    if (filters.department) where.departmentId = filters.department;
+    if (filters.department && scope !== "self") where.departmentId = filters.department;
     if (filters.employmentType) where.employmentType = filters.employmentType;
     if (filters.status) where.status = filters.status;
     if (filters.gender) where.gender = filters.gender;

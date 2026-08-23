@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { Breadcrumb } from "@/components/ui/page-header";
 import { AttendanceReportsClient } from "./attendance-reports-client";
@@ -8,6 +10,9 @@ export const dynamic = "force-dynamic";
 
 export default async function AttendanceReportsPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "reports")) {
+    redirect("/?error=access_denied");
+  }
 
   const [employees, departments] = await Promise.all([
     prisma.employee.findMany({

@@ -11,13 +11,26 @@ import { NotificationsPopover, type Notif } from "./notifications";
 import { UserMenu } from "./user-menu";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
-const BOTTOM_NAV = [
+const BOTTOM_NAV_BASE = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Staff", href: "/staff", icon: Users },
   { label: "Attendance", href: "/attendance", icon: CalendarCheck },
-  { label: "Payroll", href: "/payroll", icon: Wallet },
   { label: "Menu", href: "", icon: Menu },
 ];
+
+const BOTTOM_NAV_ADMIN = [
+  { label: "Staff", href: "/staff", icon: Users, module: "staff" },
+  { label: "Payroll", href: "/payroll", icon: Wallet, module: "payroll" },
+];
+
+function hasNavPermission(permissions: string[] | undefined, module: string): boolean {
+  if (!permissions) return false;
+  return (
+    permissions.includes("*") ||
+    permissions.includes(`${module}:*`) ||
+    permissions.includes(`${module}:view`) ||
+    permissions.includes(module)
+  );
+}
 
 export function AppShell({
   user,
@@ -106,8 +119,18 @@ export function AppShell({
         </footer>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-700 dark:bg-slate-800 lg:hidden">
-        {BOTTOM_NAV.map((item) => {
+      {(() => {
+        const navItems = [
+          ...BOTTOM_NAV_BASE,
+          ...BOTTOM_NAV_ADMIN.filter((i) => hasNavPermission(permissions, i.module)),
+        ];
+        const navCount = navItems.length;
+        return (
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 grid border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-700 dark:bg-slate-800 lg:hidden"
+        style={{ gridTemplateColumns: `repeat(${navCount}, minmax(0, 1fr))` }}
+      >
+        {navItems.map((item) => {
           const active = item.href !== "" && pathname.startsWith(item.href);
           const Icon = item.icon;
           if (!item.href) {
@@ -143,6 +166,8 @@ export function AppShell({
           );
         })}
       </nav>
+      );
+      })()}
     </div>
   );
 }

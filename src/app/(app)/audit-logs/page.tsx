@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { SmartTable, type SmartColumn, type SmartRow } from "@/components/app/smart-table";
 import { Tabs } from "@/components/ui/tabs";
@@ -13,6 +15,9 @@ export default async function AuditLogsPage({
   searchParams: { module?: string; tab?: string };
 }) {
   const session = await requireSession();
+  if (!hasPermission(session, "audit-logs", "view")) {
+    redirect("/?error=access_denied");
+  }
   const activeTab = searchParams.tab === "auth" ? "auth" : "general";
 
   if (activeTab === "auth") {

@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { IncomeManager } from "./income-manager";
 
@@ -7,6 +9,9 @@ export const dynamic = "force-dynamic";
 
 export default async function IncomePage() {
   const session = await requireSession();
+  if (!hasPermission(session, "income", "view")) {
+    redirect("/?error=access_denied");
+  }
   const incomes = await prisma.income.findMany({
     where: { workspaceId: session.workspaceId },
     orderBy: { date: "desc" },

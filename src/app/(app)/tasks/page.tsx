@@ -1,6 +1,8 @@
 import { format } from "date-fns";
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDataScope, hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { TaskManager } from "./task-manager";
@@ -11,9 +13,24 @@ export const dynamic = "force-dynamic";
 
 export default async function TasksPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "tasks", "view")) {
+    redirect("/?error=access_denied");
+  }
+  const scope = getDataScope(session);
+
+  const taskWhere: Record<string, unknown> = { workspaceId: session.workspaceId };
+  if (scope === "self") {
+    taskWhere.OR = [
+      { assignedToId: session.employeeId },
+      { createdById: session.employeeId },
+    ];
+  } else if (scope === "department" && session.departmentId) {
+    taskWhere.assignee = { departmentId: session.departmentId };
+  }
+
   const [tasks, employees, departments] = await Promise.all([
     prisma.task.findMany({
-      where: { workspaceId: session.workspaceId },
+      where: taskWhere,
       include: { assignee: { include: { department: true } }, department: true },
       orderBy: { createdAt: "desc" },
     }),

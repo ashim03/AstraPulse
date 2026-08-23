@@ -1,6 +1,8 @@
 import { format } from "date-fns";
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { Breadcrumb } from "@/components/ui/page-header";
 import { EmployeeAttendanceClient } from "./employee-attendance-client";
@@ -13,6 +15,9 @@ export default async function EmployeeAttendanceDashboard({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "employee_dashboard")) {
+    redirect("/?error=access_denied");
+  }
   const selectedEmployeeId = typeof searchParams.employeeId === "string" ? searchParams.employeeId : "";
   const selectedMonth = typeof searchParams.month === "string" ? searchParams.month : format(new Date(), "yyyy-MM");
 

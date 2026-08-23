@@ -20,6 +20,9 @@ export default async function StaffPage({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const session = await requireSession();
+  if (!hasPermission(session, "staff", "view")) {
+    redirect("/?error=access_denied");
+  }
   const scope = getDataScope(session);
   const canViewSensitive = hasPermission(session, "staff", "view_sensitive");
   const canCreate = hasPermission(session, "staff", "create");

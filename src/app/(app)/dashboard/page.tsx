@@ -1,4 +1,4 @@
-import { format, subDays, subMonths } from "date-fns";
+import { format, subDays } from "date-fns";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { money, formatDate } from "@/lib/utils";
@@ -36,10 +36,17 @@ export default async function DashboardPage() {
   const session = await requireSession();
   const wsId = session.workspaceId;
   const now = new Date();
+
+  const canViewFinance = hasPermission(session, "payroll", "view") || hasPermission(session, "expenses", "view") || hasPermission(session, "income", "view") || hasPermission(session, "accounting", "view");
+  const canViewPayroll = hasPermission(session, "payroll", "view");
+  const canCreatePayroll = hasPermission(session, "payroll", "create");
+  const canViewExpenses = hasPermission(session, "expenses", "view");
+  const canViewIncome = hasPermission(session, "income", "view");
+  const canViewAccounting = hasPermission(session, "accounting", "view");
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  const [workspace, user, employees, todayAttendance, payrolls, expenses, incomes, invoices, bankAccounts, pendingLeaveCount, pendingTasks, advances] =
+  const [workspace, user, employees, todayAttendance, pendingLeaveCount, pendingTasks, advances] =
     await Promise.all([
       prisma.workspace.findUnique({ where: { id: wsId }, include: { subscription: true } }),
       prisma.user.findUnique({ where: { id: session.id }, include: { role: true } }),
@@ -51,32 +58,48 @@ export default async function DashboardPage() {
         },
       }),
       attendanceStatsForDay(wsId, now),
-      prisma.payroll.findMany({ where: { workspaceId: wsId }, orderBy: { period: "desc" }, take: 6 }),
-      prisma.expense.findMany({ where: { workspaceId: wsId }, orderBy: { date: "desc" } }),
-      prisma.income.findMany({ where: { workspaceId: wsId }, orderBy: { date: "desc" } }),
-      prisma.invoice.findMany({ where: { workspaceId: wsId } }),
-      prisma.bankAccount.findMany({ where: { workspaceId: wsId } }),
       prisma.leaveRequest.count({ where: { workspaceId: wsId, status: "pending" } }),
       prisma.task.count({ where: { workspaceId: wsId, status: { in: ["backlog", "todo", "in_progress", "review"] } } }),
       prisma.employeeAdvance.findMany({ where: { workspaceId: wsId, status: { in: ["approved", "paid"] } } }),
     ]);
 
+  let safePayrolls: any[] = [];
+  let safeExpenses: any[] = [];
+  let safeIncomes: any[] = [];
+  let safeInvoices: any[] = [];
+  let safeBankAccounts: any[] = [];
+
+  if (canViewFinance) {
+    const [payrolls, expenses, incomes, invoices, bankAccounts] = await Promise.all([
+      prisma.payroll.findMany({ where: { workspaceId: wsId }, orderBy: { period: "desc" }, take: 6 }),
+      prisma.expense.findMany({ where: { workspaceId: wsId }, orderBy: { date: "desc" } }),
+      prisma.income.findMany({ where: { workspaceId: wsId }, orderBy: { date: "desc" } }),
+      prisma.invoice.findMany({ where: { workspaceId: wsId } }),
+      prisma.bankAccount.findMany({ where: { workspaceId: wsId } }),
+    ]);
+    safePayrolls = payrolls;
+    safeExpenses = expenses;
+    safeIncomes = incomes;
+    safeInvoices = invoices;
+    safeBankAccounts = bankAccounts;
+  }
+
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter((e: any) => e.status === "active").length;
   const onLeave = employees.filter((e: any) => e.status === "on_leave").length;
 
-  const latestPayroll = payrolls[0];
-  const payrollThisMonth = payrolls.find((p) => p.period === format(now, "yyyy-MM"));
+  const latestPayroll = safePayrolls[0];
+  const payrollThisMonth = safePayrolls.find((p) => p.period === format(now, "yyyy-MM"));
   const payrollNet = payrollThisMonth?.netTotal ?? latestPayroll?.netTotal ?? 0;
 
-  const expensesThisMonth = expenses.filter((e) => e.date >= monthStart && e.status !== "rejected").reduce((a, b) => a + b.amount, 0);
-  const expensesLastMonth = expenses.filter((e) => e.date >= lastMonthStart && e.date < monthStart && e.status !== "rejected").reduce((a, b) => a + b.amount, 0);
+  const expensesThisMonth = safeExpenses.filter((e) => e.date >= monthStart && e.status !== "rejected").reduce((a, b) => a + b.amount, 0);
+  const expensesLastMonth = safeExpenses.filter((e) => e.date >= lastMonthStart && e.date < monthStart && e.status !== "rejected").reduce((a, b) => a + b.amount, 0);
 
-  const revenueThisMonth = incomes.filter((i) => i.date >= monthStart).reduce((a, b) => a + b.amount, 0);
-  const revenueLastMonth = incomes.filter((i) => i.date >= lastMonthStart && i.date < monthStart).reduce((a, b) => a + b.amount, 0);
+  const revenueThisMonth = safeIncomes.filter((i) => i.date >= monthStart).reduce((a, b) => a + b.amount, 0);
+  const revenueLastMonth = safeIncomes.filter((i) => i.date >= lastMonthStart && i.date < monthStart).reduce((a, b) => a + b.amount, 0);
 
-  const outstandingInvoices = invoices.filter((i) => !["paid", "cancelled", "draft"].includes(i.status)).reduce((a, b) => a + (b.total - b.paid), 0);
-  const cashBalance = bankAccounts.reduce((a, b) => a + b.currentBalance, 0);
+  const outstandingInvoices = safeInvoices.filter((i) => !["paid", "cancelled", "draft"].includes(i.status)).reduce((a, b) => a + (b.total - b.paid), 0);
+  const cashBalance = safeBankAccounts.reduce((a, b) => a + b.currentBalance, 0);
   const outstandingAdvances = advances.reduce((a, b) => a + b.outstanding, 0);
 
   const pct = (cur: number, prev: number) => (prev === 0 ? (cur > 0 ? 100 : 0) : ((cur - prev) / prev) * 100);
@@ -96,47 +119,67 @@ export default async function DashboardPage() {
     });
   }
 
-  const payrollByMonth: Record<string, { label: string; net: number; gross: number }> = {};
-  for (const p of payrolls) {
-    const [y, m] = p.period.split("-").map(Number);
-    const key = `${y}-${m}`;
-    payrollByMonth[key] = {
-      label: format(new Date(y, m - 1, 1), "MMM"),
-      net: (payrollByMonth[key]?.net ?? 0) + p.netTotal,
-      gross: (payrollByMonth[key]?.gross ?? 0) + p.grossTotal,
-    };
-  }
-  const payrollTrend = Object.values(payrollByMonth);
+  let payrollTrend: { label: string; net: number; gross: number }[] = [];
+  let revenueVsExpense: { label: string; revenue: number; expense: number }[] = [];
+  let expenseCategories: { name: string; value: number }[] = [];
+  let cashFlow: { label: string; flow: number }[] = [];
+  let monthLabels: string[] = [];
 
-  // Revenue vs expenses from journal (accounting-consistent)
-  const since = subMonths(now, 5);
-  const journalAccounts = await prisma.account.findMany({
-    where: { workspaceId: wsId },
-    include: { journalLines: { include: { journal: true } } },
-  });
-  const monthLabels: string[] = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    monthLabels.push(`${d.getFullYear()}-${d.getMonth()}`);
-  }
-  const revenueVsExpense = monthLabels.map((key) => {
-    const [y, m] = key.split("-").map(Number);
-    let revenue = 0;
-    let expense = 0;
-    for (const acc of journalAccounts) {
-      for (const line of acc.journalLines) {
-        if (line.journal.date.getFullYear() === y && line.journal.date.getMonth() === m) {
-          if (acc.type === "revenue") revenue += line.credit - line.debit;
-          if (acc.type === "expense") expense += line.debit - line.credit;
+  if (canViewFinance) {
+    const payrollByMonth: Record<string, { label: string; net: number; gross: number }> = {};
+    for (const p of safePayrolls) {
+      const [y, m] = p.period.split("-").map(Number);
+      const key = `${y}-${m}`;
+      payrollByMonth[key] = {
+        label: format(new Date(y, m - 1, 1), "MMM"),
+        net: (payrollByMonth[key]?.net ?? 0) + p.netTotal,
+        gross: (payrollByMonth[key]?.gross ?? 0) + p.grossTotal,
+      };
+    }
+    payrollTrend = Object.values(payrollByMonth);
+
+    const journalAccounts = await prisma.account.findMany({
+      where: { workspaceId: wsId },
+      include: { journalLines: { include: { journal: true } } },
+    });
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthLabels.push(`${d.getFullYear()}-${d.getMonth()}`);
+    }
+    revenueVsExpense = monthLabels.map((key) => {
+      const [y, m] = key.split("-").map(Number);
+      let revenue = 0;
+      let expense = 0;
+      for (const acc of journalAccounts) {
+        for (const line of acc.journalLines) {
+          if (line.journal.date.getFullYear() === y && line.journal.date.getMonth() === m) {
+            if (acc.type === "revenue") revenue += line.credit - line.debit;
+            if (acc.type === "expense") expense += line.debit - line.credit;
+          }
         }
       }
-    }
-    return { label: format(new Date(y, m, 1), "MMM"), revenue: Math.round(revenue), expense: Math.round(expense) };
-  });
+      return { label: format(new Date(y, m, 1), "MMM"), revenue: Math.round(revenue), expense: Math.round(expense) };
+    });
 
-  const expenseByCat: Record<string, number> = {};
-  for (const e of expenses) if (e.status !== "rejected") expenseByCat[e.category] = (expenseByCat[e.category] ?? 0) + e.amount;
-  const expenseCategories = Object.entries(expenseByCat).map(([name, value]) => ({ name, value: Math.round(value) }));
+    const expenseByCat: Record<string, number> = {};
+    for (const e of safeExpenses) if (e.status !== "rejected") expenseByCat[e.category] = (expenseByCat[e.category] ?? 0) + e.amount;
+    expenseCategories = Object.entries(expenseByCat).map(([name, value]) => ({ name, value: Math.round(value) }));
+
+    cashFlow = monthLabels.map((key) => {
+      const [y, m] = key.split("-").map(Number);
+      let flow = 0;
+      for (const acc of journalAccounts) {
+        if (["1000", "1010", "1020"].includes(acc.code)) {
+          for (const line of acc.journalLines) {
+            if (line.journal.date.getFullYear() === y && line.journal.date.getMonth() === m) {
+              flow += line.debit - line.credit;
+            }
+          }
+        }
+      }
+      return { label: format(new Date(y, m, 1), "MMM"), flow: Math.round(flow) };
+    });
+  }
 
   const leaveRequests = await prisma.leaveRequest.findMany({
     where: { workspaceId: wsId, status: { in: ["approved", "pending"] } },
@@ -150,29 +193,14 @@ export default async function DashboardPage() {
   for (const e of employees as any[]) deptCount[e.department?.name ?? "Unassigned"] = (deptCount[e.department?.name ?? "Unassigned"] ?? 0) + 1;
   const departmentHeadcount = Object.entries(deptCount).map(([name, value]) => ({ name, value }));
 
-  const cashFlow = monthLabels.map((key) => {
-    const [y, m] = key.split("-").map(Number);
-    let flow = 0;
-    for (const acc of journalAccounts) {
-      if (["1000", "1010", "1020"].includes(acc.code)) {
-        for (const line of acc.journalLines) {
-          if (line.journal.date.getFullYear() === y && line.journal.date.getMonth() === m) {
-            flow += line.debit - line.credit;
-          }
-        }
-      }
-    }
-    return { label: format(new Date(y, m, 1), "MMM"), flow: Math.round(flow) };
-  });
-
   const chartsData: DashboardChartsData = {
     attendance: attendanceTrendData,
-    payrollTrend,
-    revenueVsExpense,
-    expenseCategories,
+    payrollTrend: canViewFinance ? payrollTrend : [],
+    revenueVsExpense: canViewFinance ? revenueVsExpense : [],
+    expenseCategories: canViewFinance ? expenseCategories : [],
     leaveDistribution,
     departmentHeadcount,
-    cashFlow,
+    cashFlow: canViewFinance ? cashFlow : [],
   };
 
   const subscription = workspace?.subscription;
@@ -191,11 +219,13 @@ export default async function DashboardPage() {
                 Clock in
               </Button>
             </Link>
-            <Link href="/payroll">
-              <Button size="sm" leftIcon={<Wallet className="h-4 w-4" />}>
-                Run payroll
-              </Button>
-            </Link>
+            {canCreatePayroll && (
+              <Link href="/payroll">
+                <Button size="sm" leftIcon={<Wallet className="h-4 w-4" />}>
+                  Run payroll
+                </Button>
+              </Link>
+            )}
           </>
         }
       />
@@ -326,21 +356,31 @@ export default async function DashboardPage() {
         <Link href="/leave" className="block transition hover:scale-[1.01]">
           <StatCard title="Employees on Leave" value={onLeave} icon={CalendarDays} />
         </Link>
-        <Link href="/payroll" className="block transition hover:scale-[1.01]">
-          <StatCard title="Payroll This Month" value={money(payrollNet)} change={latestPayroll ? 2.4 : 0} trend="up" icon={Wallet} />
-        </Link>
-        <Link href="/income" className="block transition hover:scale-[1.01]">
-          <StatCard title="Total Revenue" value={money(revenueThisMonth)} change={pct(revenueThisMonth, revenueLastMonth)} trend={revenueThisMonth >= revenueLastMonth ? "up" : "down"} icon={TrendingUp} />
-        </Link>
-        <Link href="/expenses" className="block transition hover:scale-[1.01]">
-          <StatCard title="Total Expenses" value={money(expensesThisMonth)} change={pct(expensesThisMonth, expensesLastMonth)} trend={expensesThisMonth > expensesLastMonth ? "up" : "down"} icon={Receipt} />
-        </Link>
-        <Link href="/accounting" className="block transition hover:scale-[1.01]">
-          <StatCard title="Cash Balance" value={money(cashBalance)} icon={PiggyBank} footer={<p className="text-xs text-slate-400">{bankAccounts.length} accounts</p>} />
-        </Link>
-        <Link href="/invoices" className="block transition hover:scale-[1.01]">
-          <StatCard title="Outstanding Invoices" value={money(outstandingInvoices)} icon={FileText} />
-        </Link>
+        {canViewPayroll && (
+          <Link href="/payroll" className="block transition hover:scale-[1.01]">
+            <StatCard title="Payroll This Month" value={money(payrollNet)} change={latestPayroll ? 2.4 : 0} trend="up" icon={Wallet} />
+          </Link>
+        )}
+        {canViewIncome && (
+          <Link href="/income" className="block transition hover:scale-[1.01]">
+            <StatCard title="Total Revenue" value={money(revenueThisMonth)} change={pct(revenueThisMonth, revenueLastMonth)} trend={revenueThisMonth >= revenueLastMonth ? "up" : "down"} icon={TrendingUp} />
+          </Link>
+        )}
+        {canViewExpenses && (
+          <Link href="/expenses" className="block transition hover:scale-[1.01]">
+            <StatCard title="Total Expenses" value={money(expensesThisMonth)} change={pct(expensesThisMonth, expensesLastMonth)} trend={expensesThisMonth > expensesLastMonth ? "up" : "down"} icon={Receipt} />
+          </Link>
+        )}
+        {canViewAccounting && (
+          <Link href="/accounting" className="block transition hover:scale-[1.01]">
+            <StatCard title="Cash Balance" value={money(cashBalance)} icon={PiggyBank} footer={<p className="text-xs text-slate-400">{safeBankAccounts.length} accounts</p>} />
+          </Link>
+        )}
+        {canViewIncome && (
+          <Link href="/invoices" className="block transition hover:scale-[1.01]">
+            <StatCard title="Outstanding Invoices" value={money(outstandingInvoices)} icon={FileText} />
+          </Link>
+        )}
       </div>
 
       {/* Charts */}

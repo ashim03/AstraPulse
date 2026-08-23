@@ -1,5 +1,7 @@
-﻿import { requireSession } from "@/lib/auth";
+﻿import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDataScope, hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { WorkRecordManager, type EmployeeOption } from "./work-record-manager";
 
@@ -7,9 +9,21 @@ export const dynamic = "force-dynamic";
 
 export default async function WorkRecordsPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "work-records", "view")) {
+    redirect("/?error=access_denied");
+  }
+  const scope = getDataScope(session);
+
+  const recordWhere: Record<string, unknown> = { workspaceId: session.workspaceId };
+  if (scope === "self") {
+    recordWhere.employeeId = session.employeeId;
+  } else if (scope === "department" && session.departmentId) {
+    recordWhere.employee = { departmentId: session.departmentId };
+  }
+
   const [records, employees] = await Promise.all([
     prisma.workRecord.findMany({
-      where: { workspaceId: session.workspaceId },
+      where: recordWhere,
       orderBy: { date: "desc" },
       include: { employee: { select: { id: true, name: true } } },
     }),

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { fail, ok, type ActionResult } from "@/lib/actions";
 import { registerDevice, getDevices, removeDevice, testDeviceConnection, syncAttendance } from "@/services/attendance-devices";
@@ -14,6 +15,9 @@ export async function addDeviceAction(input: {
   apiKey?: string;
 }): Promise<ActionResult<DeviceConfig>> {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "device")) {
+    return fail("You don't have permission to manage attendance devices");
+  }
 
   const device = await registerDevice({
     name: input.name,
@@ -30,12 +34,18 @@ export async function addDeviceAction(input: {
 
 export async function listDevicesAction(): Promise<ActionResult<DeviceConfig[]>> {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "device")) {
+    return fail("You don't have permission to manage attendance devices");
+  }
   const devices = await getDevices(session.workspaceId);
   return ok(devices);
 }
 
 export async function removeDeviceAction(deviceId: string): Promise<ActionResult> {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "device")) {
+    return fail("You don't have permission to manage attendance devices");
+  }
   await removeDevice(deviceId);
   revalidatePath("/attendance");
   return ok(undefined, "Device removed");
@@ -43,6 +53,9 @@ export async function removeDeviceAction(deviceId: string): Promise<ActionResult
 
 export async function testDeviceAction(deviceId: string): Promise<ActionResult<{ success: boolean; message: string }>> {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "device")) {
+    return fail("You don't have permission to manage attendance devices");
+  }
   const result = await testDeviceConnection(deviceId);
   revalidatePath("/attendance");
   return result.success ? ok(result, result.message) : fail(result.message);
@@ -54,6 +67,9 @@ export async function syncDeviceAction(
   endDate: string
 ): Promise<ActionResult<{ recordCount: number; records: unknown[] }>> {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "device")) {
+    return fail("You don't have permission to manage attendance devices");
+  }
   const records = await syncAttendance(deviceId, new Date(startDate), new Date(endDate));
 
   revalidatePath("/attendance");

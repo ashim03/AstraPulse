@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -12,6 +13,8 @@ export const dynamic = "force-dynamic";
 
 export default async function HolidaysPage() {
   const session = await requireSession();
+  const canCreate = hasPermission(session, "holidays", "create");
+  const canDelete = hasPermission(session, "holidays", "delete");
   const holidays = await prisma.holiday.findMany({
     where: { workspaceId: session.workspaceId },
     orderBy: { date: "asc" },
@@ -41,6 +44,8 @@ export default async function HolidaysPage() {
           region: h.region,
           upcoming: h.date >= today,
         }))}
+        canCreate={canCreate}
+        canDelete={canDelete}
       />
     </>
   );

@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { ExpenseManager } from "./expense-manager";
 
@@ -7,6 +9,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ExpensesPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "expenses", "view")) {
+    redirect("/?error=access_denied");
+  }
   const expenses = await prisma.expense.findMany({
     where: { workspaceId: session.workspaceId },
     orderBy: { date: "desc" },

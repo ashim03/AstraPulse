@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { AnalyticsClient } from "./analytics-client";
@@ -9,6 +11,9 @@ export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "analytics", "view")) {
+    redirect("/?error=access_denied");
+  }
 
   const now = new Date();
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
