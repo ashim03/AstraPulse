@@ -69,7 +69,7 @@ export default async function DashboardPage() {
           : 0,
         session.employeeId
           ? prisma.task.findMany({
-              where: { OR: [{ assigneeId: session.employeeId }, { createdBy: session.employeeId }] },
+              where: { OR: [{ assigneeId: session.employeeId }, { createdBy: session.id }] },
               orderBy: { createdAt: "desc" },
               take: 10,
             })
@@ -91,7 +91,7 @@ export default async function DashboardPage() {
 
     const tasksTodo = myTasks.filter((t) => t.status === "todo").length;
     const tasksInProgress = myTasks.filter((t) => t.status === "in_progress").length;
-    const tasksCompleted = myTasks.filter((t) => t.status === "done").length;
+    const tasksCompleted = myTasks.filter((t) => t.status === "completed").length;
     const tasksOpen = tasksTodo + tasksInProgress;
 
     const totalLeaveDays = myLeaveBalance.filter((r) => r.status === "approved").reduce((a, b) => a + b.days, 0);
@@ -213,7 +213,7 @@ export default async function DashboardPage() {
                 </CardBody>
               </Card>
             </Link>
-            <Link href="/tasks" className="block">
+            <Link href="/work-records" className="block">
               <Card className="transition hover:shadow-md">
                 <CardBody className="flex items-center gap-3 p-4">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
@@ -454,7 +454,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="mb-4">
           <CardBody className="p-4 sm:px-5 sm:py-4">
             <h3 className="section-title mb-3">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -479,6 +479,14 @@ export default async function DashboardPage() {
             </div>
           </CardBody>
         </Card>
+
+        {/* Needs attention + recent activity */}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          <NeedsAttention workspaceId={wsId} role={session.role} employeeId={session.employeeId ?? undefined} />
+          <div className="space-y-4">
+            <RecentActivity workspaceId={wsId} role={session.role} employeeId={session.employeeId ?? undefined} />
+          </div>
+        </div>
       </>
     );
   }
@@ -828,14 +836,14 @@ export default async function DashboardPage() {
 
       {/* Charts */}
       <div className="mb-4">
-        <DashboardCharts data={chartsData} />
+        <DashboardCharts data={chartsData} role={session.role} />
       </div>
 
       {/* Needs attention + recent activity */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        <NeedsAttention workspaceId={wsId} />
+        <NeedsAttention workspaceId={wsId} role={session.role} employeeId={session.employeeId ?? undefined} />
         <div className="space-y-4">
-          <RecentActivity workspaceId={wsId} />
+          <RecentActivity workspaceId={wsId} role={session.role} employeeId={session.employeeId ?? undefined} />
         </div>
       </div>
     </>

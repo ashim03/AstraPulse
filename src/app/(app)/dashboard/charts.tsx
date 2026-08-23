@@ -46,7 +46,7 @@ export function DashboardCharts({ data, role }: { data: DashboardChartsData; rol
         </ChartCard>
       )}
 
-      {!isEmployee && data.revenueVsExpense.length > 0 && (
+      {!isEmployee && !isManager && data.revenueVsExpense.length > 0 && (
         <ChartCard title="Revenue vs Expenses" subtitle="Monthly comparison" className="lg:col-span-2">
           <TrendChart
             data={data.revenueVsExpense}
