@@ -52,7 +52,7 @@ export default async function DashboardPage() {
     session.role === "HR Manager" ||
     session.role === "HR Staff";
 
-  const firstName = session.name.split(" ")[0] ?? "there";
+  const firstName = String(session.name ?? "").split(" ")[0] ?? "there";
 
   const user = await prisma.user.findUnique({ where: { id: session.id }, include: { role: true } });
   const workspace = await prisma.workspace.findUnique({ where: { id: wsId }, include: { subscription: true } });

@@ -29,7 +29,8 @@ export function Avatar({
   size?: keyof typeof sizes;
   className?: string;
 }) {
-  const toneIndex = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % tones.length;
+  const safeName = String(name ?? "");
+  const toneIndex = safeName.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % tones.length;
   if (src) {
     return (
       <img
@@ -47,9 +48,9 @@ export function Avatar({
         tones[toneIndex],
         className
       )}
-      aria-label={name}
+      aria-label={safeName}
     >
-      {initials(name)}
+      {initials(safeName)}
     </div>
   );
 }

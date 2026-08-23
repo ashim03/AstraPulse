@@ -50,7 +50,7 @@ export function timeAgo(value: Date | string | null | undefined): string {
 }
 
 export function initials(name: string): string {
-  return name
+  return String(name ?? "")
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
