@@ -4,109 +4,54 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
-import { loginAction, verifyTwoFactorAction } from "../actions";
+import { Lock, Mail, Eye, EyeOff } from "lucide-react";
 import { Input, FormField, FieldError } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AuthCard, AuthLogo, DemoAccounts } from "../components/auth-card";
+import { AuthCard, AuthLogo } from "../components/auth-card";
 import { useToast } from "@/components/ui/toast";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [email, setEmail] = useState("admin@nova.local");
-  const [password, setPassword] = useState("Admin@123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
-  const [need2fa, setNeed2fa] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [code, setCode] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setFormError("");
     setFieldErrors({});
-    const res = await loginAction({ email, password });
-    setLoading(false);
-    if (!res.ok) {
-      setFormError(res.error);
-      setFieldErrors(res.fieldErrors ?? {});
-      return;
-    }
-    if (res.data?.need2fa) {
-      setNeed2fa(true);
-      setUserId(res.data.userId ?? null);
-      return;
-    }
-    if (res.data?.requiresOtp) {
-      toast({ type: "info", title: "Verification code sent to your email" });
-      router.push(`/login-otp?email=${encodeURIComponent(res.data.email ?? email)}`);
-      return;
-    }
-    toast({ type: "success", title: res.message ?? "Signed in" });
-    const next = searchParams.get("next");
-    if (next) {
-      router.push(next);
-    } else {
-      router.push("/");
-    }
-    router.refresh();
-  };
 
-  const submit2fa = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId) return;
-    setLoading(true);
-    const res = await verifyTwoFactorAction(userId, code);
-    setLoading(false);
-    if (!res.ok) {
-      setFormError(res.error);
-      return;
-    }
-    toast({ type: "success", title: "Authenticated securely" });
-    router.push("/");
-    router.refresh();
-  };
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      setLoading(false);
 
-  if (need2fa) {
-    return (
-      <AuthCard
-        title="Two-factor authentication"
-        subtitle="Enter the 6-digit code from your authenticator app to continue."
-      >
-        <form onSubmit={submit2fa} className="space-y-4">
-          <FormField label="Verification code" required>
-            <Input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="000000"
-              inputMode="numeric"
-              maxLength={6}
-              className="text-center text-lg font-semibold tracking-[0.4em]"
-            />
-          </FormField>
-          {formError && <FieldError error={formError} />}
-          <Button type="submit" className="w-full" loading={loading} leftIcon={<ShieldCheck className="h-4 w-4" />}>
-            Verify & sign in
-          </Button>
-          <button
-            type="button"
-            onClick={() => {
-              setNeed2fa(false);
-              setFormError("");
-            }}
-            className="w-full text-center text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-          >
-            Back to sign in
-          </button>
-        </form>
-      </AuthCard>
-    );
-  }
+      if (!data.ok) {
+        setFormError(data.error);
+        return;
+      }
+      if (data.requiresOtp) {
+        toast({ type: "info", title: "Verification code sent to your email" });
+        router.push(`/login-otp?email=${encodeURIComponent(data.email ?? email)}`);
+        return;
+      }
+      const next = searchParams.get("next");
+      window.location.href = next || data.redirect || "/";
+    } catch {
+      setLoading(false);
+      setFormError("Something went wrong. Please try again.");
+    }
+  };
 
   return (
     <AuthCard
@@ -167,7 +112,6 @@ function LoginForm() {
           Sign in
         </Button>
       </form>
-      <DemoAccounts />
     </AuthCard>
   );
 }

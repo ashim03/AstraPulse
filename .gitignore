@@ -15,3 +15,5 @@ next-dev.log
 .DS_Store
 .vercel
 .env*
+logs/
+tsconfig.tsbuildinfo

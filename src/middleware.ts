@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
-import { PROTECTED_ROUTES, SUPER_ADMIN_ROUTES } from "@/lib/permissions";
 
 const SECRET = new TextEncoder().encode(
   (process.env.AUTH_SECRET || "").replace(/^"|"$/g, "")
@@ -10,14 +9,27 @@ const SESSION_COOKIE = "astrapulse_session";
 
 const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/verify", "/_next", "/favicon", "/api"];
 
-function parsePermissions(raw: unknown): string[] {
-  try {
-    const parsed = JSON.parse(String(raw ?? "[]"));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+const ROLE_DEFAULTS: Record<string, string[]> = {
+  "Workspace Admin": ["dashboard:view","analytics:view","staff:*","departments:*","attendance:*","leave:*","holidays:*","tasks:*","work-records:*","advances:*","payroll:*","expenses:*","income:*","accounting:*","invoices:*","payments:*","reports:*","announcements:*","mail:*","audit-logs:*","settings:*","subscription:*","users:*","roles:*"],
+  "HR Manager": ["dashboard:view","analytics:view","staff:view","staff:create","staff:edit","staff:view_sensitive","departments:view","attendance:view","attendance:edit","attendance:manage","attendance:reports","attendance:employee_dashboard","leave:view","leave:create","leave:approve","holidays:view","holidays:create","tasks:view","tasks:create","tasks:assign","work-records:view","work-records:approve","advances:view","payroll:view","reports:view","reports:export","announcements:view","announcements:create","mail:view","mail:create"],
+  "HR Staff": ["dashboard:view","staff:view","staff:create","departments:view","attendance:view","attendance:edit","attendance:reports","leave:view","leave:create","holidays:view","tasks:view","work-records:view","announcements:view","mail:view","mail:create"],
+  "Finance Manager": ["dashboard:view","analytics:view","staff:view","attendance:view","payroll:view","payroll:create","payroll:approve","payroll:manage","payroll:preview","payroll:periods","expenses:view","expenses:create","expenses:edit","expenses:approve","income:view","income:create","income:edit","accounting:view","accounting:create","accounting:edit","invoices:view","invoices:create","invoices:edit","invoices:approve","payments:view","payments:create","payments:edit","reports:view","reports:export","advances:view","advances:approve"],
+  "Payroll Staff": ["dashboard:view","staff:view","attendance:view","payroll:view","payroll:create","payroll:preview","expenses:view","reports:view"],
+  "Manager": ["dashboard:view","staff:view","departments:view","attendance:view","attendance:employee_dashboard","leave:view","leave:approve","tasks:view","tasks:create","tasks:edit","tasks:assign","work-records:view","work-records:approve","announcements:view","mail:view","mail:create"],
+  "Employee": ["dashboard:view","attendance:view","attendance:create","leave:view","leave:create","tasks:view","work-records:view","work-records:create","holidays:view","announcements:view","mail:view","mail:create"],
+};
+
+const PROTECTED_ROUTES: Record<string, { module: string; action: string }> = {
+  "/settings": { module: "settings", action: "edit" },
+  "/settings/auth": { module: "settings", action: "auth" },
+  "/subscription": { module: "subscription", action: "manage" },
+  "/audit-logs": { module: "audit-logs", action: "view" },
+  "/staff/new": { module: "staff", action: "create" },
+  "/attendance/settings": { module: "attendance", action: "settings" },
+  "/payroll/preview": { module: "payroll", action: "preview" },
+  "/payroll/periods": { module: "payroll", action: "periods" },
+  "/super-admin": { module: "_super_admin", action: "view" },
+};
 
 function hasPermission(rolePermissions: string[], module: string, action: string): boolean {
   return (
@@ -84,7 +96,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const rolePermissions = parsePermissions(payload.rolePermissions);
+    const role = (payload.role as string) || "Employee";
+    const rolePermissions = ROLE_DEFAULTS[role] ?? [];
 
     // Check exact match first, then try progressively shorter prefixes
     let matchedRoute: { module: string; action: string } | null = null;

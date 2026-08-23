@@ -4,6 +4,7 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { getPermissionsForRole } from "@/lib/permissions";
 
 const SESSION_COOKIE = "astrapulse_session";
 const SECRET = new TextEncoder().encode(
@@ -31,7 +32,8 @@ export function verifyPassword(password: string, hash: string): boolean {
 }
 
 export async function createSession(user: SessionUser): Promise<string> {
-  return new SignJWT({ ...user })
+  const { rolePermissions, ...safeUser } = user;
+  return new SignJWT({ ...safeUser })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
     .setIssuedAt()
@@ -42,7 +44,18 @@ export async function createSession(user: SessionUser): Promise<string> {
 export async function verifySession(token: string): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, SECRET);
-    return payload as unknown as SessionUser;
+    const role = (payload.role as string) || "Employee";
+    return {
+      id: payload.id as string,
+      workspaceId: payload.workspaceId as string,
+      name: payload.name as string,
+      email: payload.email as string,
+      role,
+      rolePermissions: getPermissionsForRole(role),
+      accountType: (payload.accountType as string) || "organization",
+      employeeId: (payload.employeeId as string) ?? null,
+      departmentId: (payload.departmentId as string) ?? null,
+    } as SessionUser;
   } catch {
     return null;
   }
