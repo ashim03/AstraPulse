@@ -123,7 +123,7 @@ export default async function AttendancePage({
         </CardBody>
       </Card>
 
-      {scope !== "self" && <DeviceManager />}
+      {hasPermission(session, "attendance", "device") && <DeviceManager />}
     </>
   );
 }

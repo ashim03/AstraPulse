@@ -42,6 +42,11 @@ function LoginForm() {
       setUserId(res.data.userId ?? null);
       return;
     }
+    if (res.data?.requiresOtp) {
+      toast({ type: "info", title: "Verification code sent to your email" });
+      router.push(`/login-otp?email=${encodeURIComponent(res.data.email ?? email)}`);
+      return;
+    }
     toast({ type: "success", title: res.message ?? "Signed in" });
     const next = searchParams.get("next");
     if (next) {

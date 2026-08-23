@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HolidaysPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "holidays", "view")) redirect("/?error=access_denied");
   const canCreate = hasPermission(session, "holidays", "create");
   const canDelete = hasPermission(session, "holidays", "delete");
   const holidays = await prisma.holiday.findMany({

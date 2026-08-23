@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LeavePage() {
   const session = await requireSession();
+  if (!hasPermission(session, "leave", "view")) redirect("/?error=access_denied");
   const wsId = session.workspaceId;
   const year = new Date().getFullYear();
 

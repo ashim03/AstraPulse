@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { LayoutDashboard, Building2, CreditCard, Zap, LogOut, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logoutAction } from "../(auth)/actions";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/super-admin", icon: LayoutDashboard },
@@ -15,6 +17,19 @@ const NAV_ITEMS = [
 
 export default function SuperAdminSidebar({ userName }: { userName: string }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logoutAction();
+    } catch {
+      // ignore
+    }
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-slate-200 bg-white lg:flex dark:border-slate-700 dark:bg-slate-800">
@@ -64,9 +79,14 @@ export default function SuperAdminSidebar({ userName }: { userName: string }) {
             <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">{userName}</p>
             <p className="truncate text-[11px] text-slate-400">Super Admin</p>
           </div>
-          <a href="/api/auth/logout" className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300" title="Logout">
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 disabled:opacity-50"
+            title="Logout"
+          >
             <LogOut className="h-4 w-4" />
-          </a>
+          </button>
         </div>
       </div>
     </aside>

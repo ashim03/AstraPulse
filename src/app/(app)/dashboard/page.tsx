@@ -1,4 +1,4 @@
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, startOfMonth } from "date-fns";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { money, formatDate } from "@/lib/utils";
@@ -6,7 +6,8 @@ import { attendanceStatsForDay, attendanceTrend } from "@/services/attendance";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import { StatusBadge } from "@/components/ui/badge";
+import { StatusBadge, Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { ProgressBar } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ClipboardList,
+  HardDrive,
 } from "lucide-react";
 import { NeedsAttention } from "./needs-attention";
 import { RecentActivity } from "./recent-activity";
@@ -57,7 +59,7 @@ export default async function DashboardPage() {
 
   // ── Employee Dashboard ──────────────────────────────────────────────
   if (isEmployee) {
-    const [myAttendance, myPendingLeaves, myTasks, myRecentAttendance, myLeaveBalance] =
+    const [myAttendance, myPendingLeaves, myTasks, myRecentAttendance, myLeaveBalance, monthAttendance, latestPayrollItem] =
       await Promise.all([
         session.employeeId
           ? prisma.attendance.findFirst({
@@ -87,6 +89,18 @@ export default async function DashboardPage() {
               include: { type: true },
             })
           : [],
+        session.employeeId
+          ? prisma.attendance.findMany({
+              where: { employeeId: session.employeeId, date: { gte: startOfMonth(now), lte: now } },
+            })
+          : [],
+        session.employeeId
+          ? prisma.payrollItem.findFirst({
+              where: { employeeId: session.employeeId },
+              include: { payroll: true },
+              orderBy: { payroll: { period: "desc" } },
+            })
+          : null,
       ]);
 
     const tasksTodo = myTasks.filter((t) => t.status === "todo").length;
@@ -95,6 +109,13 @@ export default async function DashboardPage() {
     const tasksOpen = tasksTodo + tasksInProgress;
 
     const totalLeaveDays = myLeaveBalance.filter((r) => r.status === "approved").reduce((a, b) => a + b.days, 0);
+
+    const monthPresent = monthAttendance.filter((a) => a.status === "present" || a.status === "late" || a.status === "remote").length;
+    const monthAbsent = monthAttendance.filter((a) => a.status === "absent").length;
+    const monthLate = monthAttendance.filter((a) => a.status === "late").length;
+    const monthHalfDays = monthAttendance.filter((a) => a.isHalfDay).length;
+    const monthTotalHours = monthAttendance.reduce((sum, a) => sum + (a.hours || 0), 0);
+    const monthOvertime = monthAttendance.reduce((sum, a) => sum + (a.overtime || 0), 0);
 
     const clockInTime = myAttendance?.clockIn ? format(myAttendance.clockIn, "h:mm a") : "—";
     const clockOutTime = myAttendance?.clockOut ? format(myAttendance.clockOut, "h:mm a") : "—";
@@ -150,6 +171,12 @@ export default async function DashboardPage() {
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{workingHours}</p>
                 </div>
               </div>
+              {myAttendance && myAttendance.overtime > 0 && (
+                <div className="mt-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-2.5">
+                  <p className="text-xs text-emerald-600">Overtime today</p>
+                  <p className="text-sm font-semibold text-emerald-700">{myAttendance.overtime.toFixed(1)}h</p>
+                </div>
+              )}
             </CardBody>
           </Card>
 
@@ -227,6 +254,93 @@ export default async function DashboardPage() {
               </Card>
             </Link>
           </div>
+        </div>
+
+        {/* Monthly Attendance Summary */}
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardBody className="p-4">
+              <p className="section-title flex items-center gap-2 mb-3">
+                <Activity className="h-4 w-4 text-brand-500" /> Monthly Attendance
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-2.5 text-center">
+                  <p className="text-xl font-bold text-emerald-700">{monthPresent}</p>
+                  <p className="text-xs text-emerald-600">Present</p>
+                </div>
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-2.5 text-center">
+                  <p className="text-xl font-bold text-amber-700">{monthLate}</p>
+                  <p className="text-xs text-amber-600">Late</p>
+                </div>
+                <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-2.5 text-center">
+                  <p className="text-xl font-bold text-red-700">{monthAbsent}</p>
+                  <p className="text-xs text-red-600">Absent</p>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{monthTotalHours.toFixed(0)}h</p>
+                  <p className="text-xs text-slate-400">Total Hours</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{monthOvertime.toFixed(1)}h</p>
+                  <p className="text-xs text-slate-400">Overtime</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{monthHalfDays}</p>
+                  <p className="text-xs text-slate-400">Half Days</p>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          {latestPayrollItem && (
+            <Card>
+              <CardBody className="p-4">
+                <p className="section-title flex items-center gap-2 mb-3">
+                  <Wallet className="h-4 w-4 text-violet-500" /> Latest Payroll
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Period</span>
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                      {formatDate(new Date(latestPayrollItem.payroll.period + "-01"), "MMM yyyy")}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Net Pay</span>
+                    <span className="text-sm font-bold text-emerald-600">{money(latestPayrollItem.net)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Gross</span>
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{money(latestPayrollItem.gross)}</span>
+                  </div>
+                </div>
+                <Link href={`/payroll/${latestPayrollItem.payrollId}`} className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                  View details <ArrowRight className="h-3 w-3" />
+                </Link>
+              </CardBody>
+            </Card>
+          )}
+
+          <Card>
+            <CardBody className="p-4">
+              <p className="section-title flex items-center gap-2 mb-3">
+                <UserCheck className="h-4 w-4 text-emerald-500" /> Quick Links
+              </p>
+              <div className="space-y-2">
+                <Link href="/attendance" className="flex items-center gap-2 rounded-lg border border-slate-100 p-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <Clock className="h-4 w-4 text-slate-400" /> View My Attendance
+                </Link>
+                <Link href="/leave" className="flex items-center gap-2 rounded-lg border border-slate-100 p-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <CalendarDays className="h-4 w-4 text-slate-400" /> View My Leave
+                </Link>
+                <Link href="/settings/change-password" className="flex items-center gap-2 rounded-lg border border-slate-100 p-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <AlertCircle className="h-4 w-4 text-slate-400" /> Change Password
+                </Link>
+              </div>
+            </CardBody>
+          </Card>
         </div>
 
         {/* My Recent Activity */}
@@ -491,7 +605,165 @@ export default async function DashboardPage() {
     );
   }
 
-  // ── Admin / HR Dashboard ────────────────────────────────────────────
+  // ── HR Dashboard ─────────────────────────────────────────────────
+  const isHR = session.role === "HR Manager" || session.role === "HR Staff";
+
+  if (isHR && !isManager) {
+    const [hrEmployees, hrTodayAttendance, hrPendingLeave, hrRecentLeave] =
+      await Promise.all([
+        prisma.employee.findMany({
+          where: { workspaceId: wsId },
+          select: { id: true, name: true, status: true, department: { select: { name: true } } },
+        }),
+        attendanceStatsForDay(wsId, now),
+        prisma.leaveRequest.count({ where: { workspaceId: wsId, status: "pending" } }),
+        prisma.leaveRequest.findMany({
+          where: { workspaceId: wsId, status: "pending" },
+          include: { employee: true, type: true },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        }),
+      ]);
+
+    const hrActive = hrEmployees.filter((e) => e.status === "active").length;
+    const hrOnLeave = hrEmployees.filter((e) => e.status === "on_leave").length;
+    const hrNewThisMonth = await prisma.employee.count({
+      where: { workspaceId: wsId, joinDate: { gte: startOfMonth(now) } },
+    });
+
+    return (
+      <>
+        <PageHeader
+          title={`Hello, ${firstName} 👋`}
+          subtitle="Workforce management overview"
+          actions={
+            <Link href="/staff">
+              <Button size="sm" leftIcon={<Users className="h-4 w-4" />}>
+                View Staff
+              </Button>
+            </Link>
+          }
+        />
+
+        {/* Workforce Overview */}
+        <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href="/staff" className="block transition hover:scale-[1.01]">
+            <StatCard title="Total Employees" value={hrEmployees.length} icon={Users} footer={<p className="text-xs text-slate-400">{hrActive} active</p>} />
+          </Link>
+          <Link href="/attendance" className="block transition hover:scale-[1.01]">
+            <StatCard title="Present Today" value={hrTodayAttendance.present} trend="flat" icon={UserCheck} footer={<p className="text-xs text-emerald-600">{hrTodayAttendance.late} late</p>} />
+          </Link>
+          <Link href="/leave" className="block transition hover:scale-[1.01]">
+            <StatCard title="On Leave" value={hrOnLeave} icon={CalendarDays} footer={hrPendingLeave > 0 ? <p className="text-xs text-amber-600">{hrPendingLeave} pending</p> : undefined} />
+          </Link>
+          <StatCard title="New This Month" value={hrNewThisMonth} icon={TrendingUp} />
+        </div>
+
+        {/* Attendance Pulse */}
+        <Card className="mb-4">
+          <CardBody className="p-4 sm:px-5 sm:py-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="section-title flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-brand-500" /> Attendance Pulse
+                </h3>
+                <p className="text-xs text-slate-400">Today across {hrActive} active employees</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                {hrTodayAttendance.present}/{hrActive} present
+              </span>
+            </div>
+            <ProgressBar value={hrActive === 0 ? 0 : (hrTodayAttendance.present / hrActive) * 100} tone="green" />
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: "Late", value: hrTodayAttendance.late, tone: "text-amber-600" },
+                { label: "Remote", value: hrTodayAttendance.remote, tone: "text-sky-600" },
+                { label: "On leave", value: hrOnLeave, tone: "text-violet-600" },
+                { label: "Absent", value: hrTodayAttendance.absent, tone: "text-red-600" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-lg border border-slate-100 bg-slate-50/60 dark:bg-slate-800/60 px-3 py-2.5">
+                  <p className={`text-xl font-semibold ${s.tone}`}>{s.value}</p>
+                  <p className="text-xs text-slate-400">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Recent Leave Requests */}
+        <Card className="mb-4">
+          <CardBody className="p-4 sm:px-5 sm:py-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="section-title flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-amber-500" /> Recent Leave Requests
+              </h3>
+              <Link href="/leave" className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            {hrRecentLeave.length === 0 ? (
+              <p className="text-sm text-slate-400">No pending leave requests.</p>
+            ) : (
+              <div className="space-y-2">
+                {hrRecentLeave.map((lr) => (
+                  <div key={lr.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={lr.employee.name} size="xs" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{lr.employee.name}</p>
+                        <p className="text-xs text-slate-400">{lr.type.name} · {lr.days}d · {formatDate(lr.startDate)}</p>
+                      </div>
+                    </div>
+                    <Badge tone="amber">Pending</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
+        {/* HR Quick Actions */}
+        <Card className="mb-4">
+          <CardBody className="p-4 sm:px-5 sm:py-4">
+            <h3 className="section-title mb-3">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Link href="/staff" className="flex items-center gap-3 rounded-lg border border-slate-100 p-3 transition hover:border-brand-200 hover:bg-brand-50/30 dark:hover:bg-slate-700">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600"><Users className="h-4 w-4" /></span>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Staff Directory</p>
+                  <p className="text-xs text-slate-400">{hrEmployees.length} employees</p>
+                </div>
+              </Link>
+              <Link href="/attendance/reports" className="flex items-center gap-3 rounded-lg border border-slate-100 p-3 transition hover:border-brand-200 hover:bg-brand-50/30 dark:hover:bg-slate-700">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600"><Activity className="h-4 w-4" /></span>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Attendance Reports</p>
+                  <p className="text-xs text-slate-400">View reports</p>
+                </div>
+              </Link>
+              <Link href="/leave" className="flex items-center gap-3 rounded-lg border border-slate-100 p-3 transition hover:border-brand-200 hover:bg-brand-50/30 dark:hover:bg-slate-700">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><CalendarDays className="h-4 w-4" /></span>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Manage Leave</p>
+                  <p className="text-xs text-slate-400">{hrPendingLeave} pending</p>
+                </div>
+              </Link>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Needs attention + recent activity */}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          <NeedsAttention workspaceId={wsId} role={session.role} employeeId={session.employeeId ?? undefined} />
+          <div className="space-y-4">
+            <RecentActivity workspaceId={wsId} role={session.role} employeeId={session.employeeId ?? undefined} />
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ── Admin Dashboard ────────────────────────────────────────────────
   const canViewFinance = hasPermission(session, "payroll", "view") || hasPermission(session, "expenses", "view") || hasPermission(session, "income", "view") || hasPermission(session, "accounting", "view");
   const canViewPayroll = hasPermission(session, "payroll", "view");
   const canCreatePayroll = hasPermission(session, "payroll", "create");
@@ -501,7 +773,7 @@ export default async function DashboardPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  const [employees, todayAttendance, pendingLeaveCount, pendingTasks, advances] =
+  const [employees, todayAttendance, pendingLeaveCount, pendingTasks, advances, devices] =
     await Promise.all([
       prisma.employee.findMany({
         where: { workspaceId: wsId },
@@ -514,6 +786,7 @@ export default async function DashboardPage() {
       prisma.leaveRequest.count({ where: { workspaceId: wsId, status: "pending" } }),
       prisma.task.count({ where: { workspaceId: wsId, status: { in: ["backlog", "todo", "in_progress", "review"] } } }),
       prisma.employeeAdvance.findMany({ where: { workspaceId: wsId, status: { in: ["approved", "paid"] } } }),
+      prisma.attendanceDevice.findMany({ where: { workspaceId: wsId } }),
     ]);
 
   let safePayrolls: any[] = [];
@@ -791,6 +1064,20 @@ export default async function DashboardPage() {
                 </div>
                 <span className="text-sm font-semibold text-slate-700">{money(outstandingAdvances)}</span>
               </Link>
+              {hasPermission(session, "attendance", "device") && devices.length > 0 && (
+                <Link href="/attendance/settings" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-sky-200 hover:bg-sky-50/40 dark:hover:bg-slate-700">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-600"><HardDrive className="h-4 w-4" /></span>
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Attendance devices</p>
+                      <p className="text-xs text-slate-400">{devices.filter((d: any) => d.status === "online").length}/{devices.length} online</p>
+                    </div>
+                  </div>
+                  {devices.some((d: any) => d.lastSyncAt) && (
+                    <span className="text-xs text-slate-400">Last sync {formatDate(devices.filter((d: any) => d.lastSyncAt).sort((a: any, b: any) => new Date(b.lastSyncAt).getTime() - new Date(a.lastSyncAt).getTime())[0].lastSyncAt, "MMM d, HH:mm")}</span>
+                  )}
+                </Link>
+              )}
             </div>
           </CardBody>
         </Card>

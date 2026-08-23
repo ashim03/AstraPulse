@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { PreviewClient } from "./preview-client";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { hasPermission } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,10 @@ export default async function PayrollPreviewPage({
   searchParams: { start?: string; end?: string };
 }) {
   const session = await requireSession();
+
+  if (!hasPermission(session, "payroll", "preview")) {
+    redirect("/?error=access_denied");
+  }
 
   const now = new Date();
   const startDate = searchParams.start

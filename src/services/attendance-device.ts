@@ -1,10 +1,18 @@
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
+import type { SessionUser } from "@/lib/auth";
 import {
-  getAttendanceSettings,
-  isLateArrival,
-  isWorkingDay,
-  calculateOvertime,
-} from "./attendance-settings";
+  testDeviceConnection as hikTestConnection,
+  fetchAttendanceEvents,
+  fetchDeviceUsers,
+  getDeviceStatus as hikGetStatus,
+  type HikvisionDeviceConfig,
+  type HikvisionAttendanceEvent,
+} from "@/services/hikvision";
+import { getAttendanceSettings, isLateArrival, calculateOvertime, isWorkingDay } from "@/services/attendance-settings";
+import { format, parseISO, startOfDay, endOfDay, subDays, differenceInMinutes } from "date-fns";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type DeviceInput = {
   name: string;
@@ -18,6 +26,36 @@ export type DeviceInput = {
   syncInterval?: number;
   autoSync?: boolean;
 };
+
+export type SyncLogEntry = {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  type: string;
+  status: string;
+  message: string | null;
+  recordsSynced: number;
+  duration: number | null;
+  createdAt: Date;
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function toDeviceConfig(device: {
+  ipAddress: string;
+  port: number;
+  username: string | null;
+  password: string | null;
+}): HikvisionDeviceConfig {
+  return {
+    ipAddress: device.ipAddress,
+    port: device.port,
+    username: device.username ?? "admin",
+    password: device.password ?? "",
+  };
+}
+
+// ─── CRUD ────────────────────────────────────────────────────────────────────
 
 export async function getDevices(workspaceId: string) {
   return prisma.attendanceDevice.findMany({
@@ -35,13 +73,13 @@ export async function createDevice(workspaceId: string, data: DeviceInput) {
     data: {
       workspaceId,
       name: data.name,
-      model: data.model ?? null,
+      model: data.model,
       ipAddress: data.ipAddress,
-      port: data.port ?? 4370,
-      location: data.location ?? null,
+      port: data.port ?? 80,
+      location: data.location,
       protocol: data.protocol ?? "TCP",
-      username: data.username ?? null,
-      password: data.password ?? null,
+      username: data.username,
+      password: data.password,
       syncInterval: data.syncInterval ?? 30,
       autoSync: data.autoSync ?? false,
     },
@@ -51,7 +89,18 @@ export async function createDevice(workspaceId: string, data: DeviceInput) {
 export async function updateDevice(deviceId: string, data: Partial<DeviceInput>) {
   return prisma.attendanceDevice.update({
     where: { id: deviceId },
-    data,
+    data: {
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.model !== undefined && { model: data.model }),
+      ...(data.ipAddress !== undefined && { ipAddress: data.ipAddress }),
+      ...(data.port !== undefined && { port: data.port }),
+      ...(data.location !== undefined && { location: data.location }),
+      ...(data.protocol !== undefined && { protocol: data.protocol }),
+      ...(data.username !== undefined && { username: data.username }),
+      ...(data.password !== undefined && { password: data.password }),
+      ...(data.syncInterval !== undefined && { syncInterval: data.syncInterval }),
+      ...(data.autoSync !== undefined && { autoSync: data.autoSync }),
+    },
   });
 }
 
@@ -59,169 +108,328 @@ export async function deleteDevice(deviceId: string) {
   return prisma.attendanceDevice.delete({ where: { id: deviceId } });
 }
 
-export async function testConnection(deviceId: string) {
+// ─── Device Operations ───────────────────────────────────────────────────────
+
+export async function testConnection(deviceId: string): Promise<{ success: boolean; message: string; latencyMs?: number }> {
   const device = await prisma.attendanceDevice.findUnique({ where: { id: deviceId } });
   if (!device) throw new Error("Device not found");
 
-  const success = Math.random() > 0.15;
+  const config = toDeviceConfig(device);
+  const result = await hikTestConnection(config);
 
+  // Update device status
   await prisma.attendanceDevice.update({
     where: { id: deviceId },
     data: {
-      status: success ? "online" : "error",
-      errorMessage: success ? null : "Connection timed out",
-      firmwareVersion: success ? "v6.6.2" : device.firmwareVersion,
+      status: result.success ? "online" : "error",
+      errorMessage: result.error ?? null,
+      firmwareVersion: result.deviceInfo?.firmwareVersion ?? device.firmwareVersion,
+      serialNumber: result.deviceInfo?.serialNumber ?? device.serialNumber,
+      model: result.deviceInfo?.model ?? device.model,
     },
   });
 
+  // Log the connection test
   await prisma.attendanceDeviceLog.create({
     data: {
       deviceId,
       type: "connection",
-      status: success ? "success" : "failed",
-      message: success
-        ? `Connected to ${device.ipAddress}:${device.port}`
-        : `Failed to connect to ${device.ipAddress}:${device.port}`,
-      duration: Math.floor(Math.random() * 2000) + 200,
+      status: result.success ? "success" : "failed",
+      message: result.success
+        ? `Connected successfully (${result.latencyMs}ms). Model: ${result.deviceInfo?.model}, FW: ${result.deviceInfo?.firmwareVersion}`
+        : result.error ?? "Connection failed",
     },
   });
 
-  return { success };
+  return { success: result.success, message: result.error ?? "Connected", latencyMs: result.latencyMs };
 }
 
-function randomTime(startHour: number, endHour: number): Date {
-  const now = new Date();
-  const h = startHour + Math.floor(Math.random() * (endHour - startHour));
-  const m = Math.floor(Math.random() * 60);
-  now.setHours(h, m, Math.floor(Math.random() * 60), 0);
-  return now;
+export async function getDeviceStatus(deviceId: string): Promise<"online" | "offline" | "syncing" | "error"> {
+  const device = await prisma.attendanceDevice.findUnique({ where: { id: deviceId } });
+  if (!device) return "offline";
+
+  const status = await hikGetStatus(toDeviceConfig(device));
+  await prisma.attendanceDevice.update({
+    where: { id: deviceId },
+    data: { status },
+  });
+  return status;
 }
 
-function subtractDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() - days);
-  return d;
-}
-
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-export async function syncDevice(deviceId: string) {
+export async function fetchDeviceUserList(deviceId: string): Promise<{ employeeNo: string; name: string }[]> {
   const device = await prisma.attendanceDevice.findUnique({ where: { id: deviceId } });
   if (!device) throw new Error("Device not found");
 
-  const startTime = Date.now();
-  await prisma.attendanceDevice.update({
-    where: { id: deviceId },
-    data: { status: "syncing" },
-  });
+  return fetchDeviceUsers(toDeviceConfig(device));
+}
 
+// ─── Sync Engine ─────────────────────────────────────────────────────────────
+
+export async function syncDevice(deviceId: string): Promise<{
+  success: boolean;
+  recordsRetrieved: number;
+  newRecords: number;
+  duplicates: number;
+  unmapped: number;
+  failed: number;
+  message: string;
+}> {
+  const startTime = Date.now();
+  const device = await prisma.attendanceDevice.findUnique({ where: { id: deviceId } });
+  if (!device) throw new Error("Device not found");
+
+  const config = toDeviceConfig(device);
   const settings = await getAttendanceSettings(device.workspaceId);
 
-  const [startH, startM] = settings.officeStartTime.split(":").map(Number);
-  const [endH, endM] = settings.officeEndTime.split(":").map(Number);
-
-  const employees = await prisma.employee.findMany({
-    where: { workspaceId: device.workspaceId, status: "active" },
-    select: { id: true, employeeId: true, name: true, deviceEmployeeId: true },
+  // Mark as syncing
+  await prisma.attendanceDevice.update({
+    where: { id: deviceId },
+    data: { status: "syncing", lastSyncStatus: null, errorMessage: null },
   });
 
-  if (employees.length === 0) {
+  // Determine sync window: use lastSyncTime for incremental, or last 30 days for initial
+  const now = new Date();
+  const endTime = endOfDay(now);
+  const startTimeWindow = device.lastSyncAt
+    ? subDays(device.lastSyncAt, 1) // Sync 1 day before last sync to handle clock skew
+    : subDays(now, 30); // Initial sync: last 30 days
+
+  // Fetch events from device
+  const result = await fetchAttendanceEvents(config, startTimeWindow, endTime, device.lastSyncAt ?? undefined);
+
+  if (!result.success) {
     await prisma.attendanceDevice.update({
       where: { id: deviceId },
-      data: { status: "online", lastSyncAt: new Date(), lastSyncStatus: "success" },
+      data: { status: "error", errorMessage: result.error },
     });
     await prisma.attendanceDeviceLog.create({
       data: {
         deviceId,
         type: "sync",
-        status: "success",
-        message: "No active employees found",
-        recordsSynced: 0,
+        status: "failed",
+        message: result.error,
         duration: Date.now() - startTime,
       },
     });
-    return { synced: 0, created: 0, skipped: 0 };
+    return {
+      success: false,
+      recordsRetrieved: 0,
+      newRecords: 0,
+      duplicates: 0,
+      unmapped: 0,
+      failed: 0,
+      message: result.error ?? "Sync failed",
+    };
   }
 
-  let created = 0;
-  let skipped = 0;
-  const today = startOfDay(new Date());
-  const numDays = Math.min(7, Math.floor(Math.random() * 5) + 3);
+  // Load all employees with deviceEmployeeId for this workspace
+  const employees = await prisma.employee.findMany({
+    where: { workspaceId: device.workspaceId, status: "active" },
+    select: { id: true, employeeId: true, name: true, deviceEmployeeId: true },
+  });
 
-  for (let dayOffset = 0; dayOffset < numDays; dayOffset++) {
-    const date = startOfDay(subtractDays(today, dayOffset));
+  // Build device user → employee mapping
+  const deviceUserMap = new Map<string, typeof employees[0]>();
+  for (const emp of employees) {
+    if (emp.deviceEmployeeId) {
+      deviceUserMap.set(emp.deviceEmployeeId, emp);
+    }
+  }
 
-    if (!isWorkingDay(settings, date)) continue;
+  let newRecords = 0;
+  let duplicates = 0;
+  let unmapped = 0;
+  let failed = 0;
 
-    const recordsForDay = Math.floor(employees.length * (0.7 + Math.random() * 0.3));
-    const shuffled = [...employees].sort(() => Math.random() - 0.5);
-    const selectedEmployees = shuffled.slice(0, recordsForDay);
+  // Group events by employee + date to pair clock-in/clock-out
+  const eventsByEmployeeDate = new Map<string, HikvisionAttendanceEvent[]>();
+  for (const evt of result.events) {
+    const dateStr = evt.time.split("T")[0];
+    const key = `${evt.employeeNo}:${dateStr}`;
+    if (!eventsByEmployeeDate.has(key)) {
+      eventsByEmployeeDate.set(key, []);
+    }
+    eventsByEmployeeDate.get(key)!.push(evt);
+  }
 
-    for (const emp of selectedEmployees) {
-      const existing = await prisma.attendance.findFirst({
-        where: { employeeId: emp.id, date },
-      });
-      if (existing) {
-        skipped++;
-        continue;
+  // Process each employee-date group
+  for (const [key, events] of Array.from(eventsByEmployeeDate.entries())) {
+    const [deviceUserId, dateStr] = key.split(":");
+    const employee = deviceUserMap.get(deviceUserId);
+
+    if (!employee) {
+      unmapped++;
+      continue;
+    }
+
+    const date = parseISO(dateStr);
+
+    // Check if already exists
+    const existing = await prisma.attendance.findFirst({
+      where: { employeeId: employee.id, date: startOfDay(date) },
+    });
+
+    if (existing) {
+      duplicates++;
+      continue;
+    }
+
+    // Sort events by time
+    events.sort((a, b) => a.time.localeCompare(b.time));
+
+    // Determine clock-in, clock-out, breaks from events
+    let clockIn: Date | null = null;
+    let clockOut: Date | null = null;
+    const breaks: { breakOut: Date; breakIn?: Date }[] = [];
+    let overtimeIn: Date | null = null;
+    let overtimeOut: Date | null = null;
+
+    for (const evt of events) {
+      const evtTime = parseISO(evt.time);
+      switch (evt.attendanceStatus) {
+        case "checkIn":
+          if (!clockIn || evtTime < clockIn) clockIn = evtTime;
+          break;
+        case "checkOut":
+          if (!clockOut || evtTime > clockOut) clockOut = evtTime;
+          break;
+        case "breakOut":
+          breaks.push({ breakOut: evtTime });
+          break;
+        case "breakIn":
+          if (breaks.length > 0 && !breaks[breaks.length - 1].breakIn) {
+            breaks[breaks.length - 1].breakIn = evtTime;
+          }
+          break;
+        case "overtimeIn":
+          overtimeIn = evtTime;
+          break;
+        case "overtimeOut":
+          overtimeOut = evtTime;
+          break;
       }
+    }
 
-      const clockInHour = startH + Math.floor(Math.random() * 3);
-      const clockInMin = Math.floor(Math.random() * 60);
-      const clockIn = new Date(date);
-      clockIn.setHours(clockInHour, clockInMin, 0, 0);
+    // If no explicit clock-in/out, use first/last event
+    if (!clockIn && events.length > 0) clockIn = parseISO(events[0].time);
+    if (!clockOut && events.length > 1) clockOut = parseISO(events[events.length - 1].time);
 
-      const clockOutHour = endH + Math.floor(Math.random() * 4);
-      const clockOutMin = Math.floor(Math.random() * 60);
-      const clockOut = new Date(date);
-      clockOut.setHours(clockOutHour, clockOutMin, 0, 0);
-      if (clockOut <= clockIn) clockOut.setHours(clockIn.getHours() + 8);
+    // Calculate working metrics
+    const officeStart = settings.officeStartTime; // "10:00"
+    const officeEnd = settings.officeEndTime; // "18:00"
 
-      const workedMinutes = Math.round(
-        (clockOut.getTime() - clockIn.getTime()) / 60000
-      );
-      const officeMinutes = (endH * 60 + endM) - (startH * 60 + startM);
-      const hours = Math.round((workedMinutes / 60) * 10) / 10;
+    let lateMinutes = 0;
+    let earlyMinutes = 0;
+    let hours = 0;
+    let overtime = 0;
+    let breakMinutes = 0;
+    let isHalfDay = false;
+    let status = "present";
 
-      const { isLate, lateMinutes } = isLateArrival(settings, clockIn);
-      const { overtimeMinutes } = calculateOvertime(workedMinutes, officeMinutes, settings);
+    if (clockIn) {
+      // Late calculation
+      const lateResult = isLateArrival(settings, clockIn);
+      lateMinutes = lateResult.lateMinutes;
 
-      let status: string;
-      if (lateMinutes > 0 && lateMinutes >= (settings.absentIfLateByMinutes || Infinity)) {
+      // Half-day check
+      if (settings.absentIfLateByMinutes > 0 && lateMinutes >= settings.absentIfLateByMinutes) {
         status = "absent";
-      } else if (lateMinutes > 0 && lateMinutes >= (settings.halfDayAfterMinutes || Infinity)) {
+      } else if (settings.halfDayAfterMinutes > 0 && lateMinutes >= settings.halfDayAfterMinutes) {
+        isHalfDay = true;
         status = "half_day";
-      } else if (isLate) {
+      } else if (lateMinutes > 0) {
         status = "late";
       } else {
         status = "present";
       }
+    }
 
+    // Working hours
+    if (clockIn && clockOut) {
+      hours = Math.max(0.1, (clockOut.getTime() - clockIn.getTime()) / 3600000);
+    }
+
+    // Break duration
+    for (const brk of breaks) {
+      if (brk.breakIn) {
+        breakMinutes += differenceInMinutes(brk.breakIn, brk.breakOut);
+      }
+    }
+
+    // Check working day
+    const isWeekend = !isWorkingDay(settings, date);
+    const isHoliday = false; // TODO: check against Holiday model
+
+    // Overtime calculation
+    const [startH, startM] = officeStart.split(":").map(Number);
+    const [endH, endM] = officeEnd.split(":").map(Number);
+    const officeMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+    const workedMinutes = Math.round(hours * 60);
+
+    if (settings.overtimeEnabled) {
+      const otResult = calculateOvertime(workedMinutes, officeMinutes, settings, isWeekend, isHoliday);
+      overtime = otResult.overtimeMinutes / 60; // Convert to hours
+    }
+
+    // Early departure
+    if (clockOut) {
+      const [oEndH, oEndM] = officeEnd.split(":").map(Number);
+      const officeEndMinutes = oEndH * 60 + oEndM;
+      const clockOutMinutes = clockOut.getHours() * 60 + clockOut.getMinutes();
+      if (clockOutMinutes < officeEndMinutes) {
+        earlyMinutes = officeEndMinutes - clockOutMinutes;
+      }
+    }
+
+    try {
       await prisma.attendance.create({
         data: {
           workspaceId: device.workspaceId,
-          employeeId: emp.id,
-          date,
-          clockIn,
-          clockOut,
+          employeeId: employee.id,
+          date: startOfDay(date),
+          clockIn: clockIn ?? undefined,
+          clockOut: clockOut ?? undefined,
           status,
-          hours,
-          overtime: Math.round((overtimeMinutes / 60) * 10) / 10,
+          hours: Math.round(hours * 100) / 100,
+          overtime: Math.round(overtime * 100) / 100,
+          breakMinutes,
           lateMinutes,
-          isHalfDay: status === "half_day",
+          earlyMinutes,
+          isHalfDay,
+          isHoliday,
+          isWeekend,
           source: "device",
           deviceId: device.id,
-          deviceRecordId: `DEV-${device.id.slice(-4)}-${emp.employeeId}-${dayOffset}`,
+          deviceRecordId: `HIK-${deviceUserId}-${dateStr}-${events.length}`,
         },
       });
-      created++;
+
+      // Create break records
+      for (const brk of breaks) {
+        if (brk.breakIn) {
+          await prisma.break.create({
+            data: {
+              workspaceId: device.workspaceId,
+              attendanceId: "", // Will be set after attendance creation
+              employeeId: employee.id,
+              breakOut: brk.breakOut,
+              breakIn: brk.breakIn,
+              duration: differenceInMinutes(brk.breakIn, brk.breakOut),
+              status: "completed",
+              isPaid: settings.breakIsPaid,
+            },
+          });
+        }
+      }
+
+      newRecords++;
+    } catch (e) {
+      failed++;
     }
   }
 
+  // Update device sync status
+  const duration = Date.now() - startTime;
   await prisma.attendanceDevice.update({
     where: { id: deviceId },
     data: {
@@ -232,48 +440,74 @@ export async function syncDevice(deviceId: string) {
     },
   });
 
+  // Create sync log
   await prisma.attendanceDeviceLog.create({
     data: {
       deviceId,
       type: "sync",
-      status: "success",
-      message: `Synced ${created} records over ${numDays} days`,
-      recordsSynced: created,
-      duration: Date.now() - startTime,
+      status: failed > 0 ? "warning" : "success",
+      message: `Retrieved ${result.numOfMatches} events. New: ${newRecords}, Duplicates: ${duplicates}, Unmapped: ${unmapped}, Failed: ${failed}`,
+      recordsSynced: newRecords,
+      duration,
     },
   });
 
-  return { synced: created, created, skipped };
+  return {
+    success: true,
+    recordsRetrieved: result.numOfMatches,
+    newRecords,
+    duplicates,
+    unmapped,
+    failed,
+    message: `Sync complete: ${newRecords} new, ${duplicates} duplicates, ${unmapped} unmapped`,
+  };
 }
 
-export async function getDeviceLogs(deviceId: string, limit = 20) {
-  return prisma.attendanceDeviceLog.findMany({
+// ─── Employee-Device Mapping ─────────────────────────────────────────────────
+
+export async function mapDeviceEmployee(
+  employeeId: string,
+  deviceUserId: string
+): Promise<void> {
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { deviceEmployeeId: deviceUserId },
+  });
+}
+
+export async function getUnmappedEmployees(workspaceId: string) {
+  return prisma.employee.findMany({
+    where: { workspaceId, status: "active", deviceEmployeeId: null },
+    select: { id: true, employeeId: true, name: true, department: { select: { name: true } } },
+  });
+}
+
+export async function getMappedEmployees(workspaceId: string) {
+  return prisma.employee.findMany({
+    where: { workspaceId, status: "active", deviceEmployeeId: { not: null } },
+    select: { id: true, employeeId: true, name: true, deviceEmployeeId: true, department: { select: { name: true } } },
+  });
+}
+
+// ─── Device Logs ─────────────────────────────────────────────────────────────
+
+export async function getDeviceLogs(deviceId: string, limit = 20): Promise<SyncLogEntry[]> {
+  const logs = await prisma.attendanceDeviceLog.findMany({
     where: { deviceId },
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+
+  const device = await prisma.attendanceDevice.findUnique({ where: { id: deviceId } });
+
+  return logs.map((log) => ({
+    ...log,
+    deviceName: device?.name ?? "Unknown",
+  }));
 }
 
-export async function mapDeviceEmployee(
-  deviceId: string,
-  deviceUserId: string,
-  systemEmployeeId: string
-) {
-  const device = await prisma.attendanceDevice.findUnique({ where: { id: deviceId } });
-  if (!device) throw new Error("Device not found");
+// ─── Device Permission ───────────────────────────────────────────────────────
 
-  await prisma.employee.update({
-    where: { id: systemEmployeeId },
-    data: { deviceEmployeeId: deviceUserId },
-  });
-
-  return { success: true };
-}
-
-export type DeviceStatus = "online" | "offline" | "syncing";
-
-export async function getDeviceStatus(deviceId: string): Promise<DeviceStatus> {
-  const device = await prisma.attendanceDevice.findUnique({ where: { id: deviceId } });
-  if (!device) return "offline";
-  return device.status as DeviceStatus;
+export function checkDevicePermission(session: SessionUser): boolean {
+  return hasPermission(session, "attendance", "device");
 }

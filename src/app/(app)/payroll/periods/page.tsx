@@ -2,11 +2,16 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { PeriodManager } from "./period-manager";
+import { hasPermission } from "@/lib/permissions";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function PayrollPeriodsPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "payroll", "periods")) {
+    redirect("/?error=access_denied");
+  }
 
   const periods = await prisma.payrollPeriod.findMany({
     where: { workspaceId: session.workspaceId },

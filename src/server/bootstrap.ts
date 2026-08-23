@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { ROLE_DEFS, DEFAULT_CHART_OF_ACCOUNTS, DEFAULT_LEAVE_TYPES } from "@/lib/constants";
+import { DEFAULT_CHART_OF_ACCOUNTS, DEFAULT_LEAVE_TYPES } from "@/lib/constants";
+import { ROLE_DEFAULTS } from "@/lib/permissions";
 
 export type BootstrapInput = {
   companyName: string;
@@ -32,25 +33,48 @@ export async function bootstrapWorkspace(input: BootstrapInput) {
     },
   });
 
-  // System roles
+  // System roles – use granular ROLE_DEFAULTS from permissions module
+  const roleDescriptions: Record<string, string> = {
+    "Workspace Admin": "Manage workspace, staff, approvals and subscriptions.",
+    "HR Manager": "Manage employees, attendance, leave and documents.",
+    "HR Staff": "HR support: staff records, attendance and leave.",
+    "Finance Manager": "Manage accounting, expenses, income, invoices and reports.",
+    "Payroll Staff": "Process payroll and view payroll reports.",
+    "Manager": "Approve leave and work records for their team.",
+    "Employee": "Self-service: attendance, leave requests and timesheets.",
+  };
   const roleIds: Record<string, string> = {};
-  for (const r of ROLE_DEFS) {
+
+  // Super Admin always gets full access
+  const superAdmin = await prisma.role.create({
+    data: {
+      workspaceId: workspace.id,
+      name: "Super Admin",
+      description: "Full access to everything including billing and system settings.",
+      isSystem: true,
+      permissions: JSON.stringify(["*"]),
+    },
+  });
+  roleIds["Super Admin"] = superAdmin.id;
+
+  for (const [roleName, perms] of Object.entries(ROLE_DEFAULTS)) {
+    const expanded = perms.flatMap((p: string) => {
+      const [mod, action] = p.split(":");
+      if (action === "*") {
+        return ["view", "create", "edit", "delete", "approve", "export", "manage", "settings", "reports", "preview", "periods", "auth", "assign", "employee_dashboard", "view_sensitive", "device", "export"].map((a) => `${mod}:${a}`);
+      }
+      return [p];
+    });
     const role = await prisma.role.create({
       data: {
         workspaceId: workspace.id,
-        name: r.name,
-        description: r.description,
+        name: roleName,
+        description: roleDescriptions[roleName] ?? "",
         isSystem: true,
-        permissions: Array.isArray(r.permissions)
-          ? JSON.stringify(
-              r.permissions.flatMap((m: string) =>
-                ["view", "create", "edit", "delete", "approve", "export", "manage"].map((a) => `${m}:${a}`)
-              )
-            )
-          : JSON.stringify(["*"]),
+        permissions: JSON.stringify(expanded),
       },
     });
-    roleIds[r.name] = role.id;
+    roleIds[roleName] = role.id;
   }
 
   // Admin user

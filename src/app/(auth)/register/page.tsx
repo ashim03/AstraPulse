@@ -45,6 +45,11 @@ export default function RegisterPage() {
       setFieldErrors(res.fieldErrors ?? {});
       return;
     }
+    if (res.data?.requiresVerification) {
+      toast({ type: "info", title: res.message ?? "Please verify your email" });
+      router.push(`/verify-email?email=${encodeURIComponent(res.data.email ?? form.email)}`);
+      return;
+    }
     toast({ type: "success", title: res.message ?? "Workspace created" });
     router.push("/");
     router.refresh();

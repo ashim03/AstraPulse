@@ -48,7 +48,15 @@ export async function sendMessageAction(formData: FormData): Promise<ActionResul
 }
 
 export async function markMessageReadAction(messageId: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "mail", "view")) {
+    return fail("You don't have permission to access messages");
+  }
   await prisma.messageRecipient.updateMany({
     where: { messageId, recipientId: session.id, readAt: null },
     data: { readAt: new Date() },
@@ -88,7 +96,15 @@ export async function deleteMessageAction(messageId: string): Promise<ActionResu
 }
 
 export async function getConversationsAction(): Promise<ActionResult<any>> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "mail", "view")) {
+    return fail("You don't have permission to access messages");
+  }
 
   const sentMessages = await prisma.message.findMany({
     where: { senderId: session.id },
@@ -117,7 +133,15 @@ export async function getConversationsAction(): Promise<ActionResult<any>> {
 }
 
 export async function getUnreadCountAction(): Promise<ActionResult<number>> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "mail", "view")) {
+    return ok(0);
+  }
 
   const count = await prisma.messageRecipient.count({
     where: { recipientId: session.id, readAt: null },
@@ -127,7 +151,15 @@ export async function getUnreadCountAction(): Promise<ActionResult<number>> {
 }
 
 export async function getAvailableRecipientsAction(): Promise<ActionResult<any>> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "mail", "create")) {
+    return fail("You don't have permission to send messages");
+  }
 
   if (session.accountType === "super_admin") {
     const admins = await prisma.user.findMany({

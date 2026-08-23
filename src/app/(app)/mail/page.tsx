@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { MessageManager, type UserOption, type MessageRow } from "./message-manager";
 
@@ -7,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MailPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "mail", "view")) redirect("/?error=access_denied");
   const [messages, users, unreadCount] = await Promise.all([
     prisma.message.findMany({
       where: {

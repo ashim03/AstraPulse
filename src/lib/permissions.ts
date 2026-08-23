@@ -84,6 +84,7 @@ export const ALL_PERMISSIONS = [
   "income:view",
   "income:create",
   "income:edit",
+  "income:delete",
   "accounting:view",
   "accounting:create",
   "accounting:edit",
@@ -113,6 +114,12 @@ export const ALL_PERMISSIONS = [
   // Audit Logs
   "audit-logs:view",
   "audit-logs:export",
+
+  // Documents
+  "documents:view",
+  "documents:create",
+  "documents:edit",
+  "documents:delete",
 
   // Settings
   "settings:view",

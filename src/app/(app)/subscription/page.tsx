@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubscriptionManager } from "./subscription-manager";
 
@@ -7,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SubscriptionPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "subscription", "view")) redirect("/?error=access_denied");
   const [subscription, employeeCount] = await Promise.all([
     prisma.subscription.findUnique({ where: { workspaceId: session.workspaceId } }),
     prisma.employee.count({ where: { workspaceId: session.workspaceId, status: { in: ["active", "probation", "on_leave"] } } }),

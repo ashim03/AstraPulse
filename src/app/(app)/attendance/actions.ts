@@ -6,7 +6,7 @@ import { hasPermission, canAccessEmployee, type PermissionAction } from "@/lib/p
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { startOfDay, startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
-import { syncHikvisionAttendanceToDatabase } from "@/services/hikvision";
+import { syncDevice, getDevices } from "@/services/attendance-device";
 
 async function requirePerm(module: string, action: PermissionAction = "view") {
   const session = await requireSession();
@@ -104,38 +104,32 @@ export async function attendanceAdjustAction(
 }
 
 export async function syncHikvisionAttendanceAction(
-  ip: string,
-  port: number = 80,
-  username: string = "admin",
-  password: string = "",
-  beginDate?: string,
-  endDate?: string
-): Promise<{ ok: boolean; message: string; imported: number; created: number; updated: number; errors: string[] }> {
+  deviceId: string
+): Promise<{ ok: boolean; message: string; recordsRetrieved: number; newRecords: number; duplicates: number; unmapped: number; failed: number }> {
   try {
-    const session = await requirePerm("attendance", "create");
-    const begin = beginDate ? new Date(beginDate) : undefined;
-    const end = endDate ? new Date(endDate) : undefined;
+    const session = await requirePerm("attendance", "device");
+    const result = await syncDevice(deviceId);
 
-    const result = await syncHikvisionAttendanceToDatabase(ip, port, username, password, begin, end);
-
-    await writeAudit({ session, action: "create", module: "attendance", description: `Synced Hikvision attendance from ${ip}` });
+    await writeAudit({ session, action: "create", module: "attendance", description: `Synced device ${deviceId}: ${result.newRecords} new records` });
 
     return {
-      ok: true,
-      message: `Hikvision attendance synced: ${result.imported} records (${result.created} created, ${result.updated} updated)`,
-      imported: result.imported,
-      created: result.created,
-      updated: result.updated,
-      errors: result.errors,
+      ok: result.success,
+      message: result.message,
+      recordsRetrieved: result.recordsRetrieved,
+      newRecords: result.newRecords,
+      duplicates: result.duplicates,
+      unmapped: result.unmapped,
+      failed: result.failed,
     };
   } catch (e) {
     return {
       ok: false,
-      message: (e as Error).message || "Failed to sync Hikvision attendance",
-      imported: 0,
-      created: 0,
-      updated: 0,
-      errors: [(e as Error).message],
+      message: (e as Error).message || "Failed to sync device",
+      recordsRetrieved: 0,
+      newRecords: 0,
+      duplicates: 0,
+      unmapped: 0,
+      failed: 0,
     };
   }
 }
