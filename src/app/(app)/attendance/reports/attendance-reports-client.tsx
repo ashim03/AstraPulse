@@ -104,7 +104,7 @@ export function AttendanceReportsClient({
       format(new Date(r.date), "yyyy-MM-dd"),
       r.clockIn ? format(new Date(r.clockIn), "h:mm a") : "",
       r.clockOut ? format(new Date(r.clockOut), "h:mm a") : "",
-      r.hours.toFixed(2),
+      (r.hours ?? 0).toFixed(2),
       r.status,
       r.lateMinutes,
       r.overtime,
@@ -284,7 +284,7 @@ export function AttendanceReportsClient({
                             {record.clockOut ? format(new Date(record.clockOut), "h:mm a") : "—"}
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
-                            {record.hours.toFixed(1)}h
+                            {(record.hours ?? 0).toFixed(1)}h
                           </td>
                           <td className="px-4 py-3">
                             <StatusBadge status={record.status} />
@@ -298,7 +298,7 @@ export function AttendanceReportsClient({
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums">
                             {record.overtime > 0 ? (
-                              <span className="text-violet-600">{record.overtime.toFixed(1)}h</span>
+                              <span className="text-violet-600">{(record.overtime ?? 0).toFixed(1)}h</span>
                             ) : (
                               <span className="text-slate-300">—</span>
                             )}

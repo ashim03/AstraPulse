@@ -853,7 +853,7 @@ export default async function DashboardPage() {
   if (canViewFinance) {
     const payrollByMonth: Record<string, { label: string; net: number; gross: number }> = {};
     for (const p of safePayrolls) {
-      const [y, m] = p.period.split("-").map(Number);
+      const [y, m] = String(p.period ?? "").split("-").map(Number);
       const key = `${y}-${m}`;
       payrollByMonth[key] = {
         label: format(new Date(y, m - 1, 1), "MMM"),
