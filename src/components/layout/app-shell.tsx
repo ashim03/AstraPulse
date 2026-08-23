@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, CalendarCheck, Wallet, Menu, Sparkles } from "lucide-react";
+import { Home, Users, CalendarCheck, Wallet, Menu, Sparkles, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sidebar, MobileDrawer } from "./sidebar";
 import { GlobalSearch } from "./global-search";
@@ -26,6 +26,7 @@ export function AppShell({
   showSubscription,
   notifications,
   unreadCount,
+  unreadMessageCount,
   children,
 }: {
   user: { name: string; email: string; role?: string; onLogout: () => Promise<{ ok: boolean }> };
@@ -34,6 +35,7 @@ export function AppShell({
   showSubscription?: boolean;
   notifications: Notif[];
   unreadCount: number;
+  unreadMessageCount?: number;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -78,6 +80,18 @@ export function AppShell({
               {workspace.plan ?? "Trial"}
             </span>
             <ThemeToggle />
+            <Link
+              href="/mail"
+              className="relative rounded-md p-2 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+              title="Internal Mail"
+            >
+              <Mail className="h-5 w-5" />
+              {(unreadMessageCount ?? 0) > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {unreadMessageCount}
+                </span>
+              )}
+            </Link>
             <NotificationsPopover notifications={notifications} unread={unreadCount} />
             <UserMenu name={user.name} email={user.email} role={user.role} onLogout={user.onLogout} />
           </div>

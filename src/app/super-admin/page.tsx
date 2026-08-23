@@ -28,7 +28,7 @@ export default async function SuperAdminDashboard() {
 
   const planDistribution = subscriptions.reduce(
     (acc, s) => {
-      acc[s.plan] = (acc[s.plan] ?? 0) + 1;
+      acc[s.planName] = (acc[s.planName] ?? 0) + 1;
       return acc;
     },
     {} as Record<string, number>
@@ -121,7 +121,7 @@ export default async function SuperAdminDashboard() {
                       <p className="text-xs text-slate-400">{org.email}</p>
                     </td>
                     <td className="py-3"><StatusBadge status={org.status} /></td>
-                    <td className="py-3"><StatusBadge status={org.subscription?.plan ?? "trial"} /></td>
+                     <td className="py-3"><StatusBadge status={org.subscription?.planName ?? "trial"} /></td>
                     <td className="py-3 text-slate-500">{formatDate(org.createdAt)}</td>
                   </tr>
                 ))}

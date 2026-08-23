@@ -24,7 +24,7 @@ export default async function SubscriptionsPage() {
 
   const planDistribution = subscriptions.reduce(
     (acc, s) => {
-      acc[s.plan] = (acc[s.plan] ?? 0) + 1;
+      acc[s.planName] = (acc[s.planName] ?? 0) + 1;
       return acc;
     },
     {} as Record<string, number>
@@ -83,7 +83,7 @@ export default async function SubscriptionsPage() {
                       </Link>
                       <p className="text-xs text-slate-400">{sub.workspace.email}</p>
                     </td>
-                    <td className="px-5 py-3.5"><StatusBadge status={sub.plan} /></td>
+                    <td className="px-5 py-3.5"><StatusBadge status={sub.planName} /></td>
                     <td className="px-5 py-3.5"><StatusBadge status={sub.status} /></td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-col gap-1">

@@ -34,10 +34,10 @@ export async function updateSubscriptionPlan(
 
   await prisma.subscription.upsert({
     where: { workspaceId },
-    update: { plan, price, employeeLimit, status: "active" },
+    update: { planName: plan, price, employeeLimit, status: "active" },
     create: {
       workspaceId,
-      plan,
+      planName: plan,
       price,
       employeeLimit,
       status: "active",
@@ -84,7 +84,7 @@ export async function addOrganizationAction(input: {
   await prisma.subscription.create({
     data: {
       workspaceId: workspace.id,
-      plan: "starter",
+      planName: "starter",
       status: "active",
       isTrial: true,
       trialEndDate: trialEnd,
@@ -209,7 +209,7 @@ export async function approvePaymentAction(
 export async function updateSubscriptionPriceAction(
   workspaceId: string,
   price: number,
-  plan: string,
+  planName: string,
   employeeLimit: number
 ): Promise<ActionResult> {
   const session = await requireSession();
@@ -217,7 +217,7 @@ export async function updateSubscriptionPriceAction(
 
   await prisma.subscription.update({
     where: { workspaceId },
-    data: { price, plan, employeeLimit },
+    data: { price, planName, employeeLimit },
   });
 
   revalidatePath("/super-admin/subscriptions");

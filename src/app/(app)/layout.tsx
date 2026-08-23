@@ -23,11 +23,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const rolePermissions = parsePermissions(user.role?.permissions ?? "[]");
   const isAdmin = user.role?.name === "Workspace Admin";
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId: user.id, workspaceId: user.workspaceId },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
+  const [notifications, unreadMessageCount] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId: user.id, workspaceId: user.workspaceId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.messageRecipient.count({
+      where: { recipientId: user.id, readAt: null },
+    }),
+  ]);
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   const notifProps: Notif[] = notifications.map((n) => ({
@@ -50,13 +55,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }}
       workspace={{
         name: user.workspace.name,
-        plan: user.workspace.subscription?.plan ?? undefined,
+        plan: user.workspace.subscription?.planName ?? undefined,
         status: user.workspace.subscription?.status ?? undefined,
       }}
       permissions={rolePermissions}
       showSubscription={isAdmin}
       notifications={notifProps}
       unreadCount={unreadCount}
+      unreadMessageCount={unreadMessageCount}
     >
       {children}
     </AppShell>

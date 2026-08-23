@@ -1,13 +1,17 @@
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
-import { MessageManager, type UserOption, type MessageRow } from "./message-manager";
+import { SuperAdminMessageManager, type RecipientOption, type Organization, type MessageRow } from "./message-manager";
 
 export const dynamic = "force-dynamic";
 
-export default async function MailPage() {
+export default async function SuperAdminMessagesPage() {
   const session = await requireSession();
-  const [messages, users, unreadCount] = await Promise.all([
+  if (session.accountType !== "super_admin") {
+    return null;
+  }
+
+  const [messages, recipients, organizations, unreadCount] = await Promise.all([
     prisma.message.findMany({
       where: {
         OR: [{ senderId: session.id }, { recipients: { some: { recipientId: session.id } } }],
@@ -19,14 +23,29 @@ export default async function MailPage() {
       },
     }),
     prisma.user.findMany({
-      where: { workspaceId: session.workspaceId, status: "active" },
-      select: { id: true, name: true, email: true, role: { select: { name: true } } },
+      where: {
+        accountType: "organization",
+        role: { name: "Workspace Admin" },
+        status: "active",
+      },
+      select: { id: true, name: true, email: true, workspaceId: true },
+    }),
+    prisma.workspace.findMany({
+      where: { status: "active" },
+      select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),
     prisma.messageRecipient.count({
       where: { recipientId: session.id, readAt: null },
     }),
   ]);
+
+  const recipientsWithWorkspace = await Promise.all(
+    recipients.map(async (r) => {
+      const ws = await prisma.workspace.findUnique({ where: { id: r.workspaceId }, select: { name: true } });
+      return { ...r, workspaceName: ws?.name };
+    })
+  );
 
   const rows: MessageRow[] = messages.map((m) => {
     const mine = m.senderId === session.id;
@@ -45,24 +64,27 @@ export default async function MailPage() {
       date: m.createdAt.toISOString().slice(0, 10),
       time: m.createdAt.toISOString().slice(11, 16),
       createdAt: m.createdAt,
+      senderWorkspaceId: m.sender.workspaceId,
+      recipientWorkspaceIds: m.recipients.map((r) => r.recipient.workspaceId),
     };
   });
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Internal Mail"
-        subtitle="Messages between team members."
-        breadcrumb="Company"
+        title="Messages"
+        subtitle="Communicate with organization administrators."
+        breadcrumb="Super Admin"
         actions={
           <span className="text-sm text-slate-500">
             {unreadCount > 0 ? `${unreadCount} unread message${unreadCount !== 1 ? "s" : ""}` : "All caught up"}
           </span>
         }
       />
-      <MessageManager
+      <SuperAdminMessageManager
         rows={rows}
-        users={users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role })) as UserOption[]}
+        recipients={recipientsWithWorkspace as RecipientOption[]}
+        organizations={organizations as Organization[]}
         meId={session.id}
         unreadCount={unreadCount}
       />

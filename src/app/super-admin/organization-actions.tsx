@@ -19,7 +19,7 @@ export function OrganizationActions({
   workspaceId: string;
   status: string;
   subscription: {
-    plan: string;
+    planName: string;
     price: number;
     employeeLimit: number;
     isTrial: boolean;
@@ -33,7 +33,7 @@ export function OrganizationActions({
   const [showEditSubscription, setShowEditSubscription] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(subscription?.price?.toString() ?? "0");
   const [editForm, setEditForm] = useState({
-    plan: subscription?.plan ?? "starter",
+    planName: subscription?.planName ?? "starter",
     price: subscription?.price?.toString() ?? "0",
     employeeLimit: subscription?.employeeLimit?.toString() ?? "15",
   });
@@ -62,7 +62,7 @@ export function OrganizationActions({
 
   const handleUpdateSubscription = () => {
     startTransition(async () => {
-      await updateSubscriptionPriceAction(workspaceId, Number(editForm.price), editForm.plan, Number(editForm.employeeLimit));
+      await updateSubscriptionPriceAction(workspaceId, Number(editForm.price), editForm.planName, Number(editForm.employeeLimit));
       setShowEditSubscription(false);
       router.refresh();
     });
@@ -127,8 +127,8 @@ export function OrganizationActions({
               <div className="mt-4 space-y-4">
                 <Select
                   label="Plan"
-                  value={editForm.plan}
-                  onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })}
+                  value={editForm.planName}
+                  onChange={(e) => setEditForm({ ...editForm, planName: e.target.value })}
                 >
                   <option value="starter">Starter</option>
                   <option value="growth">Growth</option>

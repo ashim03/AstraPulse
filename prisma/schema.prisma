@@ -660,23 +660,44 @@ model Notification {
   createdAt   DateTime @default(now())
 }
 
+model SubscriptionPlan {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  monthlyPrice  Float
+  yearlyPrice   Float
+  employeeLimit Int      @default(15)
+  userLimit     Int      @default(50)
+  storageLimit  Int      @default(1024)
+  features      String   @default("[]") // JSON array of feature strings
+  isActive      Boolean  @default(true)
+  isDefault     Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
 model Subscription {
-  id              String    @id @default(cuid())
-  workspaceId     String    @unique
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  plan            String    @default("starter")
-  status          String    @default("active")
-  billingPeriod   String    @default("monthly")
-  price           Float     @default(49)
-  employeeLimit   Int       @default(15)
-  userLimit       Int       @default(50)
-  storageLimit    Int       @default(1024) // in MB
-  isTrial         Boolean   @default(false)
+  id              String            @id @default(cuid())
+  workspaceId     String            @unique
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  planId          String?
+  plan            SubscriptionPlan? @relation(fields: [planId], references: [id])
+  planName        String            @default("starter")
+  status          String            @default("active")
+  billingPeriod   String            @default("monthly")
+  price           Float             @default(49)
+  employeeLimit   Int               @default(15)
+  userLimit       Int               @default(50)
+  storageLimit    Int               @default(1024) // in MB
+  isTrial         Boolean           @default(false)
   trialEndDate    DateTime?
-  paymentStatus   String    @default("unpaid") // unpaid, pending, paid
+  paymentStatus   String            @default("unpaid") // unpaid, pending, paid
   approvedBy      String?
   approvedAt      DateTime?
-  startDate       DateTime  @default(now())
+  startDate       DateTime          @default(now())
   renewalDate     DateTime
   paymentRequests PaymentRequest[]
 }

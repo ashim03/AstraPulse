@@ -5,8 +5,10 @@ import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
 
-export async function sendMessageAction(formData: FormData): Promise<ActionResult> {
+export async function sendSuperAdminMessageAction(formData: FormData): Promise<ActionResult> {
   const session = await requireSession();
+  if (session.accountType !== "super_admin") return fail("Unauthorized");
+
   const subject = String(formData.get("subject") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const recipientIds = formData.getAll("recipients").map(String).filter(Boolean);
@@ -27,28 +29,29 @@ export async function sendMessageAction(formData: FormData): Promise<ActionResul
   });
 
   for (const r of recipients) {
-    if (r.id !== session.id) {
-      await notify(r.workspaceId, r.id, "New message", subject, "/mail");
-    }
+    await notify(r.workspaceId, r.id, "New message from Super Admin", subject, "/super-admin/messages");
   }
 
-  await writeAudit({ session, action: "create", module: "mail", recordId: message.id, description: `Sent message to ${recipients.length} recipient(s)` });
-  revalidatePath("/mail");
+  await writeAudit({ session, action: "create", module: "mail", recordId: message.id, description: `Sent message to ${recipients.length} organization admin(s)` });
+  revalidatePath("/super-admin/messages");
   return ok(undefined, "Message sent");
 }
 
-export async function markMessageReadAction(messageId: string): Promise<ActionResult> {
+export async function markSuperAdminMessageReadAction(messageId: string): Promise<ActionResult> {
   const session = await requireSession();
+  if (session.accountType !== "super_admin") return fail("Unauthorized");
+
   await prisma.messageRecipient.updateMany({
     where: { messageId, recipientId: session.id, readAt: null },
     data: { readAt: new Date() },
   });
-  revalidatePath("/mail");
+  revalidatePath("/super-admin/messages");
   return ok(undefined, "Marked read");
 }
 
-export async function deleteMessageAction(messageId: string): Promise<ActionResult> {
+export async function deleteSuperAdminMessageAction(messageId: string): Promise<ActionResult> {
   const session = await requireSession();
+  if (session.accountType !== "super_admin") return fail("Unauthorized");
 
   const recipientRecord = await prisma.messageRecipient.findFirst({
     where: { messageId, recipientId: session.id },
@@ -56,7 +59,7 @@ export async function deleteMessageAction(messageId: string): Promise<ActionResu
 
   if (recipientRecord) {
     await prisma.messageRecipient.delete({ where: { id: recipientRecord.id } });
-    revalidatePath("/mail");
+    revalidatePath("/super-admin/messages");
     return ok(undefined, "Message removed from inbox");
   }
 
@@ -64,12 +67,13 @@ export async function deleteMessageAction(messageId: string): Promise<ActionResu
   if (!message) return fail("Message not found");
   await prisma.message.delete({ where: { id: messageId } });
   await writeAudit({ session, action: "delete", module: "mail", recordId: messageId, description: `Deleted message: ${message.subject}` });
-  revalidatePath("/mail");
+  revalidatePath("/super-admin/messages");
   return ok(undefined, "Message deleted");
 }
 
-export async function getConversationsAction(): Promise<ActionResult<any>> {
+export async function getSuperAdminConversationsAction(): Promise<ActionResult<any>> {
   const session = await requireSession();
+  if (session.accountType !== "super_admin") return fail("Unauthorized");
 
   const sentMessages = await prisma.message.findMany({
     where: { senderId: session.id },
@@ -97,8 +101,9 @@ export async function getConversationsAction(): Promise<ActionResult<any>> {
   return ok(uniqueMessages);
 }
 
-export async function getUnreadCountAction(): Promise<ActionResult<number>> {
+export async function getSuperAdminUnreadCountAction(): Promise<ActionResult<number>> {
   const session = await requireSession();
+  if (session.accountType !== "super_admin") return fail("Unauthorized");
 
   const count = await prisma.messageRecipient.count({
     where: { recipientId: session.id, readAt: null },
@@ -107,35 +112,38 @@ export async function getUnreadCountAction(): Promise<ActionResult<number>> {
   return ok(count);
 }
 
-export async function getAvailableRecipientsAction(): Promise<ActionResult<any>> {
+export async function getOrganizationsAction(): Promise<ActionResult<any>> {
   const session = await requireSession();
+  if (session.accountType !== "super_admin") return fail("Unauthorized");
 
-  if (session.accountType === "super_admin") {
-    const admins = await prisma.user.findMany({
-      where: {
-        accountType: "organization",
-        role: { name: "Workspace Admin" },
-        status: "active",
-      },
-      select: { id: true, name: true, email: true, workspaceId: true },
-    });
-    const adminsWithWorkspace = await Promise.all(
-      admins.map(async (admin) => {
-        const ws = await prisma.workspace.findUnique({ where: { id: admin.workspaceId }, select: { name: true } });
-        return { ...admin, workspaceName: ws?.name };
-      })
-    );
-    return ok(adminsWithWorkspace);
-  }
-
-  const users = await prisma.user.findMany({
-    where: {
-      workspaceId: session.workspaceId,
-      id: { not: session.id },
-      status: "active",
-    },
-    select: { id: true, name: true, email: true, role: { select: { name: true } } },
+  const workspaces = await prisma.workspace.findMany({
+    where: { status: "active" },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
   });
 
-  return ok(users);
+  return ok(workspaces);
+}
+
+export async function getSuperAdminRecipientsAction(): Promise<ActionResult<any>> {
+  const session = await requireSession();
+  if (session.accountType !== "super_admin") return fail("Unauthorized");
+
+  const admins = await prisma.user.findMany({
+    where: {
+      accountType: "organization",
+      role: { name: "Workspace Admin" },
+      status: "active",
+    },
+    select: { id: true, name: true, email: true, workspaceId: true },
+  });
+
+  const adminsWithWorkspace = await Promise.all(
+    admins.map(async (admin) => {
+      const ws = await prisma.workspace.findUnique({ where: { id: admin.workspaceId }, select: { name: true } });
+      return { ...admin, workspaceName: ws?.name };
+    })
+  );
+
+  return ok(adminsWithWorkspace);
 }

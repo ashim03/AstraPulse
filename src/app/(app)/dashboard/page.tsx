@@ -209,7 +209,7 @@ export default async function DashboardPage() {
             <Sparkles className="h-4 w-4 text-brand-500" />
             <div>
               <p className="text-xs text-slate-400">Current plan</p>
-              <p className="text-sm font-semibold text-slate-800">{subscription?.plan ?? "Trial"}</p>
+              <p className="text-sm font-semibold text-slate-800">{subscription?.planName ?? "Trial"}</p>
             </div>
           </div>
           <div>

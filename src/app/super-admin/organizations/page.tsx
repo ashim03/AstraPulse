@@ -108,7 +108,7 @@ export default async function OrganizationsPage({
                     <td className="px-5 py-3.5"><StatusBadge status={ws.status} /></td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-col gap-1">
-                        <StatusBadge status={ws.subscription?.plan ?? "none"} />
+                        <StatusBadge status={ws.subscription?.planName ?? "none"} />
                         {ws.subscription?.isTrial && (
                           <span className="text-[10px] text-amber-600 font-medium">7-day trial</span>
                         )}

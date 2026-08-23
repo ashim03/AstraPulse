@@ -16,7 +16,7 @@ export default async function SubscriptionPage() {
     <div className="space-y-6">
       <PageHeader title="Subscription" subtitle="Manage your plan and billing." breadcrumb="Company" />
       <SubscriptionManager
-        currentPlan={subscription?.plan ?? "Starter"}
+        currentPlan={subscription?.planName ?? "Starter"}
         status={subscription?.status ?? "active"}
         billingPeriod={subscription?.billingPeriod ?? "monthly"}
         employeeLimit={subscription?.employeeLimit ?? 15}

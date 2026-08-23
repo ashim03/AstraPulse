@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, CreditCard, Zap, LogOut } from "lucide-react";
+import { LayoutDashboard, Building2, CreditCard, Zap, LogOut, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/super-admin", icon: LayoutDashboard },
   { label: "Organizations", href: "/super-admin/organizations", icon: Building2 },
+  { label: "Messages", href: "/super-admin/messages", icon: Mail },
+  { label: "Plans", href: "/super-admin/plans", icon: CreditCard },
   { label: "Subscriptions", href: "/super-admin/subscriptions", icon: CreditCard },
 ];
 

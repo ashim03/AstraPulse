@@ -532,11 +532,15 @@ export async function seedFinance(ctx: SeedContext): Promise<void> {
 
 export async function seedSubscription(ctx: SeedContext): Promise<void> {
   const { prisma, now } = ctx;
+
+  const growthPlan = await prisma.subscriptionPlan.findUnique({ where: { name: "Growth" } });
+
   const trialEnd = addDays(now, 7);
   const subscription = await prisma.subscription.create({
     data: {
       workspaceId: ctx.workspace.id,
-      plan: "Growth",
+      planId: growthPlan?.id ?? null,
+      planName: "Growth",
       status: "active",
       billingPeriod: "yearly",
       price: 990,

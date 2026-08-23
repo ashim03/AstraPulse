@@ -56,7 +56,7 @@ export default async function OrganizationDetailPage({ params }: { params: Promi
             <OrganizationActions
               workspaceId={workspace.id}
               status={workspace.status}
-              subscription={sub ? { plan: sub.plan, price: sub.price, employeeLimit: sub.employeeLimit, isTrial: sub.isTrial, paymentStatus: sub.paymentStatus, trialEndDate: sub.trialEndDate } : null}
+              subscription={sub ? { planName: sub.planName, price: sub.price, employeeLimit: sub.employeeLimit, isTrial: sub.isTrial, paymentStatus: sub.paymentStatus, trialEndDate: sub.trialEndDate } : null}
             />
             <Link href="/super-admin/organizations">
               <Button variant="secondary" leftIcon={<ArrowLeft className="h-4 w-4" />}>
@@ -112,7 +112,7 @@ export default async function OrganizationDetailPage({ params }: { params: Promi
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Plan</span>
-                  <StatusBadge status={sub.plan} />
+                   <StatusBadge status={sub.planName} />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Status</span>

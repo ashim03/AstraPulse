@@ -89,7 +89,7 @@ export async function bootstrapWorkspace(input: BootstrapInput) {
   await prisma.subscription.create({
     data: {
       workspaceId: workspace.id,
-      plan: input.plan ?? "starter",
+      planName: input.plan ?? "starter",
       status: "active",
       billingPeriod: "monthly",
       price: 0,

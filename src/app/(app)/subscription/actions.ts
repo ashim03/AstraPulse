@@ -17,7 +17,7 @@ export async function changePlanAction(formData: FormData): Promise<ActionResult
     where: { workspaceId: session.workspaceId },
     create: {
       workspaceId: session.workspaceId,
-      plan: planInfo.name,
+      planName: planInfo.name,
       status: "active",
       billingPeriod: period,
       price: period === "yearly" ? planInfo.yearly : planInfo.monthly,
@@ -25,7 +25,7 @@ export async function changePlanAction(formData: FormData): Promise<ActionResult
       renewalDate: new Date(Date.now() + (period === "yearly" ? 365 : 30) * 86400000),
     },
     update: {
-      plan: planInfo.name,
+      planName: planInfo.name,
       billingPeriod: period,
       price: period === "yearly" ? planInfo.yearly : planInfo.monthly,
       employeeLimit: planInfo.employeeLimit,

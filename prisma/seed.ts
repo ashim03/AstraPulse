@@ -53,6 +53,52 @@ async function main() {
   console.log("Seeding finance (payroll, invoices, payments, expenses, income, journals)...");
   await seedFinance(ctx);
 
+  console.log("Seeding subscription plans...");
+  const planDefs = [
+    {
+      name: "Starter",
+      description: "For small teams getting started",
+      monthlyPrice: 49,
+      yearlyPrice: 490,
+      employeeLimit: 15,
+      userLimit: 50,
+      storageLimit: 1024,
+      features: JSON.stringify(["Up to 15 employees", "Core HR & attendance", "Leave management", "Basic payroll", "Email support"]),
+      isDefault: true,
+      sortOrder: 1,
+    },
+    {
+      name: "Growth",
+      description: "For growing businesses",
+      monthlyPrice: 99,
+      yearlyPrice: 990,
+      employeeLimit: 100,
+      userLimit: 200,
+      storageLimit: 5120,
+      features: JSON.stringify(["Up to 100 employees", "Advanced payroll & tax", "Invoicing & payments", "Accounting & reports", "Priority support"]),
+      sortOrder: 2,
+    },
+    {
+      name: "Pro",
+      description: "For large organizations",
+      monthlyPrice: 199,
+      yearlyPrice: 1990,
+      employeeLimit: 500,
+      userLimit: 1000,
+      storageLimit: 20480,
+      features: JSON.stringify(["Up to 500 employees", "Everything in Growth", "Multi-currency", "API access", "Dedicated support manager"]),
+      sortOrder: 3,
+    },
+  ];
+
+  for (const plan of planDefs) {
+    await prisma.subscriptionPlan.upsert({
+      where: { name: plan.name },
+      update: plan,
+      create: plan,
+    });
+  }
+
   console.log("Seeding subscription...");
   await seedSubscription(ctx);
 
