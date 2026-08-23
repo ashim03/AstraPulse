@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 const SECRET = new TextEncoder().encode(
-  (process.env.AUTH_SECRET || "astrapulse-dev-secret-change-in-production").replace(/^"|"$/g, "")
+  (process.env.AUTH_SECRET || "").replace(/^"|"$/g, "")
 );
 const SESSION_COOKIE = "astrapulse_session";
 

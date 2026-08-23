@@ -7,7 +7,7 @@ import crypto from "crypto";
 
 const SESSION_COOKIE = "astrapulse_session";
 const SECRET = new TextEncoder().encode(
-  (process.env.AUTH_SECRET || "astrapulse-dev-secret-change-in-production").replace(/^"|"$/g, "")
+  (process.env.AUTH_SECRET || "").replace(/^"|"$/g, "")
 );
 
 export type SessionUser = {
