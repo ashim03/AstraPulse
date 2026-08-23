@@ -1,6 +1,3 @@
-// AstraPulse - HR + Accounting & Payroll data model
-// Uses string-based enums for maximum portability (SQLite dev / PostgreSQL prod).
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,132 +8,129 @@ datasource db {
 }
 
 model Workspace {
-  id              String   @id @default(cuid())
-  name            String
-  email           String
-  slug            String   @unique
-  phone           String?
-  country         String?
-currency    String @default("NPR")
-  timezone        String   @default("America/New_York")
-  businessType    String?
-  fiscalYearStart Int      @default(1)
-  dateFormat      String   @default("MM/DD/YYYY")
-  logo            String?
-  status          String   @default("active")
-  suspendedAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  users                  User[]
-  roles                  Role[]
-  employees              Employee[]
-  departments            Department[]
-  positions              Position[]
-  attendances            Attendance[]
-  attendanceAdjustments  AttendanceAdjustment[]
-  leaveTypes             LeaveType[]
-  leaveRequests          LeaveRequest[]
-  holidays               Holiday[]
-  tasks                  Task[]
-  workRecords            WorkRecord[]
-  advances               EmployeeAdvance[]
-  payrolls               Payroll[]
-  expenses               Expense[]
-  incomes                Income[]
-  customers              Customer[]
-  vendors                Vendor[]
-  invoices               Invoice[]
-  payments               Payment[]
-  bankAccounts           BankAccount[]
-  accounts               Account[]
-  journalEntries         JournalEntry[]
-  auditLogs              AuditLog[]
-  announcements          Announcement[]
-  messages               Message[]
-  notifications          Notification[]
-  subscription           Subscription?
-  paymentRequests        PaymentRequest[]
-  documents              Document[]
-  attendanceDevices      AttendanceDevice[]
-  attendanceSettings     AttendanceSettings?
-  breaks                 Break[]
-  overtimeRecords        OvertimeRecord[]
-  payrollPeriods         PayrollPeriod[]
-  salaryConfigs          SalaryConfig[]
-  attendanceReminders    AttendanceReminder[]
-  emailConfigs           EmailConfig[]
-  authSettings           AuthSettings?
-  otpVerifications       OtpVerification[]
-  passwordResets         PasswordResetToken[]
-  authAuditLogs          AuthAuditLog[]
+  id                    String                 @id @default(cuid())
+  name                  String
+  email                 String
+  slug                  String                 @unique
+  phone                 String?
+  country               String?
+  currency              String                 @default("NPR")
+  timezone              String                 @default("America/New_York")
+  businessType          String?
+  fiscalYearStart       Int                    @default(1)
+  dateFormat            String                 @default("MM/DD/YYYY")
+  logo                  String?
+  status                String                 @default("active")
+  suspendedAt           DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  accounts              Account[]
+  announcements         Announcement[]
+  attendances           Attendance[]
+  attendanceAdjustments AttendanceAdjustment[]
+  attendanceDevices     AttendanceDevice[]
+  attendanceReminders   AttendanceReminder[]
+  attendanceSettings    AttendanceSettings?
+  auditLogs             AuditLog[]
+  authAuditLogs         AuthAuditLog[]
+  authSettings          AuthSettings?
+  bankAccounts          BankAccount[]
+  breaks                Break[]
+  customers             Customer[]
+  departments           Department[]
+  documents             Document[]
+  emailConfigs          EmailConfig?
+  employees             Employee[]
+  advances              EmployeeAdvance[]
+  expenses              Expense[]
+  holidays              Holiday[]
+  incomes               Income[]
+  invoices              Invoice[]
+  journalEntries        JournalEntry[]
+  leaveRequests         LeaveRequest[]
+  leaveTypes            LeaveType[]
+  messages              Message[]
+  notifications         Notification[]
+  otpVerifications      OtpVerification[]
+  overtimeRecords       OvertimeRecord[]
+  passwordResets        PasswordResetToken[]
+  payments              Payment[]
+  paymentRequests       PaymentRequest[]
+  payrolls              Payroll[]
+  payrollPeriods        PayrollPeriod[]
+  positions             Position[]
+  roles                 Role[]
+  salaryConfigs         SalaryConfig[]
+  subscription          Subscription?
+  tasks                 Task[]
+  users                 User[]
+  vendors               Vendor[]
+  workRecords           WorkRecord[]
 }
 
 model User {
-  id               String    @id @default(cuid())
-  workspaceId      String
-  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name             String
-  email            String
-  phone            String?
-  passwordHash     String
-  roleId           String?
-  role             Role?     @relation(fields: [roleId], references: [id])
-  employeeId       String?
-  employee         Employee? @relation(fields: [employeeId], references: [id])
-  twoFactorSecret  String?
-  twoFactorEnabled Boolean   @default(false)
-  status           String    @default("active") // active, inactive, pending
-  accountType      String    @default("organization") // "super_admin" or "organization"
-  emailVerified    Boolean   @default(false)
-  emailVerifiedAt  DateTime?
-  lastLoginAt      DateTime?
-  lastPasswordChange DateTime?
-  failedLoginAttempts Int   @default(0)
-  lockedUntil      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  sentMessages     Message[]           @relation("SentMessages")
-  receivedMessages MessageRecipient[]
-  notifications    Notification[]
-  auditLogs        AuditLog[]
-  taskComments     TaskComment[]
-  announcements    Announcement[]
-  otpVerifications OtpVerification[]
-  passwordResets   PasswordResetToken[]
+  id                  String               @id @default(cuid())
+  workspaceId         String
+  name                String
+  email               String
+  phone               String?
+  passwordHash        String
+  roleId              String?
+  employeeId          String?              @unique
+  twoFactorSecret     String?
+  twoFactorEnabled    Boolean              @default(false)
+  status              String               @default("active")
+  accountType         String               @default("organization")
+  lastLoginAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  emailVerified       Boolean              @default(false)
+  emailVerifiedAt     DateTime?
+  failedLoginAttempts Int                  @default(0)
+  lastPasswordChange  DateTime?
+  lockedUntil         DateTime?
+  announcements       Announcement[]
+  auditLogs           AuditLog[]
+  sentMessages        Message[]            @relation("SentMessages")
+  receivedMessages    MessageRecipient[]
+  notifications       Notification[]
+  otpVerifications    OtpVerification[]
+  passwordResets      PasswordResetToken[]
+  taskComments        TaskComment[]
+  employee            Employee?            @relation(fields: [employeeId], references: [id])
+  role                Role?                @relation(fields: [roleId], references: [id])
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, email])
-  @@unique([employeeId])
   @@index([workspaceId])
 }
 
 model Role {
-  id          String  @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   description String?
-  isSystem    Boolean @default(false)
-  permissions String  @default("[]")
+  isSystem    Boolean   @default(false)
+  permissions String    @default("[]")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   users       User[]
 
   @@unique([workspaceId, name])
 }
 
 model Department {
-  id          String  @id @default(cuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  managerId   String?
-  manager     Employee?  @relation("DeptManager", fields: [managerId], references: [id])
-  parentId    String?
-  employees   Employee[]
-  positions   Position[]
-  tasks       Task[]
+  id            String         @id @default(cuid())
+  workspaceId   String
+  name          String
+  description   String?
+  managerId     String?
+  parentId      String?
   announcements Announcement[]
+  manager       Employee?      @relation("DeptManager", fields: [managerId], references: [id])
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employees     Employee[]
+  positions     Position[]
+  tasks         Task[]
 
   @@unique([workspaceId, name])
 }
@@ -144,73 +138,72 @@ model Department {
 model Position {
   id           String      @id @default(cuid())
   workspaceId  String
-  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id])
   name         String
   level        String?
   salaryMin    Float?
   salaryMax    Float?
   employees    Employee[]
+  department   Department? @relation(fields: [departmentId], references: [id])
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model Employee {
-  id                String    @id @default(cuid())
-  workspaceId       String
-  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  employeeId        String
-  name              String
-  email             String
-  phone             String?
-  avatar            String?
-  address           String?
-  city              String?
-  country           String?
-  dateOfBirth       DateTime?
-  gender            String?
-  emergencyName     String?
-  emergencyPhone    String?
-  emergencyRelation String?
-  departmentId      String?
-  department        Department? @relation(fields: [departmentId], references: [id])
-  positionId        String?
-  position          Position?  @relation(fields: [positionId], references: [id])
-  managerId         String?
-  reportsTo         Employee?  @relation("ReportsTo", fields: [managerId], references: [id])
-  directReports     Employee[] @relation("ReportsTo")
-  employmentType    String     @default("full_time")
-  joinDate          DateTime
-  contractEndDate   DateTime?
-  status            String     @default("active")
-  workLocation      String?
-  baseSalary        Float      @default(0)
-  salaryType        String     @default("monthly") // monthly, daily, hourly
-  deviceEmployeeId  String?    // maps to biometric device user ID
-  shift             String?    // morning, evening, night, custom
-  paymentMethod     String?
-  bankName          String?
-  bankAccountNumber String?
-  accountHolder     String?
-  taxId             String?
-  createdBy         String?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
-
-  user              User?
-  salaryComponents  SalaryComponent[]
-  attendances       Attendance[]
-  adjustments       AttendanceAdjustment[]
-  leaveRequests     LeaveRequest[]
-  tasks             Task[]
-  workRecords       WorkRecord[]
-  advances          EmployeeAdvance[]
-  payrollItems      PayrollItem[]
-  expenses          Expense[]
-  managedDepartments Department[] @relation("DeptManager")
-  breaks            Break[]
-  overtimeRecords   OvertimeRecord[]
-  salaryConfigs     SalaryConfig[]
+  id                  String                 @id @default(cuid())
+  workspaceId         String
+  employeeId          String
+  name                String
+  email               String
+  phone               String?
+  avatar              String?
+  address             String?
+  city                String?
+  country             String?
+  dateOfBirth         DateTime?
+  gender              String?
+  emergencyName       String?
+  emergencyPhone      String?
+  emergencyRelation   String?
+  departmentId        String?
+  positionId          String?
+  managerId           String?
+  employmentType      String                 @default("full_time")
+  joinDate            DateTime
+  contractEndDate     DateTime?
+  status              String                 @default("active")
+  workLocation        String?
+  baseSalary          Float                  @default(0)
+  paymentMethod       String?
+  bankName            String?
+  bankAccountNumber   String?
+  accountHolder       String?
+  taxId               String?
+  createdBy           String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  deviceEmployeeId    String?
+  salaryType          String                 @default("monthly")
+  shift               String?
+  attendances         Attendance[]
+  adjustments         AttendanceAdjustment[]
   attendanceReminders AttendanceReminder[]
+  breaks              Break[]
+  managedDepartments  Department[]           @relation("DeptManager")
+  department          Department?            @relation(fields: [departmentId], references: [id])
+  reportsTo           Employee?              @relation("ReportsTo", fields: [managerId], references: [id])
+  directReports       Employee[]             @relation("ReportsTo")
+  position            Position?              @relation(fields: [positionId], references: [id])
+  workspace           Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  advances            EmployeeAdvance[]
+  expenses            Expense[]
+  leaveRequests       LeaveRequest[]
+  overtimeRecords     OvertimeRecord[]
+  payrollItems        PayrollItem[]
+  salaryComponents    SalaryComponent[]
+  salaryConfigs       SalaryConfig[]
+  tasks               Task[]
+  user                User?
+  workRecords         WorkRecord[]
 
   @@unique([workspaceId, employeeId])
   @@index([workspaceId])
@@ -220,78 +213,75 @@ model SalaryComponent {
   id            String   @id @default(cuid())
   workspaceId   String
   employeeId    String
-  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   type          String
   name          String
   amount        Float
   effectiveFrom DateTime @default(now())
   recurring     Boolean  @default(true)
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
 model Attendance {
-  id           String   @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  employeeId   String
-  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  date         DateTime
-  clockIn      DateTime?
-  clockOut     DateTime?
-  status       String   @default("present")
-  hours        Float    @default(0)
-  overtime     Float    @default(0)
-  breakMinutes Int      @default(0)
-  lateMinutes  Int      @default(0)
-  earlyMinutes Int      @default(0)
-  isHalfDay    Boolean  @default(false)
-  isHoliday    Boolean  @default(false)
-  isWeekend    Boolean  @default(false)
-  location     String?
-  note         String?
-  source       String   @default("self")
-  deviceId     String?
+  id             String    @id @default(cuid())
+  workspaceId    String
+  employeeId     String
+  date           DateTime
+  clockIn        DateTime?
+  clockOut       DateTime?
+  status         String    @default("present")
+  hours          Float     @default(0)
+  overtime       Float     @default(0)
+  breakMinutes   Int       @default(0)
+  location       String?
+  note           String?
+  source         String    @default("self")
+  approvedById   String?
+  deviceId       String?
   deviceRecordId String?
-  approvedById String?
-  breaks       Break[]
+  earlyMinutes   Int       @default(0)
+  isHalfDay      Boolean   @default(false)
+  isHoliday      Boolean   @default(false)
+  isWeekend      Boolean   @default(false)
+  lateMinutes    Int       @default(0)
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  breaks         Break[]
 
   @@unique([employeeId, date])
   @@index([workspaceId])
 }
 
 model AttendanceAdjustment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   date        DateTime
   type        String
   reason      String?
-  status      String   @default("pending")
+  status      String    @default("pending")
   reviewedBy  String?
   reviewedAt  DateTime?
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model LeaveType {
-  id           String        @id @default(cuid())
+  id           String         @id @default(cuid())
   workspaceId  String
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name         String
-  daysPerYear  Float         @default(0)
-  carryForward Boolean       @default(false)
-  color        String        @default("#6366f1")
+  daysPerYear  Float          @default(0)
+  carryForward Boolean        @default(false)
+  color        String         @default("#6366f1")
   icon         String?
   requests     LeaveRequest[]
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model LeaveRequest {
   id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   employeeId  String
-  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   typeId      String
-  type        LeaveType @relation(fields: [typeId], references: [id])
   startDate   DateTime
   endDate     DateTime
   days        Float
@@ -301,33 +291,33 @@ model LeaveRequest {
   approverId  String?
   approvedAt  DateTime?
   createdAt   DateTime  @default(now())
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type        LeaveType @relation(fields: [typeId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
 
 model Holiday {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   date        DateTime
-  endDate     DateTime?
-  type        String   @default("public") // public, national, optional, company
-  description String?
-  recurring   Boolean  @default(false)
+  recurring   Boolean   @default(false)
   region      String?
+  description String?
+  endDate     DateTime?
+  type        String    @default("public")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model Task {
   id           String        @id @default(cuid())
   workspaceId  String
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   title        String
   description  String?
   assigneeId   String?
-  assignee     Employee?     @relation(fields: [assigneeId], references: [id])
   departmentId String?
-  department   Department?   @relation(fields: [departmentId], references: [id])
   priority     String        @default("medium")
   dueDate      DateTime?
   status       String        @default("todo")
@@ -336,54 +326,57 @@ model Task {
   createdBy    String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  assignee     Employee?     @relation(fields: [assigneeId], references: [id])
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   comments     TaskComment[]
 }
 
 model TaskComment {
   id        String   @id @default(cuid())
   taskId    String
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   content   String
   createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model WorkRecord {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   project     String
   date        DateTime
   startTime   String?
   endTime     String?
   hours       Float
   description String?
-  billable    Boolean  @default(true)
-  status      String   @default("pending")
+  billable    Boolean   @default(true)
+  status      String    @default("pending")
   approvedBy  String?
   approvedAt  DateTime?
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
 
 model EmployeeAdvance {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   amount      Float
   date        DateTime
   reason      String?
-  months      Int      @default(1)
-  installment Float    @default(0)
-  outstanding Float    @default(0)
-  status      String   @default("pending")
+  months      Int       @default(1)
+  installment Float     @default(0)
+  outstanding Float     @default(0)
+  status      String    @default("pending")
   approvedBy  String?
   approvedAt  DateTime?
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
@@ -391,7 +384,6 @@ model EmployeeAdvance {
 model Payroll {
   id                String        @id @default(cuid())
   workspaceId       String
-  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   period            String
   name              String
   status            String        @default("draft")
@@ -404,6 +396,7 @@ model Payroll {
   lockedAt          DateTime?
   approvedBy        String?
   approvedAt        DateTime?
+  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   items             PayrollItem[]
 
   @@unique([workspaceId, period])
@@ -411,60 +404,60 @@ model Payroll {
 }
 
 model PayrollItem {
-  id              String   @id @default(cuid())
-  payrollId       String
-  payroll         Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
-  employeeId      String
-  employee        Employee @relation(fields: [employeeId], references: [id])
-  baseSalary      Float    @default(0)
-  allowances      Float    @default(0)
-  bonuses         Float    @default(0)
-  overtime        Float    @default(0)
-  overtimeHours   Float    @default(0)
-  weekendPay      Float    @default(0)
-  holidayPay      Float    @default(0)
-  gross           Float    @default(0)
-  lateDeduction   Float    @default(0)
-  absentDeduction Float    @default(0)
-  leaveDeduction  Float    @default(0)
-  halfDayDeduction Float   @default(0)
-  deductions      Float    @default(0)
-  tax             Float    @default(0)
-  advanceDeduction Float   @default(0)
-  benefits        Float    @default(0)
-  net             Float    @default(0)
-  employerCost    Float    @default(0)
-  workingDays     Float    @default(0)
-  presentDays     Float    @default(0)
-  absentDays      Float    @default(0)
-  halfDays        Float    @default(0)
-  paidLeaveDays   Float    @default(0)
-  unpaidLeaveDays Float    @default(0)
-  totalHours      Float    @default(0)
-  paymentStatus   String   @default("pending")
+  id               String   @id @default(cuid())
+  payrollId        String
+  employeeId       String
+  baseSalary       Float    @default(0)
+  allowances       Float    @default(0)
+  bonuses          Float    @default(0)
+  overtime         Float    @default(0)
+  gross            Float    @default(0)
+  deductions       Float    @default(0)
+  tax              Float    @default(0)
+  advanceDeduction Float    @default(0)
+  benefits         Float    @default(0)
+  net              Float    @default(0)
+  employerCost     Float    @default(0)
+  paymentStatus    String   @default("pending")
+  absentDays       Float    @default(0)
+  absentDeduction  Float    @default(0)
+  halfDayDeduction Float    @default(0)
+  halfDays         Float    @default(0)
+  holidayPay       Float    @default(0)
+  lateDeduction    Float    @default(0)
+  leaveDeduction   Float    @default(0)
+  overtimeHours    Float    @default(0)
+  paidLeaveDays    Float    @default(0)
+  presentDays      Float    @default(0)
+  totalHours       Float    @default(0)
+  unpaidLeaveDays  Float    @default(0)
+  weekendPay       Float    @default(0)
+  workingDays      Float    @default(0)
+  employee         Employee @relation(fields: [employeeId], references: [id])
+  payroll          Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
 }
 
 model Expense {
   id            String    @id @default(cuid())
   workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   number        String
   employeeId    String?
-  employee      Employee? @relation(fields: [employeeId], references: [id])
   vendorId      String?
-  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
   category      String
   date          DateTime
   amount        Float
   tax           Float     @default(0)
   paymentMethod String?
   accountId     String?
-  account       Account?  @relation(fields: [accountId], references: [id])
   description   String?
   receipt       String?
   status        String    @default("draft")
   approvedBy    String?
   approvedAt    DateTime?
+  account       Account?  @relation(fields: [accountId], references: [id])
+  employee      Employee? @relation(fields: [employeeId], references: [id])
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   payments      Payment[]
 
   @@index([workspaceId])
@@ -473,57 +466,55 @@ model Expense {
 model Income {
   id            String    @id @default(cuid())
   workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   number        String
   customerId    String?
-  customer      Customer? @relation(fields: [customerId], references: [id])
   category      String
   date          DateTime
   amount        Float
   tax           Float     @default(0)
   paymentMethod String?
   accountId     String?
-  account       Account?  @relation(fields: [accountId], references: [id])
   description   String?
   attachment    String?
+  account       Account?  @relation(fields: [accountId], references: [id])
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
 
 model Customer {
-  id       String    @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name     String
-  email    String?
-  phone    String?
-  address  String?
-  taxId    String?
-  invoices Invoice[]
-  payments Payment[]
-  incomes  Income[]
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  taxId       String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  incomes     Income[]
+  invoices    Invoice[]
+  payments    Payment[]
 }
 
 model Vendor {
-  id       String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name     String
-  email    String?
-  phone    String?
-  address  String?
-  taxId    String?
-  expenses Expense[]
-  payments Payment[]
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  taxId       String?
+  expenses    Expense[]
+  payments    Payment[]
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model Invoice {
   id          String        @id @default(cuid())
   workspaceId String
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   number      String
   customerId  String
-  customer    Customer      @relation(fields: [customerId], references: [id])
   date        DateTime
   dueDate     DateTime
   status      String        @default("draft")
@@ -534,6 +525,8 @@ model Invoice {
   paid        Float         @default(0)
   terms       String?
   notes       String?
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   items       InvoiceItem[]
   payments    Payment[]
 
@@ -543,68 +536,68 @@ model Invoice {
 model InvoiceItem {
   id          String  @id @default(cuid())
   invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
   quantity    Float   @default(1)
   unitPrice   Float   @default(0)
   tax         Float   @default(0)
   amount      Float   @default(0)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
   id            String       @id @default(cuid())
   workspaceId   String
-  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   reference     String
   date          DateTime
   amount        Float
   direction     String       @default("in")
   customerId    String?
-  customer      Customer?    @relation(fields: [customerId], references: [id])
   vendorId      String?
-  vendor        Vendor?      @relation(fields: [vendorId], references: [id])
   invoiceId     String?
-  invoice       Invoice?     @relation(fields: [invoiceId], references: [id])
   expenseId     String?
-  expense       Expense?     @relation(fields: [expenseId], references: [id])
   method        String
   bankAccountId String?
-  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
   notes         String?
   reconciled    Boolean      @default(false)
   reconciledAt  DateTime?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+  customer      Customer?    @relation(fields: [customerId], references: [id])
+  expense       Expense?     @relation(fields: [expenseId], references: [id])
+  invoice       Invoice?     @relation(fields: [invoiceId], references: [id])
+  vendor        Vendor?      @relation(fields: [vendorId], references: [id])
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
 
 model BankAccount {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name          String
-  bank          String
-  accountNumber String
-  currency      String    @default("NPR")
-  openingBalance Float    @default(0)
-  currentBalance Float    @default(0)
-  payments      Payment[]
+  id             String    @id @default(cuid())
+  workspaceId    String
+  name           String
+  bank           String
+  accountNumber  String
+  currency       String    @default("NPR")
+  openingBalance Float     @default(0)
+  currentBalance Float     @default(0)
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  payments       Payment[]
 }
 
 model Account {
-  id            String        @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  code          String
-  name          String
-  type          String
-  parentId      String?
-  openingBalance Float        @default(0)
-  balance       Float         @default(0)
-  status        String        @default("active")
-  isSystem      Boolean       @default(false)
-  journalLines  JournalLine[]
-  expenses      Expense[]
-  incomes       Income[]
+  id             String        @id @default(cuid())
+  workspaceId    String
+  code           String
+  name           String
+  type           String
+  parentId       String?
+  openingBalance Float         @default(0)
+  balance        Float         @default(0)
+  status         String        @default("active")
+  isSystem       Boolean       @default(false)
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  expenses       Expense[]
+  incomes        Income[]
+  journalLines   JournalLine[]
 
   @@unique([workspaceId, code])
 }
@@ -612,7 +605,6 @@ model Account {
 model JournalEntry {
   id          String        @id @default(cuid())
   workspaceId String
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   number      String
   date        DateTime
   description String
@@ -620,6 +612,7 @@ model JournalEntry {
   attachment  String?
   createdBy   String?
   createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   lines       JournalLine[]
 
   @@index([workspaceId])
@@ -628,19 +621,17 @@ model JournalEntry {
 model JournalLine {
   id        String       @id @default(cuid())
   journalId String
-  journal   JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
   accountId String
-  account   Account      @relation(fields: [accountId], references: [id])
   debit     Float        @default(0)
   credit    Float        @default(0)
+  account   Account      @relation(fields: [accountId], references: [id])
+  journal   JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
   action      String
   module      String
   recordId    String?
@@ -648,7 +639,9 @@ model AuditLog {
   before      String?
   after       String?
   ip          String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  user        User?     @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
@@ -656,109 +649,106 @@ model AuditLog {
 model Announcement {
   id           String      @id @default(cuid())
   workspaceId  String
-  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   title        String
   message      String
   audience     String      @default("all")
   departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id])
   priority     String      @default("normal")
   publishDate  DateTime?
   expiryDate   DateTime?
   attachment   String?
   status       String      @default("draft")
   authorId     String?
-  author       User?       @relation(fields: [authorId], references: [id])
   createdAt    DateTime    @default(now())
+  author       User?       @relation(fields: [authorId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model Message {
-  id          String            @id @default(cuid())
+  id          String             @id @default(cuid())
   workspaceId String
-  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   senderId    String
-  sender      User              @relation("SentMessages", fields: [senderId], references: [id])
   subject     String
   body        String?
   attachment  String?
   parentId    String?
-  createdAt   DateTime          @default(now())
+  createdAt   DateTime           @default(now())
+  sender      User               @relation("SentMessages", fields: [senderId], references: [id])
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   recipients  MessageRecipient[]
 }
 
 model MessageRecipient {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   messageId   String
-  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   recipientId String
-  recipient   User     @relation(fields: [recipientId], references: [id])
   readAt      DateTime?
+  message     Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  recipient   User      @relation(fields: [recipientId], references: [id])
 
   @@unique([messageId, recipientId])
 }
 
 model Notification {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   body        String?
-  type        String   @default("info")
+  type        String    @default("info")
   link        String?
   readAt      DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model SubscriptionPlan {
-  id            String   @id @default(cuid())
-  name          String   @unique
+  id            String         @id @default(cuid())
+  name          String         @unique
   description   String?
   monthlyPrice  Float
   yearlyPrice   Float
-  employeeLimit Int      @default(15)
-  userLimit     Int      @default(50)
-  storageLimit  Int      @default(1024)
-  features      String   @default("[]") // JSON array of feature strings
-  isActive      Boolean  @default(true)
-  isDefault     Boolean  @default(false)
-  sortOrder     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
+  employeeLimit Int            @default(15)
+  userLimit     Int            @default(50)
+  storageLimit  Int            @default(1024)
+  features      String         @default("[]")
+  isActive      Boolean        @default(true)
+  isDefault     Boolean        @default(false)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   subscriptions Subscription[]
 }
 
 model Subscription {
   id              String            @id @default(cuid())
   workspaceId     String            @unique
-  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   planId          String?
-  plan            SubscriptionPlan? @relation(fields: [planId], references: [id])
   planName        String            @default("starter")
   status          String            @default("active")
   billingPeriod   String            @default("monthly")
   price           Float             @default(49)
   employeeLimit   Int               @default(15)
   userLimit       Int               @default(50)
-  storageLimit    Int               @default(1024) // in MB
+  storageLimit    Int               @default(1024)
   isTrial         Boolean           @default(false)
   trialEndDate    DateTime?
-  paymentStatus   String            @default("unpaid") // unpaid, pending, paid
+  paymentStatus   String            @default("unpaid")
   approvedBy      String?
   approvedAt      DateTime?
   startDate       DateTime          @default(now())
   renewalDate     DateTime
   paymentRequests PaymentRequest[]
+  plan            SubscriptionPlan? @relation(fields: [planId], references: [id])
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model PaymentRequest {
   id             String        @id @default(cuid())
   workspaceId    String
-  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   subscriptionId String?
-  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
   amount         Float
   method         String        @default("card")
   reference      String
@@ -767,49 +757,50 @@ model PaymentRequest {
   approvedBy     String?
   approvedAt     DateTime?
   createdAt      DateTime      @default(now())
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model Document {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   entityType  String
   entityId    String
   name        String
   filePath    String
   type        String?
-  size        Int      @default(0)
+  size        Int       @default(0)
   expiresAt   DateTime?
   uploadedBy  String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, entityType, entityId])
 }
 
 model AttendanceDevice {
-  id              String   @id @default(cuid())
+  id              String                @id @default(cuid())
   workspaceId     String
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name            String
   model           String?
   ipAddress       String
-  port            Int      @default(4370)
+  port            Int                   @default(4370)
   location        String?
-  protocol        String   @default("TCP") // TCP, HTTP, HTTPS
+  protocol        String                @default("TCP")
   username        String?
   password        String?
-  status          String   @default("offline") // online, offline, syncing, error
+  status          String                @default("offline")
   lastSyncAt      DateTime?
-  lastSyncStatus  String?  // success, failed
-  syncInterval    Int      @default(30) // minutes
-  autoSync        Boolean  @default(false)
+  lastSyncStatus  String?
+  syncInterval    Int                   @default(30)
+  autoSync        Boolean               @default(false)
   firmwareVersion String?
   serialNumber    String?
   errorMessage    String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
+  isActive        Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  workspace       Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   logs            AttendanceDeviceLog[]
 
   @@unique([workspaceId, ipAddress])
@@ -817,205 +808,180 @@ model AttendanceDevice {
 }
 
 model AttendanceDeviceLog {
-  id          String   @id @default(cuid())
-  deviceId    String
-  device      AttendanceDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  type        String   // sync, connection, error, manual
-  status      String   // success, failed, warning
-  message     String?
-  recordsSynced Int    @default(0)
-  duration    Int?     // milliseconds
-  createdAt   DateTime @default(now())
+  id            String           @id @default(cuid())
+  deviceId      String
+  type          String
+  status        String
+  message       String?
+  recordsSynced Int              @default(0)
+  duration      Int?
+  createdAt     DateTime         @default(now())
+  device        AttendanceDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId])
 }
 
 model AttendanceSettings {
-  id              String   @id @default(cuid())
-  workspaceId     String   @unique
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  // Office Hours
-  officeStartTime String   @default("10:00")
-  officeEndTime   String   @default("18:00")
-  officeTimezone  String   @default("Asia/Kathmandu")
-
-  // Grace Period
-  graceMinutes    Int      @default(15)
-
-  // Late / Absent Rules
-  absentIfLateByMinutes Int @default(0) // 0 = disabled
-
-  // Half-Day Rules
-  halfDayAfterMinutes  Int @default(240) // 0 = disabled
-
-  // Minimum Working Time
-  minimumWorkMinutes   Int @default(180) // 0 = no minimum
-
-  // Working Days (JSON: ["mon","tue","wed","thu","fri"])
-  workingDays    String   @default("[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\"]")
-
-  // Weekend
-  weekendDays    String   @default("[\"sat\",\"sun\"]")
-
-  // Overtime
-  overtimeEnabled         Boolean @default(true)
-  overtimeRequiresApproval Boolean @default(true)
-  overtimeRateMultiplier  Float   @default(1.5)
-  weekendOvertimeRate     Float   @default(2.0)
-  holidayOvertimeRate     Float   @default(2.5)
-
-  // Break Settings
-  breakEnabled           Boolean @default(true)
-  breakStartTime         String? @default("12:00")
-  breakEndTime           String? @default("13:00")
-  breakDurationMinutes   Int     @default(60)
-  maxBreaksPerDay        Int     @default(1)
-  breakIsPaid            Boolean @default(false)
-
-  // Attendance Reminders
-  remindersEnabled       Boolean @default(false)
-  reminderStartHour      String  @default("10:00")
-  reminderEndHour        String  @default("17:00")
-  maxRemindersPerDay     Int     @default(8)
-  reminderEmailEnabled   Boolean @default(true)
-
-  // Salary Calculation
-  lateDeductionEnabled   Boolean @default(true)
-  lateDeductionPerMinute Float   @default(0)
-  absentDeductionEnabled Boolean @default(true)
-  halfDayDeductionPercent Float  @default(50)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                       String    @id @default(cuid())
+  workspaceId              String    @unique
+  officeStartTime          String    @default("10:00")
+  officeEndTime            String    @default("18:00")
+  officeTimezone           String    @default("Asia/Kathmandu")
+  graceMinutes             Int       @default(15)
+  absentIfLateByMinutes    Int       @default(0)
+  halfDayAfterMinutes      Int       @default(240)
+  minimumWorkMinutes       Int       @default(180)
+  workingDays              String    @default("[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\"]")
+  weekendDays              String    @default("[\"sat\",\"sun\"]")
+  overtimeEnabled          Boolean   @default(true)
+  overtimeRequiresApproval Boolean   @default(true)
+  overtimeRateMultiplier   Float     @default(1.5)
+  weekendOvertimeRate      Float     @default(2.0)
+  holidayOvertimeRate      Float     @default(2.5)
+  breakEnabled             Boolean   @default(true)
+  breakStartTime           String?   @default("12:00")
+  breakEndTime             String?   @default("13:00")
+  breakDurationMinutes     Int       @default(60)
+  maxBreaksPerDay          Int       @default(1)
+  breakIsPaid              Boolean   @default(false)
+  remindersEnabled         Boolean   @default(false)
+  reminderStartHour        String    @default("10:00")
+  reminderEndHour          String    @default("17:00")
+  maxRemindersPerDay       Int       @default(8)
+  reminderEmailEnabled     Boolean   @default(true)
+  lateDeductionEnabled     Boolean   @default(true)
+  lateDeductionPerMinute   Float     @default(0)
+  absentDeductionEnabled   Boolean   @default(true)
+  halfDayDeductionPercent  Float     @default(50)
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  workspace                Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model Break {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   workspaceId  String
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   attendanceId String
-  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
   employeeId   String
-  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   breakOut     DateTime
   breakIn      DateTime?
-  duration     Int      @default(0) // minutes
-  status       String   @default("active") // active, completed, late_return
-  isPaid       Boolean  @default(false)
+  duration     Int        @default(0)
+  status       String     @default("active")
+  isPaid       Boolean    @default(false)
   note         String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([employeeId])
 }
 
 model OvertimeRecord {
-  id           String   @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  employeeId   String
-  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  date         DateTime
-  hours        Float
-  type         String   // regular, weekend, holiday, early_checkin, late_checkout
-  rate         Float    @default(1.5)
-  status       String   @default("pending") // pending, approved, rejected
-  approvedBy   String?
-  approvedAt   DateTime?
-  note         String?
-  createdAt    DateTime @default(now())
+  id          String    @id @default(cuid())
+  workspaceId String
+  employeeId  String
+  date        DateTime
+  hours       Float
+  type        String
+  rate        Float     @default(1.5)
+  status      String    @default("pending")
+  approvedBy  String?
+  approvedAt  DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([employeeId, date])
 }
 
 model EmailConfig {
-  id              String   @id @default(cuid())
-  workspaceId     String
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  provider        String   @default("brevo")
-  apiKey          String
-  senderName      String
-  senderEmail     String
-  replyToEmail    String?
-  isEnabled       Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@unique([workspaceId])
+  id           String    @id @default(cuid())
+  workspaceId  String    @unique
+  provider     String    @default("brevo")
+  apiKey       String
+  senderName   String
+  senderEmail  String
+  replyToEmail String?
+  isEnabled    Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model AuthSettings {
-  id                    String   @id @default(cuid())
-  workspaceId           String   @unique
-  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  emailVerificationRequired Boolean @default(true)
-  loginOtpEnabled       Boolean  @default(false)
-  otpExpirationMinutes  Int      @default(5)
-  otpLength             Int      @default(6)
-  maxOtpAttempts        Int      @default(5)
-  otpResendCooldownSeconds Int  @default(60)
-  maxOtpResends         Int      @default(3)
-  passwordMinLength     Int      @default(8)
-  passwordRequireUppercase Boolean @default(true)
-  passwordRequireLowercase Boolean @default(true)
-  passwordRequireNumber Boolean  @default(true)
-  passwordRequireSpecial Boolean @default(true)
-  passwordResetExpirationMinutes Int @default(15)
-  sessionTimeoutMinutes Int      @default(480) // 8 hours
-  forceLogoutOnPasswordChange Boolean @default(true)
-  maxFailedLoginAttempts Int     @default(5)
-  lockoutDurationMinutes Int    @default(30)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                             String    @id @default(cuid())
+  workspaceId                    String    @unique
+  emailVerificationRequired      Boolean   @default(true)
+  loginOtpEnabled                Boolean   @default(false)
+  otpExpirationMinutes           Int       @default(5)
+  otpLength                      Int       @default(6)
+  maxOtpAttempts                 Int       @default(5)
+  otpResendCooldownSeconds       Int       @default(60)
+  maxOtpResends                  Int       @default(3)
+  passwordMinLength              Int       @default(8)
+  passwordRequireUppercase       Boolean   @default(true)
+  passwordRequireLowercase       Boolean   @default(true)
+  passwordRequireNumber          Boolean   @default(true)
+  passwordRequireSpecial         Boolean   @default(true)
+  passwordResetExpirationMinutes Int       @default(15)
+  sessionTimeoutMinutes          Int       @default(480)
+  forceLogoutOnPasswordChange    Boolean   @default(true)
+  maxFailedLoginAttempts         Int       @default(5)
+  lockoutDurationMinutes         Int       @default(30)
+  createdAt                      DateTime  @default(now())
+  updatedAt                      DateTime  @updatedAt
+  workspace                      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model OtpVerification {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   email       String
   codeHash    String
-  type        String   // registration, login, password_reset, email_verify
+  type        String
   expiresAt   DateTime
-  attempts    Int      @default(0)
-  verified    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  attempts    Int       @default(0)
+  verified    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([email, type])
   @@index([workspaceId])
 }
 
 model PasswordResetToken {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash   String
   expiresAt   DateTime
-  used        Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  used        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([workspaceId])
 }
 
 model AuthAuditLog {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   userId      String?
   email       String
-  action      String   // register, verify_email, login, login_otp, forgot_password, reset_password, change_password, admin_verify, admin_disable, admin_force_reset
+  action      String
   success     Boolean
   ip          String?
   userAgent   String?
-  metadata    String?  // JSON string for extra data
-  createdAt   DateTime @default(now())
+  metadata    String?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([email])
@@ -1023,56 +989,56 @@ model AuthAuditLog {
 }
 
 model PayrollPeriod {
-  id              String   @id @default(cuid())
-  workspaceId     String
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name            String
-  frequency       String   @default("monthly") // monthly, biweekly, weekly
-  startDate       DateTime
-  endDate         DateTime
-  paymentDate     DateTime
-  status          String   @default("upcoming") // upcoming, active, processing, completed, closed
-  isCurrent       Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  frequency   String    @default("monthly")
+  startDate   DateTime
+  endDate     DateTime
+  paymentDate DateTime
+  status      String    @default("upcoming")
+  isCurrent   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
 
 model SalaryConfig {
-  id              String   @id @default(cuid())
-  workspaceId     String
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  employeeId      String?
-  employee        Employee? @relation(fields: [employeeId], references: [id])
-  salaryType      String   @default("monthly") // monthly, daily, hourly
-  baseSalary      Float    @default(0)
-  currency        String   @default("NPR")
-  taxEnabled      Boolean  @default(true)
-  taxRate         Float    @default(0) // percentage
-  socialSecurityEnabled Boolean @default(false)
-  socialSecurityRate    Float   @default(0)
-  providentFundEnabled  Boolean @default(false)
-  providentFundRate     Float   @default(0)
-  insuranceEnabled      Boolean @default(false)
-  insuranceAmount       Float   @default(0)
-  effectiveFrom   DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  employeeId            String?
+  salaryType            String    @default("monthly")
+  baseSalary            Float     @default(0)
+  currency              String    @default("NPR")
+  taxEnabled            Boolean   @default(true)
+  taxRate               Float     @default(0)
+  socialSecurityEnabled Boolean   @default(false)
+  socialSecurityRate    Float     @default(0)
+  providentFundEnabled  Boolean   @default(false)
+  providentFundRate     Float     @default(0)
+  insuranceEnabled      Boolean   @default(false)
+  insuranceAmount       Float     @default(0)
+  effectiveFrom         DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  employee              Employee? @relation(fields: [employeeId], references: [id])
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
 }
 
 model AttendanceReminder {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   date        DateTime
-  type        String   // missing_clockin, missing_clockout
-  sentAt      DateTime @default(now())
-  channel     String   @default("email") // email, notification, sms
+  type        String
+  sentAt      DateTime  @default(now())
+  channel     String    @default("email")
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([employeeId, date])
