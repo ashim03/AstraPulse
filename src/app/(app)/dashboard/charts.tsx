@@ -12,7 +12,10 @@ export type DashboardChartsData = {
   cashFlow: Array<{ label: string; flow: number }>;
 };
 
-export function DashboardCharts({ data }: { data: DashboardChartsData }) {
+export function DashboardCharts({ data, role }: { data: DashboardChartsData; role?: string }) {
+  const isEmployee = role === "Employee";
+  const isManager = role === "Manager";
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <ChartCard title="Attendance Trend" subtitle="Last 30 days">
@@ -28,36 +31,42 @@ export function DashboardCharts({ data }: { data: DashboardChartsData }) {
         />
       </ChartCard>
 
-      <ChartCard title="Payroll Trend" subtitle="Net payroll by month">
-        <BarChartView
-          data={data.payrollTrend}
-          xKey="label"
-          currency
-          series={[
-            { key: "net", name: "Net Pay", color: "#4f46e5" },
-            { key: "gross", name: "Gross", color: "#a5b4fc" },
-          ]}
-          height={250}
-        />
-      </ChartCard>
+      {!isEmployee && !isManager && data.payrollTrend.length > 0 && (
+        <ChartCard title="Payroll Trend" subtitle="Net payroll by month">
+          <BarChartView
+            data={data.payrollTrend}
+            xKey="label"
+            currency
+            series={[
+              { key: "net", name: "Net Pay", color: "#4f46e5" },
+              { key: "gross", name: "Gross", color: "#a5b4fc" },
+            ]}
+            height={250}
+          />
+        </ChartCard>
+      )}
 
-      <ChartCard title="Revenue vs Expenses" subtitle="Monthly comparison" className="lg:col-span-2">
-        <TrendChart
-          data={data.revenueVsExpense}
-          xKey="label"
-          type="line"
-          currency
-          series={[
-            { key: "revenue", name: "Revenue", color: "#10b981" },
-            { key: "expense", name: "Expenses", color: "#ef4444" },
-          ]}
-          height={240}
-        />
-      </ChartCard>
+      {!isEmployee && data.revenueVsExpense.length > 0 && (
+        <ChartCard title="Revenue vs Expenses" subtitle="Monthly comparison" className="lg:col-span-2">
+          <TrendChart
+            data={data.revenueVsExpense}
+            xKey="label"
+            type="line"
+            currency
+            series={[
+              { key: "revenue", name: "Revenue", color: "#10b981" },
+              { key: "expense", name: "Expenses", color: "#ef4444" },
+            ]}
+            height={240}
+          />
+        </ChartCard>
+      )}
 
-      <ChartCard title="Expense Categories" subtitle="By category">
-        <DonutChart data={data.expenseCategories} currency height={220} />
-      </ChartCard>
+      {!isEmployee && data.expenseCategories.length > 0 && (
+        <ChartCard title="Expense Categories" subtitle="By category">
+          <DonutChart data={data.expenseCategories} currency height={220} />
+        </ChartCard>
+      )}
 
       <ChartCard title="Department Headcount" subtitle="Team sizes">
         <BarChartView
@@ -68,16 +77,18 @@ export function DashboardCharts({ data }: { data: DashboardChartsData }) {
         />
       </ChartCard>
 
-      <ChartCard title="Cash Flow" subtitle="Net monthly cash movement">
-        <TrendChart
-          data={data.cashFlow}
-          xKey="label"
-          currency
-          color="#10b981"
-          series={[{ key: "flow", name: "Net cash flow", color: "#10b981" }]}
-          height={230}
-        />
-      </ChartCard>
+      {!isEmployee && data.cashFlow.length > 0 && (
+        <ChartCard title="Cash Flow" subtitle="Net monthly cash movement">
+          <TrendChart
+            data={data.cashFlow}
+            xKey="label"
+            currency
+            color="#10b981"
+            series={[{ key: "flow", name: "Net cash flow", color: "#10b981" }]}
+            height={230}
+          />
+        </ChartCard>
+      )}
 
       <ChartCard title="Leave Distribution" subtitle="Days by leave type">
         <DonutChart data={data.leaveDistribution} height={230} centerLabel={`${data.leaveDistribution.reduce((a, b) => a + b.value, 0)}d`} />

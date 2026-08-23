@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, FileText, HandCoins, Receipt, UserX, FileWarning, ChevronRight, CheckCircle } from "lucide-react";
+import { CalendarClock, FileText, HandCoins, Receipt, UserX, FileWarning, ChevronRight, CheckCircle, ClipboardList } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -14,113 +14,204 @@ type Needs = {
   items: Array<{ title: string; sub?: string; badge?: string; badgeTone?: string }>;
 };
 
-export async function NeedsAttention({ workspaceId }: { workspaceId: string }) {
+export async function NeedsAttention({ workspaceId, role, employeeId }: { workspaceId: string; role?: string; employeeId?: string }) {
   const now = new Date();
   const soon = new Date(now.getTime() + 60 * 86400000);
+  const isEmployee = role === "Employee";
+  const isManager = role === "Manager";
 
-  const [pendingLeave, unpaidInvoices, pendingExpenses, contractExpiries, outstandingAdvances, expiringDocs] =
+  const [pendingLeave, unpaidInvoices, pendingExpenses, contractExpiries, outstandingAdvances, expiringDocs, myTasks] =
     await Promise.all([
-      prisma.leaveRequest.findMany({
-        where: { workspaceId, status: "pending" },
-        include: { employee: true, type: true },
-        orderBy: { createdAt: "asc" },
-        take: 4,
-      }),
-      prisma.invoice.findMany({
-        where: { workspaceId, status: { in: ["sent", "viewed", "overdue", "partially_paid"] } },
-        include: { customer: true },
-        orderBy: { dueDate: "asc" },
-        take: 4,
-      }),
-      prisma.expense.findMany({
-        where: { workspaceId, status: "submitted" },
-        include: { vendor: true },
-        orderBy: { date: "asc" },
-        take: 4,
-      }),
-      prisma.employee.findMany({
-        where: { workspaceId, contractEndDate: { not: null, lte: soon }, status: "active" },
-        orderBy: { contractEndDate: "asc" },
-        take: 4,
-      }),
-      prisma.employeeAdvance.findMany({
-        where: { workspaceId, status: { in: ["approved", "paid"] }, outstanding: { gt: 0 } },
-        include: { employee: true },
-        orderBy: { date: "asc" },
-        take: 4,
-      }),
-      prisma.document.findMany({
-        where: { workspaceId, expiresAt: { not: null, lte: soon } },
-        orderBy: { expiresAt: "asc" },
-        take: 4,
-      }),
+      isEmployee && employeeId
+        ? prisma.leaveRequest.findMany({
+            where: { workspaceId, status: "pending", employeeId },
+            include: { employee: true, type: true },
+            orderBy: { createdAt: "asc" },
+            take: 4,
+          })
+        : isManager
+          ? prisma.leaveRequest.findMany({
+              where: { workspaceId, status: "pending", employee: { department: { workspaceId } } },
+              include: { employee: true, type: true },
+              orderBy: { createdAt: "asc" },
+              take: 4,
+            })
+          : prisma.leaveRequest.findMany({
+              where: { workspaceId, status: "pending" },
+              include: { employee: true, type: true },
+              orderBy: { createdAt: "asc" },
+              take: 4,
+            }),
+      isEmployee
+        ? Promise.resolve([])
+        : prisma.invoice.findMany({
+            where: { workspaceId, status: { in: ["sent", "viewed", "overdue", "partially_paid"] } },
+            include: { customer: true },
+            orderBy: { dueDate: "asc" },
+            take: 4,
+          }),
+      isEmployee
+        ? Promise.resolve([])
+        : prisma.expense.findMany({
+            where: { workspaceId, status: "submitted" },
+            include: { vendor: true },
+            orderBy: { date: "asc" },
+            take: 4,
+          }),
+      isEmployee
+        ? Promise.resolve([])
+        : prisma.employee.findMany({
+            where: { workspaceId, contractEndDate: { not: null, lte: soon }, status: "active" },
+            orderBy: { contractEndDate: "asc" },
+            take: 4,
+          }),
+      isEmployee
+        ? Promise.resolve([])
+        : prisma.employeeAdvance.findMany({
+            where: { workspaceId, status: { in: ["approved", "paid"] }, outstanding: { gt: 0 } },
+            include: { employee: true },
+            orderBy: { date: "asc" },
+            take: 4,
+          }),
+      isEmployee
+        ? Promise.resolve([])
+        : prisma.document.findMany({
+            where: { workspaceId, expiresAt: { not: null, lte: soon } },
+            orderBy: { expiresAt: "asc" },
+            take: 4,
+          }),
+      isEmployee && employeeId
+        ? prisma.workRecord.findMany({
+            where: { workspaceId, employeeId, status: { in: ["pending", "submitted"] } },
+            include: { employee: true },
+            orderBy: { date: "asc" },
+            take: 4,
+          })
+        : isManager
+          ? prisma.workRecord.findMany({
+              where: { workspaceId, status: "pending", employee: { department: { workspaceId } } },
+              include: { employee: true },
+              orderBy: { date: "asc" },
+              take: 4,
+            })
+          : Promise.resolve([]),
     ]);
 
-  const sections: Needs[] = [
-    {
-      label: "Pending leave approvals",
-      href: "/leave",
-      icon: CalendarClock,
-      tone: "bg-amber-50 text-amber-600",
-      items: pendingLeave.map((r) => ({
-        title: r.employee.name,
-        sub: `${r.type.name} · ${formatDate(r.startDate)}`,
-        badge: `${r.days}d`,
-      })),
-    },
-    {
-      label: "Unpaid invoices",
-      href: "/invoices",
-      icon: FileText,
-      tone: "bg-red-50 text-red-600",
-      items: unpaidInvoices.map((i) => ({
-        title: `${i.number} · ${i.customer.name}`,
-        sub: `Due ${formatDate(i.dueDate)}`,
-        badge: `Rs. ${(i.total - i.paid).toLocaleString()}`,
-      })),
-    },
-    {
-      label: "Expense approvals",
-      href: "/expenses",
-      icon: Receipt,
-      tone: "bg-sky-50 text-sky-600",
-      items: pendingExpenses.map((e) => ({
-        title: `${e.number} · ${e.vendor?.name ?? "—"}`,
-        sub: e.category,
-        badge: `Rs. ${e.amount.toLocaleString()}`,
-      })),
-    },
-    {
-      label: "Contract expirations",
-      href: "/staff",
-      icon: UserX,
-      tone: "bg-orange-50 text-orange-600",
-      items: contractExpiries.map((e) => ({
-        title: e.name,
-        sub: `Contract ends ${formatDate(e.contractEndDate)}`,
-      })),
-    },
-    {
-      label: "Outstanding advances",
-      href: "/advances",
-      icon: HandCoins,
-      tone: "bg-violet-50 text-violet-600",
-      items: outstandingAdvances.map((a) => ({
-        title: a.employee.name,
-        sub: `Outstanding Rs. ${a.outstanding.toLocaleString()}`,
-      })),
-    },
-    {
-      label: "Documents expiring",
-      href: "/staff",
-      icon: FileWarning,
-      tone: "bg-rose-50 text-rose-600",
-      items: expiringDocs.map((d) => ({
-        title: d.name,
-        sub: `Expires ${formatDate(d.expiresAt)}`,
-      })),
-    },
-  ];
+  const sections: Needs[] = isEmployee
+    ? [
+        {
+          label: "My pending leave requests",
+          href: "/leave",
+          icon: CalendarClock,
+          tone: "bg-amber-50 text-amber-600",
+          items: pendingLeave.map((r) => ({
+            title: r.type.name,
+            sub: `${formatDate(r.startDate)} · ${r.days}d`,
+            badge: r.status,
+          })),
+        },
+        {
+          label: "My tasks",
+          href: "/tasks",
+          icon: ClipboardList,
+          tone: "bg-indigo-50 text-indigo-600",
+          items: myTasks.map((t) => ({
+            title: t.employee.name,
+            sub: `Due ${formatDate(t.date)}`,
+            badge: t.status,
+          })),
+        },
+      ]
+    : isManager
+      ? [
+          {
+            label: "Pending leave approvals",
+            href: "/leave",
+            icon: CalendarClock,
+            tone: "bg-amber-50 text-amber-600",
+            items: pendingLeave.map((r) => ({
+              title: r.employee.name,
+              sub: `${r.type.name} · ${formatDate(r.startDate)}`,
+              badge: `${r.days}d`,
+            })),
+          },
+          {
+            label: "Pending work records",
+            href: "/attendance",
+            icon: ClipboardList,
+            tone: "bg-indigo-50 text-indigo-600",
+            items: myTasks.map((t) => ({
+              title: t.employee.name,
+              sub: `Submitted ${formatDate(t.date)}`,
+              badge: t.status,
+            })),
+          },
+        ]
+      : [
+          {
+            label: "Pending leave approvals",
+            href: "/leave",
+            icon: CalendarClock,
+            tone: "bg-amber-50 text-amber-600",
+            items: pendingLeave.map((r) => ({
+              title: r.employee.name,
+              sub: `${r.type.name} · ${formatDate(r.startDate)}`,
+              badge: `${r.days}d`,
+            })),
+          },
+          {
+            label: "Unpaid invoices",
+            href: "/invoices",
+            icon: FileText,
+            tone: "bg-red-50 text-red-600",
+            items: unpaidInvoices.map((i) => ({
+              title: `${i.number} · ${i.customer.name}`,
+              sub: `Due ${formatDate(i.dueDate)}`,
+              badge: `Rs. ${(i.total - i.paid).toLocaleString()}`,
+            })),
+          },
+          {
+            label: "Expense approvals",
+            href: "/expenses",
+            icon: Receipt,
+            tone: "bg-sky-50 text-sky-600",
+            items: pendingExpenses.map((e) => ({
+              title: `${e.number} · ${e.vendor?.name ?? "—"}`,
+              sub: e.category,
+              badge: `Rs. ${e.amount.toLocaleString()}`,
+            })),
+          },
+          {
+            label: "Contract expirations",
+            href: "/staff",
+            icon: UserX,
+            tone: "bg-orange-50 text-orange-600",
+            items: contractExpiries.map((e) => ({
+              title: e.name,
+              sub: `Contract ends ${formatDate(e.contractEndDate)}`,
+            })),
+          },
+          {
+            label: "Outstanding advances",
+            href: "/advances",
+            icon: HandCoins,
+            tone: "bg-violet-50 text-violet-600",
+            items: outstandingAdvances.map((a) => ({
+              title: a.employee.name,
+              sub: `Outstanding Rs. ${a.outstanding.toLocaleString()}`,
+            })),
+          },
+          {
+            label: "Documents expiring",
+            href: "/staff",
+            icon: FileWarning,
+            tone: "bg-rose-50 text-rose-600",
+            items: expiringDocs.map((d) => ({
+              title: d.name,
+              sub: `Expires ${formatDate(d.expiresAt)}`,
+            })),
+          },
+        ];
 
   const hasItems = sections.some((s) => s.items.length > 0);
 

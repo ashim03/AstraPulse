@@ -47,9 +47,16 @@ const moduleLinks: Record<string, string> = {
   holidays: "/holidays",
 };
 
-export async function RecentActivity({ workspaceId }: { workspaceId: string }) {
+export async function RecentActivity({ workspaceId, role, employeeId }: { workspaceId: string; role?: string; employeeId?: string }) {
+  const isEmployee = role === "Employee";
+  const isManager = role === "Manager";
+
   const logs = await prisma.auditLog.findMany({
-    where: { workspaceId },
+    where: isEmployee && employeeId
+      ? { workspaceId, userId: employeeId }
+      : isManager
+        ? { workspaceId, user: { is: { employee: { department: { workspaceId } } } } }
+        : { workspaceId },
     orderBy: { createdAt: "desc" },
     take: 8,
     include: { user: true },
