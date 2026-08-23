@@ -40,7 +40,7 @@ export async function notify(workspaceId: string, userId: string, title: string,
   }
 }
 
-export type ActionResult<T = undefined> =
+export type ActionResult<T = any> =
   | { ok: true; data?: T; message?: string }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
 

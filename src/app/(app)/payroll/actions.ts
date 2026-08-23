@@ -82,3 +82,300 @@ export async function updatePayrollStatusAction(id: string, status: string): Pro
   revalidatePath(`/payroll/${id}`);
   return ok(undefined, `Payroll marked ${status}`);
 }
+
+export async function generatePayrollPreviewAction(
+  startDate: string,
+  endDate: string
+): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "view");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  try {
+    const { calculatePayrollPreview } = await import("@/services/salary");
+    const preview = await calculatePayrollPreview(
+      session.workspaceId,
+      new Date(startDate),
+      new Date(endDate)
+    );
+    return ok(preview);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to calculate preview";
+    return fail(message);
+  }
+}
+
+export async function generatePayrollFromPreviewAction(
+  previewData: Array<{
+    employeeId: string;
+    employeeName: string;
+    departmentName: string;
+    baseSalary: number;
+    salaryType: string;
+    workingDays: number;
+    presentDays: number;
+    absentDays: number;
+    halfDays: number;
+    paidLeaveDays: number;
+    unpaidLeaveDays: number;
+    totalHours: number;
+    overtimeHours: number;
+    lateMinutes: number;
+    allowances: number;
+    bonuses: number;
+    overtimePay: number;
+    weekendPay: number;
+    holidayPay: number;
+    gross: number;
+    lateDeduction: number;
+    absentDeduction: number;
+    leaveDeduction: number;
+    halfDayDeduction: number;
+    totalDeductions: number;
+    tax: number;
+    advanceDeduction: number;
+    net: number;
+    status: "ready" | "needs_review";
+  }>,
+  period: { id: string; name: string; startDate: string; endDate: string }
+): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  try {
+    const { generatePayrollFromPreview } = await import("@/services/salary");
+
+    const payroll = await generatePayrollFromPreview(
+      session.workspaceId,
+      previewData,
+      {
+        id: period.id,
+        name: period.name,
+        startDate: new Date(period.startDate),
+        endDate: new Date(period.endDate),
+      } as any
+    );
+
+    await writeAudit({
+      session,
+      action: "create",
+      module: "payroll",
+      recordId: payroll.id,
+      description: `Generated payroll from preview (${payroll.items.length} employees, net ${payroll.netTotal})`,
+    });
+
+    revalidatePath("/payroll");
+    revalidatePath("/payroll/preview");
+    return ok(undefined, "Payroll generated successfully");
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to generate payroll";
+    return fail(message);
+  }
+}
+
+export async function createPayrollPeriodAction(formData: FormData): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const frequency = String(formData.get("frequency") ?? "monthly");
+  const startDateStr = String(formData.get("startDate") ?? "");
+  const endDateStr = String(formData.get("endDate") ?? "");
+  const paymentDateStr = String(formData.get("paymentDate") ?? "");
+
+  if (!name) return fail("Name is required");
+  if (!startDateStr) return fail("Start date is required");
+  if (!endDateStr) return fail("End date is required");
+  if (!paymentDateStr) return fail("Payment date is required");
+
+  const startDate = new Date(startDateStr);
+  const endDate = new Date(endDateStr);
+  const paymentDate = new Date(paymentDateStr);
+
+  if (endDate <= startDate) return fail("End date must be after start date");
+
+  const existing = await prisma.payrollPeriod.findFirst({
+    where: {
+      workspaceId: session.workspaceId,
+      name,
+    },
+  });
+
+  if (existing) return fail("A period with this name already exists");
+
+  const period = await prisma.payrollPeriod.create({
+    data: {
+      workspaceId: session.workspaceId,
+      name,
+      frequency,
+      startDate,
+      endDate,
+      paymentDate,
+      status: "upcoming",
+      isCurrent: false,
+    },
+  });
+
+  await writeAudit({
+    session,
+    action: "create",
+    module: "payroll-period",
+    recordId: period.id,
+    description: `Created payroll period "${name}" (${frequency})`,
+  });
+
+  revalidatePath("/payroll/periods");
+  return ok(undefined, "Period created");
+}
+
+export async function updatePayrollPeriodAction(
+  id: string,
+  status: string
+): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const period = await prisma.payrollPeriod.findFirst({
+    where: { id, workspaceId: session.workspaceId },
+  });
+
+  if (!period) return fail("Period not found");
+
+  const validTransitions: Record<string, string[]> = {
+    upcoming: ["active", "closed"],
+    active: ["processing", "completed", "closed"],
+    processing: ["completed", "closed"],
+    completed: ["closed"],
+    closed: [],
+  };
+
+  const allowed = validTransitions[period.status] ?? [];
+  if (!allowed.includes(status)) {
+    return fail(`Cannot transition from "${period.status}" to "${status}"`);
+  }
+
+  const updateData: Record<string, unknown> = { status };
+
+  if (status === "active") {
+    await prisma.payrollPeriod.updateMany({
+      where: { workspaceId: session.workspaceId, isCurrent: true },
+      data: { isCurrent: false },
+    });
+    updateData.isCurrent = true;
+  }
+
+  if (status === "closed") {
+    updateData.isCurrent = false;
+  }
+
+  await prisma.payrollPeriod.update({ where: { id }, data: updateData });
+
+  await writeAudit({
+    session,
+    action: status,
+    module: "payroll-period",
+    recordId: id,
+    description: `Period "${period.name}" marked as ${status}`,
+  });
+
+  revalidatePath("/payroll/periods");
+  return ok(undefined, `Period ${status}`);
+}
+
+export async function runAutoSalaryAction(periodId: string): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const period = await prisma.payrollPeriod.findFirst({
+    where: { id: periodId, workspaceId: session.workspaceId },
+  });
+
+  if (!period) return fail("Period not found");
+
+  if (period.status !== "active") {
+    return fail("Period must be active to process payroll");
+  }
+
+  const existingPayroll = await prisma.payroll.findFirst({
+    where: {
+      workspaceId: session.workspaceId,
+      period: `${period.startDate.toISOString().slice(0, 7)}`,
+    },
+  });
+
+  if (existingPayroll) {
+    return fail("Payroll already exists for this period");
+  }
+
+  try {
+    await prisma.payrollPeriod.update({
+      where: { id: periodId },
+      data: { status: "processing" },
+    });
+
+    const { calculatePayrollPreview, generatePayrollFromPreview } = await import("@/services/salary");
+
+    const preview = await calculatePayrollPreview(
+      session.workspaceId,
+      period.startDate,
+      period.endDate
+    );
+
+    if (preview.length === 0) {
+      await prisma.payrollPeriod.update({
+        where: { id: periodId },
+        data: { status: "active" },
+      });
+      return fail("No active employees to pay");
+    }
+
+    const payroll = await generatePayrollFromPreview(
+      session.workspaceId,
+      preview,
+      period
+    );
+
+    await prisma.payrollPeriod.update({
+      where: { id: periodId },
+      data: { status: "completed" },
+    });
+
+    await writeAudit({
+      session,
+      action: "process",
+      module: "payroll",
+      recordId: payroll.id,
+      description: `Auto-generated payroll for period "${period.name}" (${payroll.items.length} employees)`,
+    });
+
+    revalidatePath("/payroll");
+    revalidatePath("/payroll/periods");
+    return ok(undefined, "Payroll generated");
+  } catch (e) {
+    await prisma.payrollPeriod.update({
+      where: { id: periodId },
+      data: { status: "active" },
+    });
+    const message = e instanceof Error ? e.message : "Failed to generate payroll";
+    return fail(message);
+  }
+}

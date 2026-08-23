@@ -58,6 +58,13 @@ currency    String @default("NPR")
   subscription           Subscription?
   paymentRequests        PaymentRequest[]
   documents              Document[]
+  attendanceDevices      AttendanceDevice[]
+  attendanceSettings     AttendanceSettings?
+  breaks                 Break[]
+  overtimeRecords        OvertimeRecord[]
+  payrollPeriods         PayrollPeriod[]
+  salaryConfigs          SalaryConfig[]
+  attendanceReminders    AttendanceReminder[]
 }
 
 model User {
@@ -165,6 +172,9 @@ model Employee {
   status            String     @default("active")
   workLocation      String?
   baseSalary        Float      @default(0)
+  salaryType        String     @default("monthly") // monthly, daily, hourly
+  deviceEmployeeId  String?    // maps to biometric device user ID
+  shift             String?    // morning, evening, night, custom
   paymentMethod     String?
   bankName          String?
   bankAccountNumber String?
@@ -185,6 +195,10 @@ model Employee {
   payrollItems      PayrollItem[]
   expenses          Expense[]
   managedDepartments Department[] @relation("DeptManager")
+  breaks            Break[]
+  overtimeRecords   OvertimeRecord[]
+  salaryConfigs     SalaryConfig[]
+  attendanceReminders AttendanceReminder[]
 
   @@unique([workspaceId, employeeId])
   @@index([workspaceId])
@@ -215,10 +229,18 @@ model Attendance {
   hours        Float    @default(0)
   overtime     Float    @default(0)
   breakMinutes Int      @default(0)
+  lateMinutes  Int      @default(0)
+  earlyMinutes Int      @default(0)
+  isHalfDay    Boolean  @default(false)
+  isHoliday    Boolean  @default(false)
+  isWeekend    Boolean  @default(false)
   location     String?
   note         String?
   source       String   @default("self")
+  deviceId     String?
+  deviceRecordId String?
   approvedById String?
+  breaks       Break[]
 
   @@unique([employeeId, date])
   @@index([workspaceId])
@@ -277,6 +299,9 @@ model Holiday {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   name        String
   date        DateTime
+  endDate     DateTime?
+  type        String   @default("public") // public, national, optional, company
+  description String?
   recurring   Boolean  @default(false)
   region      String?
 }
@@ -383,13 +408,27 @@ model PayrollItem {
   allowances      Float    @default(0)
   bonuses         Float    @default(0)
   overtime        Float    @default(0)
+  overtimeHours   Float    @default(0)
+  weekendPay      Float    @default(0)
+  holidayPay      Float    @default(0)
   gross           Float    @default(0)
+  lateDeduction   Float    @default(0)
+  absentDeduction Float    @default(0)
+  leaveDeduction  Float    @default(0)
+  halfDayDeduction Float   @default(0)
   deductions      Float    @default(0)
   tax             Float    @default(0)
   advanceDeduction Float   @default(0)
   benefits        Float    @default(0)
   net             Float    @default(0)
   employerCost    Float    @default(0)
+  workingDays     Float    @default(0)
+  presentDays     Float    @default(0)
+  absentDays      Float    @default(0)
+  halfDays        Float    @default(0)
+  paidLeaveDays   Float    @default(0)
+  unpaidLeaveDays Float    @default(0)
+  totalHours      Float    @default(0)
   paymentStatus   String   @default("pending")
 }
 
@@ -733,4 +772,204 @@ model Document {
   createdAt   DateTime @default(now())
 
   @@index([workspaceId, entityType, entityId])
+}
+
+model AttendanceDevice {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  model           String?
+  ipAddress       String
+  port            Int      @default(4370)
+  location        String?
+  protocol        String   @default("TCP") // TCP, HTTP, HTTPS
+  username        String?
+  password        String?
+  status          String   @default("offline") // online, offline, syncing, error
+  lastSyncAt      DateTime?
+  lastSyncStatus  String?  // success, failed
+  syncInterval    Int      @default(30) // minutes
+  autoSync        Boolean  @default(false)
+  firmwareVersion String?
+  serialNumber    String?
+  errorMessage    String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  logs            AttendanceDeviceLog[]
+
+  @@unique([workspaceId, ipAddress])
+  @@index([workspaceId])
+}
+
+model AttendanceDeviceLog {
+  id          String   @id @default(cuid())
+  deviceId    String
+  device      AttendanceDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  type        String   // sync, connection, error, manual
+  status      String   // success, failed, warning
+  message     String?
+  recordsSynced Int    @default(0)
+  duration    Int?     // milliseconds
+  createdAt   DateTime @default(now())
+
+  @@index([deviceId])
+}
+
+model AttendanceSettings {
+  id              String   @id @default(cuid())
+  workspaceId     String   @unique
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Office Hours
+  officeStartTime String   @default("10:00")
+  officeEndTime   String   @default("18:00")
+  officeTimezone  String   @default("Asia/Kathmandu")
+
+  // Grace Period
+  graceMinutes    Int      @default(15)
+
+  // Late / Absent Rules
+  absentIfLateByMinutes Int @default(0) // 0 = disabled
+
+  // Half-Day Rules
+  halfDayAfterMinutes  Int @default(240) // 0 = disabled
+
+  // Minimum Working Time
+  minimumWorkMinutes   Int @default(180) // 0 = no minimum
+
+  // Working Days (JSON: ["mon","tue","wed","thu","fri"])
+  workingDays    String   @default("[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\"]")
+
+  // Weekend
+  weekendDays    String   @default("[\"sat\",\"sun\"]")
+
+  // Overtime
+  overtimeEnabled         Boolean @default(true)
+  overtimeRequiresApproval Boolean @default(true)
+  overtimeRateMultiplier  Float   @default(1.5)
+  weekendOvertimeRate     Float   @default(2.0)
+  holidayOvertimeRate     Float   @default(2.5)
+
+  // Break Settings
+  breakEnabled           Boolean @default(true)
+  breakStartTime         String? @default("12:00")
+  breakEndTime           String? @default("13:00")
+  breakDurationMinutes   Int     @default(60)
+  maxBreaksPerDay        Int     @default(1)
+  breakIsPaid            Boolean @default(false)
+
+  // Attendance Reminders
+  remindersEnabled       Boolean @default(false)
+  reminderStartHour      String  @default("10:00")
+  reminderEndHour        String  @default("17:00")
+  maxRemindersPerDay     Int     @default(8)
+  reminderEmailEnabled   Boolean @default(true)
+
+  // Salary Calculation
+  lateDeductionEnabled   Boolean @default(true)
+  lateDeductionPerMinute Float   @default(0)
+  absentDeductionEnabled Boolean @default(true)
+  halfDayDeductionPercent Float  @default(50)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Break {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  attendanceId String
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  breakOut     DateTime
+  breakIn      DateTime?
+  duration     Int      @default(0) // minutes
+  status       String   @default("active") // active, completed, late_return
+  isPaid       Boolean  @default(false)
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([employeeId])
+}
+
+model OvertimeRecord {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date         DateTime
+  hours        Float
+  type         String   // regular, weekend, holiday, early_checkin, late_checkout
+  rate         Float    @default(1.5)
+  status       String   @default("pending") // pending, approved, rejected
+  approvedBy   String?
+  approvedAt   DateTime?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([employeeId, date])
+}
+
+model PayrollPeriod {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name            String
+  frequency       String   @default("monthly") // monthly, biweekly, weekly
+  startDate       DateTime
+  endDate         DateTime
+  paymentDate     DateTime
+  status          String   @default("upcoming") // upcoming, active, processing, completed, closed
+  isCurrent       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+model SalaryConfig {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId      String?
+  employee        Employee? @relation(fields: [employeeId], references: [id])
+  salaryType      String   @default("monthly") // monthly, daily, hourly
+  baseSalary      Float    @default(0)
+  currency        String   @default("NPR")
+  taxEnabled      Boolean  @default(true)
+  taxRate         Float    @default(0) // percentage
+  socialSecurityEnabled Boolean @default(false)
+  socialSecurityRate    Float   @default(0)
+  providentFundEnabled  Boolean @default(false)
+  providentFundRate     Float   @default(0)
+  insuranceEnabled      Boolean @default(false)
+  insuranceAmount       Float   @default(0)
+  effectiveFrom   DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+model AttendanceReminder {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date        DateTime
+  type        String   // missing_clockin, missing_clockout
+  sentAt      DateTime @default(now())
+  channel     String   @default("email") // email, notification, sms
+
+  @@index([workspaceId])
+  @@index([employeeId, date])
 }

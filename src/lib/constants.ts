@@ -20,6 +20,11 @@ import {
   Mail,
   ScrollText,
   Settings,
+  SlidersHorizontal,
+  UserCheck,
+  FileBarChart,
+  CalendarClock,
+  BadgeDollarSign,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,12 +42,17 @@ export const NAVIGATION: NavItem[] = [
   { label: "Staff", href: "/staff", icon: Users },
   { label: "Departments", href: "/departments", icon: Building2 },
   { label: "Attendance", href: "/attendance", icon: CalendarCheck },
+  { label: "Attendance Dashboard", href: "/attendance/employee-dashboard", icon: UserCheck },
+  { label: "Attendance Reports", href: "/attendance/reports", icon: FileBarChart },
+  { label: "Attendance Settings", href: "/attendance/settings", icon: SlidersHorizontal },
   { label: "Leave", href: "/leave", icon: CalendarDays },
   { label: "Holidays", href: "/holidays", icon: PartyPopper },
   { label: "Tasks", href: "/tasks", icon: ListTodo },
   { label: "Work Records", href: "/work-records", icon: Clock3 },
   { label: "Employee Advances", href: "/advances", icon: HandCoins },
   { label: "Payroll", href: "/payroll", icon: Wallet },
+  { label: "Salary Preview", href: "/payroll/preview", icon: BadgeDollarSign },
+  { label: "Payroll Periods", href: "/payroll/periods", icon: CalendarClock },
   { label: "Expenses", href: "/expenses", icon: Receipt },
   { label: "Income", href: "/income", icon: TrendingUp },
   { label: "Accounting", href: "/accounting", icon: BookOpenCheck },
@@ -59,11 +69,11 @@ export const NAV_SECTIONS: Record<string, { label: string; items: string[] }> = 
   Overview: { label: "Overview", items: ["Dashboard", "Analytics"] },
   "People & HR": {
     label: "People & HR",
-    items: ["Staff", "Departments", "Attendance", "Leave", "Holidays", "Tasks", "Work Records", "Employee Advances"],
+    items: ["Staff", "Departments", "Attendance", "Attendance Dashboard", "Attendance Reports", "Attendance Settings", "Leave", "Holidays", "Tasks", "Work Records", "Employee Advances"],
   },
   "Finance & Accounting": {
     label: "Finance & Accounting",
-    items: ["Payroll", "Expenses", "Income", "Accounting", "Invoices", "Payments", "Financial Reports"],
+    items: ["Payroll", "Salary Preview", "Payroll Periods", "Expenses", "Income", "Accounting", "Invoices", "Payments", "Financial Reports"],
   },
   Company: {
     label: "Company",
