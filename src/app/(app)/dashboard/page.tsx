@@ -2,7 +2,7 @@ import { format, subDays, subMonths } from "date-fns";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { money, formatDate } from "@/lib/utils";
-import { attendanceStatsForDay } from "@/services/attendance";
+import { attendanceStatsForDay, attendanceTrend } from "@/services/attendance";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
@@ -75,15 +75,17 @@ export default async function DashboardPage() {
   const pct = (cur: number, prev: number) => (prev === 0 ? (cur > 0 ? 100 : 0) : ((cur - prev) / prev) * 100);
 
   // ---- Charts ----
+  const attendanceTrendRaw = await attendanceTrend(wsId, 30);
   const attendanceTrendData = [];
   for (let i = 29; i >= 0; i--) {
     const day = subDays(now, i);
-    const stats = await attendanceStatsForDay(wsId, day);
+    const dayKey = day.toISOString().slice(0, 10);
+    const stats = attendanceTrendRaw.find((d) => d.date === dayKey);
     attendanceTrendData.push({
       date: format(day, "MMM d"),
-      present: stats.present,
-      late: stats.late,
-      remote: stats.remote,
+      present: stats?.present ?? 0,
+      late: stats?.late ?? 0,
+      remote: stats?.remote ?? 0,
     });
   }
 

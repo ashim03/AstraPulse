@@ -198,7 +198,7 @@ export default async function ReportPage({ params, searchParams }: { params: { t
         actions={<ReportDetailClient period={period} />}
       />
       <Card className="overflow-x-auto p-4">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-max text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs uppercase text-slate-500">
               {columns.map((c) => (

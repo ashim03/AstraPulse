@@ -191,7 +191,7 @@ export function MessageManager({
                 placeholder="Search messages..."
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="w-48"
+                className="w-full sm:w-48"
               />
               <Button variant="outline" size="sm" onClick={handleRefresh}>
                 <RefreshCw className="h-4 w-4" />

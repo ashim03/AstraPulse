@@ -68,7 +68,8 @@ export function InvoiceDetailClient({
         {payments.length === 0 ? (
           <p className="text-sm text-slate-400">No payments recorded yet.</p>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto scrollbar-thin">
+          <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs uppercase text-slate-500">
                 <th className="py-2">Reference</th>
@@ -88,6 +89,7 @@ export function InvoiceDetailClient({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Card>
 
