@@ -532,6 +532,7 @@ export async function seedFinance(ctx: SeedContext): Promise<void> {
 
 export async function seedSubscription(ctx: SeedContext): Promise<void> {
   const { prisma, now } = ctx;
+  const trialEnd = addDays(now, 7);
   const subscription = await prisma.subscription.create({
     data: {
       workspaceId: ctx.workspace.id,
@@ -540,6 +541,10 @@ export async function seedSubscription(ctx: SeedContext): Promise<void> {
       billingPeriod: "yearly",
       price: 990,
       employeeLimit: 100,
+      isTrial: false,
+      paymentStatus: "paid",
+      approvedBy: ctx.admin.id,
+      approvedAt: subDays(now, 40),
       startDate: subDays(now, 40),
       renewalDate: addDays(now, 325),
     },

@@ -24,6 +24,7 @@ currency    String @default("NPR")
   dateFormat      String   @default("MM/DD/YYYY")
   logo            String?
   status          String   @default("active")
+  suspendedAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -670,6 +671,11 @@ model Subscription {
   employeeLimit   Int       @default(15)
   userLimit       Int       @default(50)
   storageLimit    Int       @default(1024) // in MB
+  isTrial         Boolean   @default(false)
+  trialEndDate    DateTime?
+  paymentStatus   String    @default("unpaid") // unpaid, pending, paid
+  approvedBy      String?
+  approvedAt      DateTime?
   startDate       DateTime  @default(now())
   renewalDate     DateTime
   paymentRequests PaymentRequest[]

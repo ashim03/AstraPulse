@@ -7,13 +7,21 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card, CardBody } from "@/components/ui/card";
+import { AddOrganizationForm } from "../add-organization-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrganizationsPage() {
+export default async function OrganizationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const session = await requireSession();
+  const { status } = await searchParams;
+  const filterStatus = status ?? "all";
 
   const workspaces = await prisma.workspace.findMany({
+    where: filterStatus !== "all" ? { status: filterStatus } : undefined,
     include: {
       subscription: true,
       users: { select: { id: true } },
@@ -22,8 +30,10 @@ export default async function OrganizationsPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  const total = workspaces.length;
-  const active = workspaces.filter((w) => w.status === "active").length;
+  const total = await prisma.workspace.count();
+  const active = await prisma.workspace.count({ where: { status: "active" } });
+  const pending = await prisma.workspace.count({ where: { status: "pending" } });
+  const suspended = await prisma.workspace.count({ where: { status: "suspended" } });
   const totalUsers = workspaces.reduce((a, b) => a + b.users.length, 0);
   const totalEmployees = workspaces.reduce((a, b) => a + b.employees.length, 0);
 
@@ -32,13 +42,35 @@ export default async function OrganizationsPage() {
       <PageHeader
         title="Organizations"
         subtitle={`${total} registered organizations across the platform`}
+        actions={<AddOrganizationForm />}
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Organizations" value={total} icon={Building2} />
         <StatCard title="Active" value={active} icon={Building2} />
-        <StatCard title="Total Users" value={totalUsers} icon={Users} />
-        <StatCard title="Total Employees" value={totalEmployees} icon={Users} />
+        <StatCard title="Pending" value={pending} icon={Building2} />
+        <StatCard title="Suspended" value={suspended} icon={Building2} />
+      </div>
+
+      <div className="mb-4 flex gap-2">
+        {[
+          { key: "all", label: "All" },
+          { key: "active", label: "Active" },
+          { key: "pending", label: "Pending" },
+          { key: "suspended", label: "Suspended" },
+        ].map((f) => (
+          <Link
+            key={f.key}
+            href={f.key === "all" ? "/super-admin/organizations" : `/super-admin/organizations?status=${f.key}`}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              filterStatus === f.key
+                ? "bg-brand-600 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+            }`}
+          >
+            {f.label}
+          </Link>
+        ))}
       </div>
 
       <Card>
@@ -50,6 +82,7 @@ export default async function OrganizationsPage() {
                   <th className="px-5 py-3 font-medium text-slate-500">Organization</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Status</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Plan</th>
+                  <th className="px-5 py-3 font-medium text-slate-500">Payment</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Users</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Employees</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Created</th>
@@ -73,7 +106,17 @@ export default async function OrganizationsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5"><StatusBadge status={ws.status} /></td>
-                    <td className="px-5 py-3.5"><StatusBadge status={ws.subscription?.plan ?? "trial"} /></td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-col gap-1">
+                        <StatusBadge status={ws.subscription?.plan ?? "none"} />
+                        {ws.subscription?.isTrial && (
+                          <span className="text-[10px] text-amber-600 font-medium">7-day trial</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <StatusBadge status={ws.subscription?.paymentStatus ?? "unpaid"} />
+                    </td>
                     <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400">{ws.users.length}</td>
                     <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400">{ws.employees.length}</td>
                     <td className="px-5 py-3.5 text-slate-500">{formatDate(ws.createdAt)}</td>
@@ -86,7 +129,7 @@ export default async function OrganizationsPage() {
                 ))}
                 {workspaces.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
+                    <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
                       No organizations found
                     </td>
                   </tr>

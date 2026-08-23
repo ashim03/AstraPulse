@@ -83,18 +83,23 @@ export async function bootstrapWorkspace(input: BootstrapInput) {
     data: DEFAULT_LEAVE_TYPES.map((lt) => ({ workspaceId: workspace.id, ...lt })),
   });
 
-  // Trial subscription
+  // 7-day trial subscription
   const now = new Date();
+  const trialEnd = new Date(now.getTime() + 7 * 86400000);
   await prisma.subscription.create({
     data: {
       workspaceId: workspace.id,
-      plan: input.plan ?? "Starter",
-      status: "trial",
+      plan: input.plan ?? "starter",
+      status: "active",
       billingPeriod: "monthly",
       price: 0,
       employeeLimit: 15,
+      userLimit: 50,
+      isTrial: true,
+      trialEndDate: trialEnd,
+      paymentStatus: "unpaid",
       startDate: now,
-      renewalDate: new Date(now.getTime() + 14 * 86400000),
+      renewalDate: trialEnd,
     },
   });
 

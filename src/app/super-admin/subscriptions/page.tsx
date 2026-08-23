@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CreditCard, TrendingUp, Users, ChevronRight } from "lucide-react";
+import { CreditCard, TrendingUp, Users, ChevronRight, Clock } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { money, formatDate } from "@/lib/utils";
@@ -20,6 +20,7 @@ export default async function SubscriptionsPage() {
 
   const activeSubs = subscriptions.filter((s) => s.status === "active");
   const totalRevenue = activeSubs.reduce((a, b) => a + b.price, 0);
+  const trialSubs = subscriptions.filter((s) => s.isTrial);
 
   const planDistribution = subscriptions.reduce(
     (acc, s) => {
@@ -39,7 +40,7 @@ export default async function SubscriptionsPage() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Active Subscriptions" value={activeSubs.length} icon={CreditCard} />
         <StatCard title="Monthly Revenue" value={money(totalRevenue)} icon={TrendingUp} />
-        <StatCard title="Total Subscriptions" value={subscriptions.length} icon={CreditCard} />
+        <StatCard title="On Trial" value={trialSubs.length} icon={Clock} />
         <StatCard title="Avg. Plan Value" value={activeSubs.length ? money(totalRevenue / activeSubs.length) : "—"} icon={Users} />
       </div>
 
@@ -66,6 +67,7 @@ export default async function SubscriptionsPage() {
                   <th className="px-5 py-3 font-medium text-slate-500">Organization</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Plan</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Status</th>
+                  <th className="px-5 py-3 font-medium text-slate-500">Payment</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Price</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Employee Limit</th>
                   <th className="px-5 py-3 font-medium text-slate-500">Renewal</th>
@@ -83,6 +85,16 @@ export default async function SubscriptionsPage() {
                     </td>
                     <td className="px-5 py-3.5"><StatusBadge status={sub.plan} /></td>
                     <td className="px-5 py-3.5"><StatusBadge status={sub.status} /></td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-col gap-1">
+                        <StatusBadge status={sub.paymentStatus} />
+                        {sub.isTrial && (
+                          <span className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> Trial
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-5 py-3.5 font-medium text-slate-800 dark:text-slate-200">{money(sub.price)}/mo</td>
                     <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400">{sub.employeeLimit}</td>
                     <td className="px-5 py-3.5 text-slate-500">{formatDate(sub.renewalDate)}</td>
@@ -95,7 +107,7 @@ export default async function SubscriptionsPage() {
                 ))}
                 {subscriptions.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
+                    <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
                       No subscriptions found
                     </td>
                   </tr>

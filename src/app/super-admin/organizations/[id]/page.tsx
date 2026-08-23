@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, Users, CreditCard, Mail, MapPin, Globe } from "lucide-react";
+import { ArrowLeft, Building2, Users, CreditCard, Mail, MapPin, Globe, Clock } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDate, money } from "@/lib/utils";
@@ -8,8 +8,16 @@ import { PageHeader, Breadcrumb } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { OrganizationActions } from "../../organization-actions";
 
 export const dynamic = "force-dynamic";
+
+function daysRemaining(date: Date): number {
+  const now = new Date();
+  const end = new Date(date);
+  const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, diff);
+}
 
 export default async function OrganizationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -28,6 +36,8 @@ export default async function OrganizationDetailPage({ params }: { params: Promi
 
   const activeUsers = workspace.users.filter((u) => u.status === "active").length;
   const activeEmployees = workspace.employees.filter((e) => e.status === "active").length;
+  const sub = workspace.subscription;
+  const trialDaysLeft = sub?.isTrial && sub.trialEndDate ? daysRemaining(sub.trialEndDate) : null;
 
   return (
     <>
@@ -42,11 +52,18 @@ export default async function OrganizationDetailPage({ params }: { params: Promi
         title={workspace.name}
         subtitle={workspace.email}
         actions={
-          <Link href="/super-admin/organizations">
-            <Button variant="secondary" leftIcon={<ArrowLeft className="h-4 w-4" />}>
-              Back to Organizations
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <OrganizationActions
+              workspaceId={workspace.id}
+              status={workspace.status}
+              subscription={sub ? { plan: sub.plan, price: sub.price, employeeLimit: sub.employeeLimit, isTrial: sub.isTrial, paymentStatus: sub.paymentStatus, trialEndDate: sub.trialEndDate } : null}
+            />
+            <Link href="/super-admin/organizations">
+              <Button variant="secondary" leftIcon={<ArrowLeft className="h-4 w-4" />}>
+                Back
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -77,6 +94,11 @@ export default async function OrganizationDetailPage({ params }: { params: Promi
               <div className="text-xs text-slate-400">
                 Created {formatDate(workspace.createdAt)}
               </div>
+              {workspace.suspendedAt && (
+                <div className="text-xs text-red-500">
+                  Suspended {formatDate(workspace.suspendedAt)}
+                </div>
+              )}
             </div>
           </CardBody>
         </Card>
@@ -86,28 +108,52 @@ export default async function OrganizationDetailPage({ params }: { params: Promi
             <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
               <CreditCard className="h-4 w-4 text-brand-500" /> Subscription
             </h3>
-            {workspace.subscription ? (
+            {sub ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Plan</span>
-                  <StatusBadge status={workspace.subscription.plan} />
+                  <StatusBadge status={sub.plan} />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Status</span>
-                  <StatusBadge status={workspace.subscription.status} />
+                  <StatusBadge status={sub.status} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">Payment</span>
+                  <StatusBadge status={sub.paymentStatus} />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Price</span>
-                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{money(workspace.subscription.price)}/mo</span>
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{money(sub.price)}/mo</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Employee limit</span>
-                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{workspace.subscription.employeeLimit}</span>
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{sub.employeeLimit}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-500">Renewal</span>
-                  <span className="text-sm text-slate-600 dark:text-slate-400">{formatDate(workspace.subscription.renewalDate)}</span>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">{formatDate(sub.renewalDate)}</span>
                 </div>
+
+                {sub.isTrial && sub.trialEndDate && (
+                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+                    <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                      <Clock className="h-4 w-4" />
+                      Trial Period
+                    </div>
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                      {trialDaysLeft !== null && trialDaysLeft > 0
+                        ? `${trialDaysLeft} day${trialDaysLeft > 1 ? "s" : ""} remaining (ends ${formatDate(sub.trialEndDate)})`
+                        : `Trial expired on ${formatDate(sub.trialEndDate)}`}
+                    </p>
+                  </div>
+                )}
+
+                {sub.approvedBy && (
+                  <div className="text-xs text-slate-400">
+                    Last approved {sub.approvedAt ? formatDate(sub.approvedAt) : "—"}
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-sm text-slate-400">No active subscription</p>
