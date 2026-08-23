@@ -344,6 +344,10 @@ export function parsePermissions(raw: string | null | undefined): string[] {
   }
 }
 
+export function getPermissionsForRole(roleName: string): string[] {
+  return ROLE_DEFAULTS[roleName] ?? [];
+}
+
 // ─── Data Access Verification ───────────────────────────────────────────────
 
 export function canAccessEmployee(

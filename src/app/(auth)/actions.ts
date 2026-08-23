@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import {
   hashPassword,
@@ -167,7 +168,8 @@ export async function loginAction(input: { email: string; password: string }): P
     description: `${user.name} signed in`,
   });
 
-  return ok({ need2fa: false, accountType: user.accountType ?? "organization" }, "Welcome back!");
+  const acctType = user.accountType ?? "organization";
+  redirect(acctType === "super_admin" ? "/super-admin" : "/");
 }
 
 export async function verifyTwoFactorAction(userId: string, code: string): Promise<ActionResult<{ accountType: string }>> {
@@ -187,7 +189,8 @@ export async function verifyTwoFactorAction(userId: string, code: string): Promi
     departmentId: user.employee?.departmentId ?? null,
   });
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-  return ok({ accountType: user.accountType ?? "organization" }, "Authenticated");
+  const acctType = user.accountType ?? "organization";
+  redirect(acctType === "super_admin" ? "/super-admin" : "/");
 }
 
 export async function verifyLoginOtpAction(
@@ -256,7 +259,8 @@ export async function verifyLoginOtpAction(
     description: `${user.name} signed in (OTP verified)`,
   });
 
-  return ok({ accountType: user.accountType ?? "organization" }, "Authenticated");
+  const acctType = user.accountType ?? "organization";
+  redirect(acctType === "super_admin" ? "/super-admin" : "/");
 }
 
 export async function resendLoginOtpAction(
@@ -359,7 +363,7 @@ export async function registerAction(input: z.infer<typeof registerSchema>): Pro
     departmentId: null,
   });
 
-  return ok(undefined, `Welcome to AstraPulse, ${user.name.split(" ")[0]}! Your workspace is ready.`);
+  redirect("/");
 }
 
 export async function verifyRegistrationAction(
@@ -435,7 +439,7 @@ export async function verifyRegistrationAction(
     description: `${user.name} verified email and registered`,
   });
 
-  return ok(undefined, "Email verified! Welcome to AstraPulse.");
+  redirect("/");
 }
 
 export async function logoutAction() {

@@ -6,7 +6,6 @@ import { Search, ChevronsUpDown, Sparkles, Zap, Building2, HelpCircle, X } from 
 import { NAVIGATION, NAV_SECTIONS, PLANS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/dropdown";
-import { Badge } from "@/components/ui/badge";
 
 function filterNavigationByPermissions(items: typeof NAVIGATION, permissions: string[]): typeof NAVIGATION {
   if (permissions.includes("*")) return items;
@@ -175,35 +174,7 @@ export function Sidebar({
         })}
       </nav>
 
-      {!collapsed && showSubscription && (
-        <div className="shrink-0 p-3">
-          <div className="rounded-card border border-slate-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-800 p-4">
-            {plan && (
-              <>
-                <div className="flex items-center justify-between">
-                  <Badge tone={plan.name === "Pro" ? "violet" : plan.name === "Growth" ? "indigo" : "gray"}>
-                    {plan.name}
-                  </Badge>
-                  <Sparkles className="h-4 w-4 text-brand-500" />
-                </div>
-                <p className="mt-2.5 text-sm font-semibold text-slate-800">{workspacePlan} workspace</p>
-                <p className="mt-0.5 text-xs text-slate-500">{plan.employeeLimit} employees included</p>
-                <Link
-                  href="/subscription"
-                  className="mt-3 block rounded-lg bg-brand-600 px-3 py-1.5 text-center text-xs font-semibold text-white transition hover:bg-brand-700"
-                >
-                  Manage subscription
-                </Link>
-              </>
-            )}
-            {!plan && (
-              <Link href="/subscription" className="flex items-center gap-2 text-sm font-medium text-brand-700">
-                <Sparkles className="h-4 w-4" /> Choose a plan
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+
 
       <button
         onClick={() => onCollapsedChange(!collapsed)}
