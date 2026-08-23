@@ -11,7 +11,6 @@ import { AttendanceDayPicker } from "./attendance-day-picker";
 import { ClockButtons } from "./clock-buttons";
 import { LogIn, LogOut } from "lucide-react";
 import { AttendanceStats } from "./attendance-stats";
-import { DeviceManager } from "./device-manager";
 import { getDataScope, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
@@ -123,7 +122,6 @@ export default async function AttendancePage({
         </CardBody>
       </Card>
 
-      {hasPermission(session, "attendance", "device") && <DeviceManager />}
     </>
   );
 }

@@ -38,18 +38,19 @@ function LoginOtpForm() {
     try {
       const res = await verifyLoginOtpAction(email, code);
       if (res.ok) {
-        toast({ type: "success", title: "Authenticated securely" });
-        router.push(next);
-        router.refresh();
+        window.location.href = next;
       } else {
         setError(res.error);
       }
-    } catch {
+    } catch (err: any) {
+      if (err?.digest?.startsWith("NEXT_REDIRECT")) {
+        return;
+      }
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [code, email, next, toast, router]);
+  }, [code, email, next]);
 
   const handleResend = useCallback(async () => {
     if (!email || countdown > 0) return;
