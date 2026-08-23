@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { SessionUser } from "@/lib/auth";
 
 export type AuditInput = {
-  session: SessionUser | null;
+  session: Pick<SessionUser, "id" | "workspaceId" | "name" | "email" | "role" | "rolePermissions" | "accountType" | "employeeId"> | null;
   action: string;
   module: string;
   recordId?: string;

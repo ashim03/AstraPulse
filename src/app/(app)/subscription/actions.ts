@@ -2,12 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { PLANS } from "@/lib/constants";
 
 export async function changePlanAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "subscription", "manage")) {
+    await writeAudit({ session, action: "denied", module: "subscription", description: "Permission denied: subscription:manage" });
+    return fail("You don't have permission to change subscription plan");
+  }
   const plan = String(formData.get("plan") ?? "");
   const period = String(formData.get("period") ?? "monthly");
   const planInfo = PLANS.find((p) => p.name.toLowerCase() === plan.toLowerCase());
@@ -40,7 +50,16 @@ export async function changePlanAction(formData: FormData): Promise<ActionResult
 }
 
 export async function cancelSubscriptionAction(): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "subscription", "manage")) {
+    await writeAudit({ session, action: "denied", module: "subscription", description: "Permission denied: subscription:manage" });
+    return fail("You don't have permission to cancel subscription");
+  }
   const subscription = await prisma.subscription.findUnique({ where: { workspaceId: session.workspaceId } });
   if (!subscription) return fail("No active subscription");
   await prisma.subscription.update({ where: { id: subscription.id }, data: { status: "cancelled" } });

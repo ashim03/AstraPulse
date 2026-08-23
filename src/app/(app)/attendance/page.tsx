@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { attendanceStatsForDay } from "@/services/attendance";
@@ -11,6 +12,7 @@ import { ClockButtons } from "./clock-buttons";
 import { LogIn, LogOut } from "lucide-react";
 import { AttendanceStats } from "./attendance-stats";
 import { DeviceManager } from "./device-manager";
+import { getDataScope, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +22,37 @@ export default async function AttendancePage({
   searchParams: { date?: string };
 }) {
   const session = await requireSession();
+  if (!hasPermission(session, "attendance", "view")) {
+    redirect("/?error=access_denied");
+  }
+
+  const scope = getDataScope(session);
   const selected = searchParams.date ? new Date(searchParams.date) : new Date();
   const dayKey = format(selected, "yyyy-MM-dd");
 
+  const employeeWhere: Record<string, unknown> = { workspaceId: session.workspaceId };
+  if (scope === "department" && session.departmentId) {
+    employeeWhere.departmentId = session.departmentId;
+  } else if (scope === "self") {
+    employeeWhere.id = session.employeeId ?? "__none__";
+  }
+
+  const attendanceWhere: Record<string, unknown> = { workspaceId: session.workspaceId, date: selected };
+  if (scope === "department" && session.departmentId) {
+    attendanceWhere.employee = { departmentId: session.departmentId };
+  } else if (scope === "self") {
+    attendanceWhere.employeeId = session.employeeId ?? "__none__";
+  }
+
   const [stats, employees, records, user] = await Promise.all([
     attendanceStatsForDay(session.workspaceId, selected),
-    prisma.employee.findMany({ where: { workspaceId: session.workspaceId }, include: { department: true } }),
+    prisma.employee.findMany({
+      where: employeeWhere,
+      select: { id: true, name: true, department: { select: { name: true } } },
+    }),
     prisma.attendance.findMany({
-      where: { workspaceId: session.workspaceId, date: selected },
-      include: { employee: { include: { department: true } } },
+      where: attendanceWhere,
+      include: { employee: { select: { id: true, name: true, department: { select: { name: true } } } } },
       orderBy: { clockIn: "asc" },
     }),
     prisma.user.findFirst({ where: { id: session.id, workspaceId: session.workspaceId }, include: { employee: true } }),
@@ -43,7 +67,7 @@ export default async function AttendancePage({
     return {
       id: e.id,
       name: e.name,
-      department: e.department?.name ?? "—",
+      department: (e as any).department?.name ?? "—",
       clockIn: record?.clockIn ? format(record.clockIn, "h:mm a") : "—",
       clockOut: record?.clockOut ? format(record.clockOut, "h:mm a") : "—",
       hours: record?.hours?.toFixed(2) ?? "0.00",
@@ -99,7 +123,7 @@ export default async function AttendancePage({
         </CardBody>
       </Card>
 
-      <DeviceManager />
+      {scope !== "self" && <DeviceManager />}
     </>
   );
 }

@@ -29,6 +29,14 @@ export async function createAdvanceAction(formData: FormData): Promise<ActionRes
     const parsed = schema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
     const d = parsed.data;
+    // Employees can only create advances for themselves
+    if (session.employeeId && d.employeeId !== session.employeeId) {
+      const hasApprovePerm = hasPermission(session, "advances", "approve");
+      if (!hasApprovePerm) {
+        await writeAudit({ session, action: "denied", module: "advances", description: "Permission denied: employees can only request advance for self" });
+        return fail("You can only create advance requests for yourself");
+      }
+    }
     const installment = Math.round((d.amount / d.months) * 100) / 100;
     const advance = await prisma.employeeAdvance.create({
       data: {

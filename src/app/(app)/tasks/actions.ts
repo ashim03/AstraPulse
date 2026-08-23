@@ -119,7 +119,7 @@ export async function deleteTaskAction(id: string): Promise<ActionResult> {
 export async function addTaskCommentAction(taskId: string, comment: string): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("tasks", "create");
+    session = await requirePermission("tasks", "view");
   } catch {
     return fail("You don't have permission");
   }

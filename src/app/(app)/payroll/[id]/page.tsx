@@ -1,4 +1,4 @@
-﻿import { notFound } from "next/navigation";
+﻿import { notFound, redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
@@ -7,11 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { PayrollDetailManager } from "./payroll-detail";
 import { money } from "@/lib/utils";
 import { PAYROLL_STATUSES } from "@/lib/constants";
+import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PayrollDetailPage({ params }: { params: { id: string } }) {
   const session = await requireSession();
+  if (!hasPermission(session, "payroll", "view")) {
+    redirect("/?error=access_denied");
+  }
+
   const payroll = await prisma.payroll.findFirst({
     where: { id: params.id, workspaceId: session.workspaceId },
     include: {

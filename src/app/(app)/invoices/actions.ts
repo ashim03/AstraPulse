@@ -80,7 +80,7 @@ export async function createInvoiceAction(formData: FormData): Promise<ActionRes
 export async function updateInvoiceStatusAction(id: string, status: string): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("invoices", "edit");
+    session = await requirePermission("invoices", "approve");
   } catch {
     return fail("You don't have permission");
   }

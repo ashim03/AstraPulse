@@ -19,6 +19,7 @@ export type SessionUser = {
   rolePermissions: string[];
   accountType: string;
   employeeId: string | null;
+  departmentId: string | null;
 };
 
 export function hashPassword(password: string): string {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
-import { hasPermission, type PermissionAction } from "@/lib/permissions";
+import { hasPermission, canAccessEmployee, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
 import { startOfDay, startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
@@ -88,7 +88,7 @@ export async function attendanceAdjustAction(
   data: { hours: number; status: string; note?: string }
 ): Promise<ActionResult> {
   try {
-    const session = await requirePerm("attendance", "edit");
+    const session = await requirePerm("attendance", "manage");
     const record = await prisma.attendance.findFirst({ where: { id, workspaceId: session.workspaceId } });
     if (!record) return fail("Record not found");
     await prisma.attendance.update({
@@ -146,6 +146,10 @@ export async function getEmployeeAttendanceDashboardAction(
 ): Promise<ActionResult<Record<string, unknown>>> {
   try {
     const session = await requireSession();
+    if (!hasPermission(session, "attendance", "view")) {
+      await writeAudit({ session, action: "denied", module: "attendance", description: "Permission denied: attendance:view" });
+      return fail("You don't have permission to view attendance");
+    }
     const now = new Date();
     const targetMonth = month ? new Date(month + "-01") : now;
     const monthStart = startOfMonth(targetMonth);
@@ -156,6 +160,10 @@ export async function getEmployeeAttendanceDashboardAction(
       include: { department: true, position: true },
     });
     if (!employee) return fail("Employee not found");
+    if (!canAccessEmployee(session, employeeId, employee.departmentId)) {
+      await writeAudit({ session, action: "denied", module: "attendance", recordId: employeeId, description: "Permission denied: cannot access employee attendance data" });
+      return fail("You don't have access to this employee's data");
+    }
 
     const today = startOfDay(now);
     const [todayRecord, monthlyRecords, breaks, overtimeRecords] = await Promise.all([
@@ -240,6 +248,10 @@ export async function getAttendanceReportAction(
 ): Promise<ActionResult<Record<string, unknown>>> {
   try {
     const session = await requireSession();
+    if (!hasPermission(session, "attendance", "reports")) {
+      await writeAudit({ session, action: "denied", module: "attendance", description: "Permission denied: attendance:reports" });
+      return fail("You don't have permission to view attendance reports");
+    }
     const start = new Date(startDate);
     const end = new Date(endDate);
 

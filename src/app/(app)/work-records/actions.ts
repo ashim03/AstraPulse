@@ -36,6 +36,14 @@ export async function createWorkRecordAction(formData: FormData): Promise<Action
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
+  // Employees can only create work records for themselves
+  if (session.employeeId && d.employeeId !== session.employeeId) {
+    const hasApprovePerm = hasPermission(session, "work-records", "approve");
+    if (!hasApprovePerm) {
+      await writeAudit({ session, action: "denied", module: "work-records", description: "Permission denied: employees can only log work for self" });
+      return fail("You can only create work records for yourself");
+    }
+  }
   const record = await prisma.workRecord.create({
     data: {
       workspaceId: session.workspaceId,

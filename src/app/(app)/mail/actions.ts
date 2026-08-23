@@ -2,11 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
 
 export async function sendMessageAction(formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "mail", "create")) {
+    await writeAudit({ session, action: "denied", module: "mail", description: "Permission denied: mail:create" });
+    return fail("You don't have permission to send messages");
+  }
   const subject = String(formData.get("subject") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const recipientIds = formData.getAll("recipients").map(String).filter(Boolean);
@@ -48,7 +58,16 @@ export async function markMessageReadAction(messageId: string): Promise<ActionRe
 }
 
 export async function deleteMessageAction(messageId: string): Promise<ActionResult> {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  if (!hasPermission(session, "mail", "delete")) {
+    await writeAudit({ session, action: "denied", module: "mail", recordId: messageId, description: "Permission denied: mail:delete" });
+    return fail("You don't have permission to delete messages");
+  }
 
   const recipientRecord = await prisma.messageRecipient.findFirst({
     where: { messageId, recipientId: session.id },

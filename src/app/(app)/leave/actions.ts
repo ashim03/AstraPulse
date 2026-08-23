@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
-import { hasPermission, type PermissionAction } from "@/lib/permissions";
+import { hasPermission, canAccessEmployee, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
 import { computeLeaveBalance } from "@/services/leave";
@@ -35,6 +35,15 @@ export async function createLeaveRequestAction(formData: FormData): Promise<Acti
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail("Please fix the highlighted fields", toErrors(parsed.error));
   const d = parsed.data;
+
+  // Employees can only create leave requests for themselves
+  if (session.employeeId && d.employeeId !== session.employeeId) {
+    const hasManagePerm = hasPermission(session, "leave", "approve");
+    if (!hasManagePerm) {
+      await writeAudit({ session, action: "denied", module: "leave", description: "Permission denied: employees can only create leave for self" });
+      return fail("You can only create leave requests for yourself");
+    }
+  }
 
   const start = new Date(d.startDate);
   const end = new Date(d.endDate);
@@ -123,12 +132,20 @@ export async function rejectLeaveRequestAction(id: string): Promise<ActionResult
 export async function cancelLeaveRequestAction(id: string): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("leave", "edit");
+    session = await requirePermission("leave", "create");
   } catch {
     return fail("You don't have permission");
   }
   const request = await prisma.leaveRequest.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!request) return fail("Request not found");
+  // Employees can only cancel their own requests
+  if (session.employeeId && request.employeeId !== session.employeeId) {
+    const hasApprovePerm = hasPermission(session, "leave", "approve");
+    if (!hasApprovePerm) {
+      await writeAudit({ session, action: "denied", module: "leave", recordId: id, description: "Permission denied: cannot cancel another employee's leave" });
+      return fail("You can only cancel your own leave requests");
+    }
+  }
   await prisma.leaveRequest.update({ where: { id }, data: { status: "cancelled" } });
   await writeAudit({ session, action: "edit", module: "leave", recordId: id, description: `Cancelled leave request` });
   revalidatePath("/leave");
@@ -138,7 +155,7 @@ export async function cancelLeaveRequestAction(id: string): Promise<ActionResult
 export async function createLeaveTypeAction(formData: FormData): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("leave", "create");
+    session = await requirePermission("leave", "manage");
   } catch {
     return fail("You don't have permission");
   }

@@ -147,6 +147,7 @@ export async function loginAction(input: { email: string; password: string }): P
     rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
     accountType: user.accountType ?? "organization",
     employeeId: user.employeeId ?? null,
+    departmentId: user.employee?.departmentId ?? null,
   });
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
@@ -170,7 +171,7 @@ export async function loginAction(input: { email: string; password: string }): P
 }
 
 export async function verifyTwoFactorAction(userId: string, code: string): Promise<ActionResult<{ accountType: string }>> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { role: true } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { role: true, employee: true } });
   if (!user?.twoFactorSecret) return fail("Two-factor is not enabled for this account");
   if (!verifyTotp(user.twoFactorSecret, code)) return fail("Invalid verification code");
 
@@ -183,6 +184,7 @@ export async function verifyTwoFactorAction(userId: string, code: string): Promi
     rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
     accountType: user.accountType ?? "organization",
     employeeId: user.employeeId ?? null,
+    departmentId: user.employee?.departmentId ?? null,
   });
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   return ok({ accountType: user.accountType ?? "organization" }, "Authenticated");
@@ -194,7 +196,7 @@ export async function verifyLoginOtpAction(
 ): Promise<ActionResult<{ accountType?: string }>> {
   const user = await prisma.user.findFirst({
     where: { email: email.toLowerCase().trim() },
-    include: { role: true },
+    include: { role: true, employee: true },
   });
 
   if (!user) {
@@ -226,6 +228,7 @@ export async function verifyLoginOtpAction(
     rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
     accountType: user.accountType ?? "organization",
     employeeId: user.employeeId ?? null,
+    departmentId: user.employee?.departmentId ?? null,
   });
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
@@ -353,6 +356,7 @@ export async function registerAction(input: z.infer<typeof registerSchema>): Pro
     rolePermissions: [],
     accountType: "organization",
     employeeId: null,
+    departmentId: null,
   });
 
   return ok(undefined, `Welcome to AstraPulse, ${user.name.split(" ")[0]}! Your workspace is ready.`);
@@ -364,7 +368,7 @@ export async function verifyRegistrationAction(
 ): Promise<ActionResult> {
   const user = await prisma.user.findFirst({
     where: { email: email.toLowerCase().trim() },
-    include: { role: true },
+    include: { role: true, employee: true },
   });
 
   if (!user) {
@@ -403,6 +407,7 @@ export async function verifyRegistrationAction(
     rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
     accountType: user.accountType ?? "organization",
     employeeId: user.employeeId ?? null,
+    departmentId: user.employee?.departmentId ?? null,
   });
 
   await logAuthEvent({

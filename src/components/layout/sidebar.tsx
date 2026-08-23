@@ -13,35 +13,15 @@ function filterNavigationByPermissions(items: typeof NAVIGATION, permissions: st
 
   return items.filter((item) => {
     if (item.href === "/") return true;
+    if (!item.permission) return true;
 
-    const moduleMap: Record<string, string> = {
-      "Dashboard": "dashboard",
-      "Analytics": "analytics",
-      "Staff": "staff",
-      "Departments": "departments",
-      "Attendance": "attendance",
-      "Leave": "leave",
-      "Holidays": "holidays",
-      "Tasks": "tasks",
-      "Work Records": "work-records",
-      "Employee Advances": "advances",
-      "Payroll": "payroll",
-      "Expenses": "expenses",
-      "Income": "income",
-      "Accounting": "accounting",
-      "Invoices": "invoices",
-      "Payments": "payments",
-      "Financial Reports": "reports",
-      "Announcements": "announcements",
-      "Internal Mail": "mail",
-      "Audit Logs": "audit-logs",
-      "Settings": "settings",
-    };
-
-    const module = moduleMap[item.label];
-    if (!module) return true;
-
-    return permissions.includes(module) || permissions.includes(`${module}:view`);
+    const [module, action] = item.permission.split(":");
+    return (
+      permissions.includes(item.permission) ||
+      permissions.includes(`${module}:*`) ||
+      permissions.includes(module) ||
+      permissions.includes("*")
+    );
   });
 }
 

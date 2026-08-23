@@ -56,7 +56,7 @@ export async function runPayrollAction(formData: FormData): Promise<ActionResult
 export async function updatePayrollStatusAction(id: string, status: string): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("payroll", "edit");
+    session = await requirePermission("payroll", "approve");
   } catch {
     return fail("You don't have permission");
   }
@@ -89,7 +89,7 @@ export async function generatePayrollPreviewAction(
 ): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("payroll", "view");
+    session = await requirePermission("payroll", "preview");
   } catch {
     return fail("You don't have permission");
   }
@@ -183,7 +183,7 @@ export async function generatePayrollFromPreviewAction(
 export async function createPayrollPeriodAction(formData: FormData): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("payroll", "create");
+    session = await requirePermission("payroll", "manage");
   } catch {
     return fail("You don't have permission");
   }
@@ -245,7 +245,7 @@ export async function updatePayrollPeriodAction(
 ): Promise<ActionResult> {
   let session;
   try {
-    session = await requirePermission("payroll", "edit");
+    session = await requirePermission("payroll", "manage");
   } catch {
     return fail("You don't have permission");
   }

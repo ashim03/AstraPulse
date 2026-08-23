@@ -28,6 +28,7 @@ import { NeedsAttention } from "./needs-attention";
 import { RecentActivity } from "./recent-activity";
 import { DashboardCharts, type DashboardChartsData } from "./charts";
 import Link from "next/link";
+import { getSafeEmployeeSelect, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,13 @@ export default async function DashboardPage() {
     await Promise.all([
       prisma.workspace.findUnique({ where: { id: wsId }, include: { subscription: true } }),
       prisma.user.findUnique({ where: { id: session.id }, include: { role: true } }),
-      prisma.employee.findMany({ where: { workspaceId: wsId }, include: { department: true } }),
+      prisma.employee.findMany({
+        where: { workspaceId: wsId },
+        select: {
+          ...getSafeEmployeeSelect(session),
+          department: { select: { id: true, name: true } },
+        },
+      }),
       attendanceStatsForDay(wsId, now),
       prisma.payroll.findMany({ where: { workspaceId: wsId }, orderBy: { period: "desc" }, take: 6 }),
       prisma.expense.findMany({ where: { workspaceId: wsId }, orderBy: { date: "desc" } }),
@@ -55,8 +62,8 @@ export default async function DashboardPage() {
     ]);
 
   const totalEmployees = employees.length;
-  const activeEmployees = employees.filter((e) => e.status === "active").length;
-  const onLeave = employees.filter((e) => e.status === "on_leave").length;
+  const activeEmployees = employees.filter((e: any) => e.status === "active").length;
+  const onLeave = employees.filter((e: any) => e.status === "on_leave").length;
 
   const latestPayroll = payrolls[0];
   const payrollThisMonth = payrolls.find((p) => p.period === format(now, "yyyy-MM"));
@@ -140,7 +147,7 @@ export default async function DashboardPage() {
   const leaveDistribution = Object.entries(leaveByType).map(([name, value]) => ({ name, value }));
 
   const deptCount: Record<string, number> = {};
-  for (const e of employees) deptCount[e.department?.name ?? "Unassigned"] = (deptCount[e.department?.name ?? "Unassigned"] ?? 0) + 1;
+  for (const e of employees as any[]) deptCount[e.department?.name ?? "Unassigned"] = (deptCount[e.department?.name ?? "Unassigned"] ?? 0) + 1;
   const departmentHeadcount = Object.entries(deptCount).map(([name, value]) => ({ name, value }));
 
   const cashFlow = monthLabels.map((key) => {

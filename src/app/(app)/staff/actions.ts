@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
-import { hasPermission, type PermissionAction } from "@/lib/permissions";
+import { hasPermission, canModifyEmployee, canAccessEmployee, getDataScope, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
@@ -118,6 +118,10 @@ export async function updateEmployeeStatusAction(id: string, status: string): Pr
   }
   const current = await prisma.employee.findFirst({ where: { id, workspaceId: session.workspaceId } });
   if (!current) return fail("Employee not found");
+  if (!canModifyEmployee(session, id, current.departmentId)) {
+    await writeAudit({ session, action: "denied", module: "staff", recordId: id, description: `Permission denied: cannot modify employee status` });
+    return fail("You don't have permission to modify this employee");
+  }
   await prisma.employee.update({ where: { id }, data: { status: status as never } });
   await writeAudit({ session, action: "edit", module: "staff", recordId: id, description: `Updated status of ${current.name} to ${status}` });
   revalidatePath("/staff");
@@ -135,6 +139,12 @@ export async function updateEmployeeAction(id: string, formData: FormData): Prom
   if (!parsed.success) return fail("Please fix the highlighted fields", toFieldErrors(parsed.error));
   const d = parsed.data;
   try {
+    const current = await prisma.employee.findFirst({ where: { id, workspaceId: session.workspaceId } });
+    if (!current) return fail("Employee not found");
+    if (!canModifyEmployee(session, id, current.departmentId)) {
+      await writeAudit({ session, action: "denied", module: "staff", recordId: id, description: `Permission denied: cannot modify employee` });
+      return fail("You don't have permission to modify this employee");
+    }
     await prisma.employee.update({
       where: { id },
       data: {
@@ -235,7 +245,18 @@ export async function getStaffWithFiltersAction(filters: {
 }): Promise<ActionResult<unknown[]>> {
   try {
     const session = await requireSession();
+    if (!hasPermission(session, "staff", "view")) {
+      await writeAudit({ session, action: "denied", module: "staff", description: "Permission denied: staff:view" });
+      return fail("You don't have permission to view staff");
+    }
+    const scope = getDataScope(session);
     const where: Record<string, unknown> = { workspaceId: session.workspaceId };
+
+    if (scope === "self") {
+      where.id = session.employeeId;
+    } else if (scope === "department" && session.departmentId) {
+      where.departmentId = session.departmentId;
+    }
 
     if (filters.search) {
       const q = filters.search;

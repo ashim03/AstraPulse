@@ -1,12 +1,17 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { AuthSettingsClient } from "./auth-settings-client";
+import { hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AuthSettingsPage() {
   const session = await requireSession();
+  if (!hasPermission(session, "settings", "auth")) {
+    redirect("/?error=access_denied");
+  }
 
   let authSettings = await prisma.authSettings.findUnique({
     where: { workspaceId: session.workspaceId },

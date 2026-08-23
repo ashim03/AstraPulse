@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import { redirect } from "next/navigation";
 import { UserPlus, Users, UserCheck, UserMinus, Clock, MailCheck, MailX } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { SmartTable, type SmartColumn, type SmartRow } from "@/components/app/smart-table";
 import { StaffFilters } from "./staff-filters";
 import { Badge } from "@/components/ui/badge";
+import { getSafeEmployeeSelect, getDataScope, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,9 @@ export default async function StaffPage({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const session = await requireSession();
+  const scope = getDataScope(session);
+  const canViewSensitive = hasPermission(session, "staff", "view_sensitive");
+  const canCreate = hasPermission(session, "staff", "create");
 
   const letter = typeof searchParams.letter === "string" ? searchParams.letter : "";
   const search = typeof searchParams.search === "string" ? searchParams.search : "";
@@ -31,6 +36,14 @@ export default async function StaffPage({
   const accountStatusFilter = typeof searchParams.accountStatus === "string" ? searchParams.accountStatus : "";
 
   const where: Record<string, unknown> = { workspaceId: session.workspaceId };
+
+  // Data scope filtering
+  if (scope === "department" && session.departmentId) {
+    where.departmentId = session.departmentId;
+  } else if (scope === "self") {
+    where.id = session.employeeId ?? "__none__";
+  }
+
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
@@ -38,7 +51,7 @@ export default async function StaffPage({
       { email: { contains: search, mode: "insensitive" } },
     ];
   }
-  if (departmentFilter) where.departmentId = departmentFilter;
+  if (departmentFilter && scope === "all") where.departmentId = departmentFilter;
   if (employmentType) where.employmentType = employmentType;
   if (statusFilter) where.status = statusFilter;
   if (gender) where.gender = gender;
@@ -55,13 +68,15 @@ export default async function StaffPage({
   }
 
   const orderBy: Record<string, string> = { [sortBy]: sortOrder };
+  const select = getSafeEmployeeSelect(session) as Record<string, true>;
 
   const [employees, departments] = await Promise.all([
     prisma.employee.findMany({
       where,
-      include: {
-        department: true,
-        position: true,
+      select: {
+        ...select,
+        department: { select: { id: true, name: true } },
+        position: { select: { id: true, name: true } },
         user: {
           select: {
             emailVerified: true,
@@ -79,14 +94,15 @@ export default async function StaffPage({
     }),
   ]);
 
-  const total = employees.length;
-  const active = employees.filter((e) => e.status === "active").length;
-  const onLeave = employees.filter((e) => e.status === "on_leave").length;
-  const contract = employees.filter((e) => e.employmentType === "contract").length;
-  const verifiedCount = employees.filter((e) => e.user?.emailVerified).length;
-  const unverifiedCount = employees.filter((e) => e.user && !e.user.emailVerified).length;
+  const empArr = employees as any[];
+  const total = empArr.length;
+  const active = empArr.filter((e) => e.status === "active").length;
+  const onLeave = empArr.filter((e) => e.status === "on_leave").length;
+  const contract = empArr.filter((e) => e.employmentType === "contract").length;
+  const verifiedCount = empArr.filter((e) => e.user?.emailVerified).length;
+  const unverifiedCount = empArr.filter((e) => e.user && !e.user.emailVerified).length;
 
-  const rows: SmartRow[] = employees.map((e) => ({
+  const rows: SmartRow[] = (employees as any[]).map((e) => ({
     id: e.id,
     name: e.name,
     email: e.email,
@@ -96,7 +112,7 @@ export default async function StaffPage({
     employmentType: e.employmentType,
     status: e.status,
     joinDate: e.joinDate ? formatDate(e.joinDate, "yyyy-MM-dd") : "",
-    salary: e.baseSalary,
+    salary: canViewSensitive ? e.baseSalary : undefined,
     emailVerified: e.user?.emailVerified ?? false,
     accountStatus: e.user?.status ?? "active",
     lastLogin: e.user?.lastLoginAt ? formatDate(e.user.lastLoginAt, "MMM dd, yyyy HH:mm") : "Never",
@@ -147,18 +163,20 @@ export default async function StaffPage({
     { key: "lastLogin", header: "Last Login" },
     { key: "status", header: "Status", kind: "status" },
     { key: "joinDate", header: "Joined", kind: "date" },
-    { key: "salary", header: "Salary", kind: "money", align: "right" },
+    ...(canViewSensitive ? [{ key: "salary", header: "Salary", kind: "money" as const, align: "right" as const }] : []),
   ];
 
   return (
     <>
       <PageHeader
         title="Staff"
-        subtitle={`${total} employees in ${new Set(employees.map((e) => e.department?.name).filter(Boolean)).size} departments`}
+        subtitle={`${total} employees in ${new Set(empArr.map((e) => e.department?.name).filter(Boolean)).size} departments`}
         actions={
-          <Link href="/staff/new">
-            <Button leftIcon={<UserPlus className="h-4 w-4" />}>Add Employee</Button>
-          </Link>
+          canCreate ? (
+            <Link href="/staff/new">
+              <Button leftIcon={<UserPlus className="h-4 w-4" />}>Add Employee</Button>
+            </Link>
+          ) : undefined
         }
       />
 
