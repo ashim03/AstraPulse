@@ -217,7 +217,7 @@ export function EmployeeAttendanceClient({
               </div>
             </div>
             <CardBody>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 <div>
                   <p className="text-xs font-medium text-slate-500">Status</p>
                   <Badge tone={todayStatus === "present" ? "green" : todayStatus === "late" ? "amber" : todayStatus === "absent" ? "red" : todayStatus === "leave" ? "blue" : "gray"}>
@@ -230,6 +230,7 @@ export function EmployeeAttendanceClient({
                     <LogIn className="h-3.5 w-3.5 text-emerald-500" />
                     {todayRecord?.clockIn ? formatTimeNepal(todayRecord.clockIn) : "—"}
                   </p>
+                  <p className="text-[10px] text-slate-400">Official: 9:30 AM</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500">Clock Out</p>
@@ -237,6 +238,7 @@ export function EmployeeAttendanceClient({
                     <LogOut className="h-3.5 w-3.5 text-red-500" />
                     {todayRecord?.clockOut ? formatTimeNepal(todayRecord.clockOut) : "—"}
                   </p>
+                  <p className="text-[10px] text-slate-400">Official: 5:30 PM</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500">Working Hours</p>
@@ -246,11 +248,12 @@ export function EmployeeAttendanceClient({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500">Break</p>
+                  <p className="text-xs font-medium text-slate-500">Break ({todayRecord?.breakMinutes ?? 0}/35 min)</p>
                   <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     <Coffee className="h-3.5 w-3.5 text-amber-500" />
-                    {todayRecord?.breakMinutes ? `${todayRecord.breakMinutes}m` : "0m"}
+                    {todayRecord?.breakMinutes ? `${todayRecord.breakMinutes}m used` : "Not used"}
                   </p>
+                  <p className="text-[10px] text-slate-400">Max: 35min once/day</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500">Overtime</p>
@@ -258,13 +261,15 @@ export function EmployeeAttendanceClient({
                     <TrendingUp className="h-3.5 w-3.5 text-violet-500" />
                     {todayRecord?.overtime ? `${todayRecord.overtime.toFixed(1)}h` : "0h"}
                   </p>
+                  <p className="text-[10px] text-slate-400">After 5:35 PM</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500">Late</p>
+                  <p className="text-xs font-medium text-slate-500">Late / Grace</p>
                   <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     <AlertTriangle className={cn("h-3.5 w-3.5", (todayRecord?.lateMinutes || 0) > 0 ? "text-amber-500" : "text-emerald-500")} />
-                    {todayRecord?.lateMinutes ? `${todayRecord.lateMinutes}m` : "0m"}
+                    {todayRecord?.lateMinutes ? `${todayRecord.lateMinutes}m late` : "On time"}
                   </p>
+                  <p className="text-[10px] text-slate-400">Grace until 9:40 AM</p>
                 </div>
               </div>
             </CardBody>

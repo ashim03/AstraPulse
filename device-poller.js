@@ -1,11 +1,11 @@
 /**
  * Hikvision Device Poller — run locally to sync attendance from the device.
  *
- * Usage:   node device-poller.js
- *          pm2 start ecosystem.config.js
- *
- * Timezone: Nepal (UTC+5:45). All times stored in UTC in DB.
- *           The device sends UTC timestamps (Z suffix).
+ * Rules (Nepal UTC+5:45):
+ *   Office: 9:30 AM – 5:30 PM
+ *   Grace: 10 min (check-in ≤ 9:40 = Present, > 9:40 = Absent)
+ *   OT threshold: 5:35 PM (check-out > 5:35 = Overtime)
+ *   Break: max 35 min, once per day
  */
 
 const { PrismaClient } = require('@prisma/client');
@@ -23,12 +23,11 @@ const DEVICE_ID = 'hikvision-main';
 const POLL_INTERVAL_MS = 15 * 60 * 1000;
 const FETCH_DAYS = 7;
 
-// Office hours in Nepal time (for late/early calculations)
-const OFFICE_START_HOUR = 10;
-const OFFICE_START_MIN = 0;
-const OFFICE_END_HOUR = 18;
-const OFFICE_END_MIN = 0;
-const GRACE_MINUTES = 15;
+// Office hours in Nepal minutes from midnight
+const OFFICE_START = 9 * 60 + 30;   // 9:30 AM = 570
+const OFFICE_END = 17 * 60 + 30;    // 5:30 PM = 1050
+const GRACE_DEADLINE = OFFICE_START + 10; // 9:40 AM = 580
+const OT_THRESHOLD = OFFICE_END + 5;      // 5:35 PM = 1055
 
 const prisma = new PrismaClient();
 
@@ -82,20 +81,15 @@ async function digestRequest(method, uri, body = null) {
 
 // ─── Nepal Time Helpers ──────────────────────────────────────────────────────
 
-const NPL_OFFSET_MS = 5.75 * 60 * 60 * 1000; // +5:45 in ms
+const NPL_OFFSET_MS = 5.75 * 60 * 60 * 1000;
 
 function toNepalDate(utcDate) {
   return new Date(utcDate.getTime() + NPL_OFFSET_MS);
 }
 
-function getNepalHours(utcDate) {
-  const npl = toNepalDate(utcDate);
-  return npl.getUTCHours();
-}
-
 function getNepalMinutes(utcDate) {
   const npl = toNepalDate(utcDate);
-  return npl.getUTCMinutes();
+  return npl.getUTCHours() * 60 + npl.getUTCMinutes();
 }
 
 function formatNplTime(utcDate) {
@@ -113,10 +107,37 @@ function formatNplDate(utcDate) {
   return `${npl.getUTCFullYear()}-${String(npl.getUTCMonth() + 1).padStart(2, '0')}-${String(npl.getUTCDate()).padStart(2, '0')}`;
 }
 
-function startOfDayNpl(utcDate) {
-  const npl = toNepalDate(utcDate);
-  npl.setHours(0, 0, 0, 0);
-  return new Date(npl.getTime() - NPL_OFFSET_MS);
+// ─── Attendance Rules ─────────────────────────────────────────────────────────
+
+function determineStatus(clockInMinutes) {
+  if (clockInMinutes <= GRACE_DEADLINE) return 'present';
+  return 'absent';
+}
+
+function calculateLateMinutes(clockInMinutes) {
+  return Math.max(0, clockInMinutes - OFFICE_START);
+}
+
+function calculateOvertimeMinutes(clockOutMinutes) {
+  if (clockOutMinutes <= OT_THRESHOLD) return 0;
+  return clockOutMinutes - OT_THRESHOLD;
+}
+
+function calculateEarlyMinutes(clockOutMinutes) {
+  if (clockOutMinutes >= OFFICE_END) return 0;
+  return OFFICE_END - clockOutMinutes;
+}
+
+function calculateHours(clockIn, clockOut, breakMinutes = 0) {
+  const totalMs = clockOut.getTime() - clockIn.getTime();
+  const totalMinutes = totalMs / 60000;
+  const workedMinutes = Math.max(0, totalMinutes - breakMinutes);
+  return Math.round((workedMinutes / 60) * 100) / 100;
+}
+
+function isWeekend(dateUtc) {
+  const day = dateUtc.getUTCDay();
+  return day === 0 || day === 6;
 }
 
 // ─── Main sync logic ─────────────────────────────────────────────────────────
@@ -128,7 +149,6 @@ async function syncDevice() {
 
   console.log(`[${now.toISOString()}] Syncing attendance from ${fmtTime(startTime)} to ${fmtTime(now)}`);
 
-  // Fetch all events from device
   const body = JSON.stringify({
     AcsEventCond: {
       searchID: `poll-${Date.now()}`,
@@ -153,7 +173,6 @@ async function syncDevice() {
 
   if (events.length === 0) return { created: 0, updated: 0, skipped: 0 };
 
-  // Find ALL employees (including unmapped) for reference
   const allEmployees = await prisma.employee.findMany({
     where: { workspaceId: WORKSPACE_ID, status: 'active' },
     select: { id: true, name: true, deviceEmployeeId: true },
@@ -161,12 +180,10 @@ async function syncDevice() {
 
   const empMap = {};
   for (const emp of allEmployees) {
-    if (emp.deviceEmployeeId) {
-      empMap[emp.deviceEmployeeId] = emp;
-    }
+    if (emp.deviceEmployeeId) empMap[emp.deviceEmployeeId] = emp;
   }
 
-  // Group events by employee + date (using Nepal date)
+  // Group by employee + Nepal date
   const grouped = {};
   for (const evt of events) {
     const empNo = evt.employeeNoString ?? evt.employeeNo ?? '';
@@ -174,20 +191,15 @@ async function syncDevice() {
       console.log(`  Skipping event with empty employee ID at time ${evt.time}`);
       continue;
     }
-
     const emp = empMap[empNo];
     if (!emp) {
       console.log(`  Skipping event for unmapped employee: ${empNo}`);
       continue;
     }
-
     const evtTime = new Date(evt.time);
     const nepalDateStr = formatNplDate(evtTime);
     const key = `${empNo}:${nepalDateStr}`;
-
-    if (!grouped[key]) {
-      grouped[key] = { employee: emp, date: nepalDateStr, events: [] };
-    }
+    if (!grouped[key]) grouped[key] = { employee: emp, date: nepalDateStr, events: [] };
     grouped[key].events.push({ time: evtTime, raw: evt });
   }
 
@@ -195,55 +207,66 @@ async function syncDevice() {
 
   for (const [key, group] of Object.entries(grouped)) {
     const { employee, date: nepalDateStr, events: groupEvents } = group;
-
-    // Sort events by time ascending
     groupEvents.sort((a, b) => a.time.getTime() - b.time.getTime());
 
     const clockIn = groupEvents[0].time;
     const clockOut = groupEvents.length > 1 ? groupEvents[groupEvents.length - 1].time : null;
 
-    // Calculate date as start of Nepal day in UTC
     const [y, mo, d] = nepalDateStr.split('-').map(Number);
     const dateUtc = new Date(Date.UTC(y, mo - 1, d, 0, 0, 0));
 
-    // Check if attendance record already exists
+    // Check for existing record
     const existing = await prisma.attendance.findFirst({
       where: { workspaceId: WORKSPACE_ID, employeeId: employee.id, date: dateUtc },
     });
 
-    if (existing) {
-      // Update clockOut if missing
-      if (clockOut && !existing.clockOut) {
-        const hours = Math.round(((clockOut.getTime() - clockIn.getTime()) / 3600000) * 100) / 100;
-        const lateMinutes = calculateLateMinutes(clockIn);
-        const earlyMinutes = calculateEarlyMinutes(clockOut);
-        const overtime = calculateOvertime(hours);
+    // Calculate all metrics
+    const clockInMin = getNepalMinutes(clockIn);
+    const status = determineStatus(clockInMin);
+    const lateMinutes = calculateLateMinutes(clockInMin);
 
+    let clockOutMin = 0;
+    let overtimeMinutes = 0;
+    let earlyMinutes = 0;
+    let hours = 0;
+
+    if (clockOut) {
+      clockOutMin = getNepalMinutes(clockOut);
+      overtimeMinutes = calculateOvertimeMinutes(clockOutMin);
+      earlyMinutes = calculateEarlyMinutes(clockOutMin);
+      hours = calculateHours(clockIn, clockOut, 0);
+    }
+
+    // Check if a break already exists for this attendance today
+    const existingBreak = await prisma.break.findFirst({
+      where: { workspaceId: WORKSPACE_ID, employeeId: employee.id, attendance: { date: dateUtc } },
+    });
+    const breakMinutes = existingBreak?.duration ?? 0;
+    if (breakMinutes > 0) {
+      hours = calculateHours(clockIn, clockOut || clockIn, breakMinutes);
+    }
+
+    if (existing) {
+      // Update if missing clockOut or status needs correction
+      if (clockOut && !existing.clockOut) {
         await prisma.attendance.update({
           where: { id: existing.id },
           data: {
             clockIn,
             clockOut,
+            status,
             hours,
             lateMinutes,
             earlyMinutes,
-            overtime,
-            status: getStatus(lateMinutes),
+            overtime: overtimeMinutes,
           },
         });
         updated++;
-        console.log(`  Updated clockOut for ${employee.name} on ${nepalDateStr} — ${formatNplTime(clockIn)} to ${formatNplTime(clockOut)} = ${hours}h`);
+        console.log(`  Updated ${employee.name} on ${nepalDateStr}: ${formatNplTime(clockIn)} → ${formatNplTime(clockOut)} = ${hours}h, status=${status}, OT=${overtimeMinutes}m`);
       } else {
         skipped++;
-        console.log(`  Already exists for ${employee.name} on ${nepalDateStr} (clockOut: ${existing.clockOut ? 'set' : 'null'})`);
       }
     } else {
-      // Create new attendance
-      const hours = clockOut ? Math.round(((clockOut.getTime() - clockIn.getTime()) / 3600000) * 100) / 100 : 0;
-      const lateMinutes = calculateLateMinutes(clockIn);
-      const earlyMinutes = clockOut ? calculateEarlyMinutes(clockOut) : 0;
-      const overtime = calculateOvertime(hours);
-
       await prisma.attendance.create({
         data: {
           workspaceId: WORKSPACE_ID,
@@ -251,25 +274,24 @@ async function syncDevice() {
           date: dateUtc,
           clockIn,
           clockOut,
+          status,
           hours,
-          overtime,
-          breakMinutes: 0,
+          overtime: overtimeMinutes,
+          breakMinutes,
           lateMinutes,
           earlyMinutes,
           isHalfDay: false,
           isHoliday: false,
           isWeekend: isWeekend(dateUtc),
-          status: getStatus(lateMinutes),
           source: 'device',
           deviceId: DEVICE_ID,
         },
       });
       created++;
-      console.log(`  Created attendance for ${employee.name} on ${nepalDateStr} — ${formatNplTime(clockIn)}${clockOut ? ' to ' + formatNplTime(clockOut) : ' (no checkout)'} = ${hours}h, late: ${lateMinutes}m`);
+      console.log(`  Created ${employee.name} on ${nepalDateStr}: ${formatNplTime(clockIn)}${clockOut ? ' → ' + formatNplTime(clockOut) : ''} = ${hours}h, status=${status}, OT=${overtimeMinutes}m`);
     }
   }
 
-  // Log sync
   await prisma.attendanceDeviceLog.create({
     data: {
       deviceId: DEVICE_ID,
@@ -282,47 +304,6 @@ async function syncDevice() {
   });
 
   return { created, updated, skipped };
-}
-
-// ─── Attendance calculations (all in Nepal time) ─────────────────────────────
-
-function calculateLateMinutes(clockInUtc) {
-  const nplH = getNepalHours(clockInUtc);
-  const nplM = getNepalMinutes(clockInUtc);
-  const clockInMinutes = nplH * 60 + nplM;
-  const officeStartMinutes = OFFICE_START_HOUR * 60 + OFFICE_START_MIN;
-  const graceDeadline = officeStartMinutes + GRACE_MINUTES;
-
-  if (clockInMinutes <= graceDeadline) return 0;
-  return clockInMinutes - officeStartMinutes;
-}
-
-function calculateEarlyMinutes(clockOutUtc) {
-  const nplH = getNepalHours(clockOutUtc);
-  const nplM = getNepalMinutes(clockOutUtc);
-  const clockOutMinutes = nplH * 60 + nplM;
-  const officeEndMinutes = OFFICE_END_HOUR * 60 + OFFICE_END_MIN;
-
-  if (clockOutMinutes >= officeEndMinutes) return 0;
-  return officeEndMinutes - clockOutMinutes;
-}
-
-function calculateOvertime(hours) {
-  const standardHours = OFFICE_END_HOUR - OFFICE_START_HOUR;
-  if (hours <= standardHours) return 0;
-  return Math.round((hours - standardHours) * 100) / 100;
-}
-
-function getStatus(lateMinutes) {
-  if (lateMinutes > 240) return 'absent';
-  if (lateMinutes > 60) return 'half_day';
-  if (lateMinutes > 0) return 'late';
-  return 'present';
-}
-
-function isWeekend(dateUtc) {
-  const day = dateUtc.getUTCDay();
-  return day === 0 || day === 6;
 }
 
 // ─── Poller loop ─────────────────────────────────────────────────────────────
@@ -351,6 +332,7 @@ async function main() {
   console.log('=== Hikvision Device Poller ===');
   console.log(`Device: ${DEVICE_IP}:${DEVICE_PORT}`);
   console.log(`Workspace: ${WORKSPACE_ID}`);
+  console.log(`Rules: Office 9:30-17:30, Grace 9:40, OT after 17:35, Break max 35min x1`);
   console.log(`Poll interval: ${POLL_INTERVAL_MS / 60000} minutes`);
   console.log(`Lookback: ${FETCH_DAYS} days`);
   console.log('');

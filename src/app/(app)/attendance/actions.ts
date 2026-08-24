@@ -5,8 +5,27 @@ import { requireSession } from "@/lib/auth";
 import { hasPermission, canAccessEmployee, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
-import { startOfDay, startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 import { syncDevice, getDevices } from "@/services/attendance-device";
+import {
+  determineCheckInStatus,
+  determineCheckOutStatus,
+  calculateWorkingHours,
+  canStartBreak,
+  validateBreakDuration,
+  ATTENDANCE_CONSTANTS,
+} from "@/services/attendance-settings";
+
+// ─── Nepal Time Helpers ───────────────────────────────────────────────────────
+const NPL_OFFSET_MS = 5.75 * 60 * 60 * 1000;
+function toNepalTime(d: Date): Date { return new Date(d.getTime() + NPL_OFFSET_MS); }
+function nepalStartOfDay(): Date {
+  const npl = toNepalTime(new Date());
+  const y = npl.getUTCFullYear();
+  const m = npl.getUTCMonth();
+  const d = npl.getUTCDate();
+  return new Date(Date.UTC(y, m, d, 0, 0, 0));
+}
 
 async function requirePerm(module: string, action: PermissionAction = "view") {
   const session = await requireSession();
@@ -30,25 +49,39 @@ export async function clockInAction(): Promise<ActionResult> {
   const employeeId = user?.employeeId;
   if (!employeeId) return fail("No employee profile linked to your account");
 
-  const today = startOfDay(new Date());
+  const today = nepalStartOfDay();
   const existing = await prisma.attendance.findFirst({
     where: { workspaceId: session.workspaceId, employeeId, date: today },
   });
   if (existing?.clockIn) return fail("You already clocked in today");
 
   const now = new Date();
+  const settings = await prisma.attendanceSettings.findFirst({
+    where: { workspaceId: session.workspaceId },
+  }) || { officeStartTime: "09:30", graceMinutes: 10, absentIfLateByMinutes: 10 };
+
+  // Determine status using Nepal time rules
+  const statusResult = determineCheckInStatus(settings, now);
+
   await prisma.attendance.create({
     data: {
       workspaceId: session.workspaceId,
       employeeId,
       date: today,
       clockIn: now,
-      status: "present",
+      status: statusResult.status,
+      lateMinutes: statusResult.lateMinutes,
     },
   });
-  await writeAudit({ session, action: "create", module: "attendance", description: `Clocked in at ${now.toLocaleTimeString()}` });
+
+  const timeStr = now.toLocaleTimeString("en-US", { timeZone: "Asia/Kathmandu", hour: "2-digit", minute: "2-digit" });
+  await writeAudit({ session, action: "create", module: "attendance", description: `Clocked in at ${timeStr} — ${statusResult.status}` });
   revalidatePath("/attendance");
-  return ok(undefined, "Clocked in");
+
+  if (statusResult.isAbsent) {
+    return ok(undefined, `Clocked in at ${timeStr} — marked ABSENT (after ${ATTENDANCE_CONSTANTS.GRACE_PERIOD_END} grace period)`);
+  }
+  return ok(undefined, `Clocked in at ${timeStr} — Present`);
 }
 
 export async function clockOutAction(): Promise<ActionResult> {
@@ -65,7 +98,7 @@ export async function clockOutAction(): Promise<ActionResult> {
   const employeeId = user?.employeeId;
   if (!employeeId) return fail("No employee profile linked to your account");
 
-  const today = startOfDay(new Date());
+  const today = nepalStartOfDay();
   const record = await prisma.attendance.findFirst({
     where: { workspaceId: session.workspaceId, employeeId, date: today },
   });
@@ -73,14 +106,152 @@ export async function clockOutAction(): Promise<ActionResult> {
   if (record.clockOut) return fail("You already clocked out today");
 
   const clockOut = new Date();
-  const hours = Math.max(0.1, (clockOut.getTime() - (record.clockIn ?? clockOut).getTime()) / 3600000);
+  const settings = await prisma.attendanceSettings.findFirst({
+    where: { workspaceId: session.workspaceId },
+  }) || { officeEndTime: "17:30" };
+
+  const checkOutResult = determineCheckOutStatus(settings, clockOut);
+  const breakMinutes = record.breakMinutes ?? 0;
+  const hours = calculateWorkingHours(record.clockIn ?? clockOut, clockOut, breakMinutes);
+
   await prisma.attendance.update({
     where: { id: record.id },
-    data: { clockOut, hours: Math.round(hours * 10) / 10, status: "present" },
+    data: {
+      clockOut,
+      hours,
+      overtime: checkOutResult.overtimeMinutes / 60,
+      earlyMinutes: checkOutResult.earlyMinutes,
+      status: record.status === "absent" ? record.status : "present",
+    },
   });
-  await writeAudit({ session, action: "edit", module: "attendance", description: `Clocked out after ${hours.toFixed(1)}h` });
+
+  const timeStr = clockOut.toLocaleTimeString("en-US", { timeZone: "Asia/Kathmandu", hour: "2-digit", minute: "2-digit" });
+  let msg = `Clocked out at ${timeStr} — ${hours.toFixed(1)}h worked`;
+  if (checkOutResult.isOvertime) msg += `, ${checkOutResult.overtimeMinutes}min overtime`;
+  if (checkOutResult.isEarlyDeparture) msg += `, ${checkOutResult.earlyMinutes}min early`;
+
+  await writeAudit({ session, action: "edit", module: "attendance", description: msg });
   revalidatePath("/attendance");
-  return ok(undefined, "Clocked out");
+  return ok(undefined, msg);
+}
+
+// ─── Break Actions ────────────────────────────────────────────────────────────
+
+export async function startBreakAction(): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePerm("attendance", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
+  const user = await prisma.user.findFirst({
+    where: { id: session.id, workspaceId: session.workspaceId },
+    include: { employee: true },
+  });
+  const employeeId = user?.employeeId;
+  if (!employeeId) return fail("No employee profile linked to your account");
+
+  const today = nepalStartOfDay();
+  const record = await prisma.attendance.findFirst({
+    where: { workspaceId: session.workspaceId, employeeId, date: today },
+  });
+  if (!record) return fail("You must clock in before starting a break");
+  if (record.clockOut) return fail("Cannot start a break after clocking out");
+
+  // Check if break already used today
+  const existingBreaksToday = await prisma.break.findMany({
+    where: { workspaceId: session.workspaceId, employeeId, attendanceId: record.id },
+  });
+
+  const settings = await prisma.attendanceSettings.findFirst({
+    where: { workspaceId: session.workspaceId },
+  }) || { breakEnabled: true, maxBreaksPerDay: 1 };
+
+  const validation = canStartBreak(existingBreaksToday.length, new Date(), settings);
+  if (!validation.allowed) return fail(validation.reason!);
+
+  const breakRecord = await prisma.break.create({
+    data: {
+      workspaceId: session.workspaceId,
+      attendanceId: record.id,
+      employeeId,
+      breakOut: new Date(),
+      status: "active",
+      isPaid: false,
+    },
+  });
+
+  const timeStr = new Date().toLocaleTimeString("en-US", { timeZone: "Asia/Kathmandu", hour: "2-digit", minute: "2-digit" });
+  await writeAudit({ session, action: "create", module: "attendance", description: `Break started at ${timeStr}` });
+  revalidatePath("/attendance");
+  return ok(undefined, `Break started at ${timeStr}`);
+}
+
+export async function endBreakAction(): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePerm("attendance", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
+  const user = await prisma.user.findFirst({
+    where: { id: session.id, workspaceId: session.workspaceId },
+    include: { employee: true },
+  });
+  const employeeId = user?.employeeId;
+  if (!employeeId) return fail("No employee profile linked to your account");
+
+  const today = nepalStartOfDay();
+  const record = await prisma.attendance.findFirst({
+    where: { workspaceId: session.workspaceId, employeeId, date: today },
+  });
+  if (!record) return fail("No attendance record found");
+
+  // Find active break
+  const activeBreak = await prisma.break.findFirst({
+    where: { workspaceId: session.workspaceId, employeeId, attendanceId: record.id, status: "active" },
+  });
+  if (!activeBreak) return fail("No active break found");
+
+  const breakIn = new Date();
+  const durationMs = breakIn.getTime() - activeBreak.breakOut.getTime();
+  const durationMinutes = Math.round(durationMs / 60000);
+
+  // Validate max 35 minutes
+  const validation = validateBreakDuration(breakIn, activeBreak.breakOut);
+  if (!validation.allowed) {
+    // Still close the break but mark as exceeded
+    await prisma.break.update({
+      where: { id: activeBreak.id },
+      data: { breakIn, duration: durationMinutes, status: "exceeded" },
+    });
+    await prisma.attendance.update({
+      where: { id: record.id },
+      data: { breakMinutes: record.breakMinutes + durationMinutes },
+    });
+    revalidatePath("/attendance");
+    return fail(validation.reason!);
+  }
+
+  await prisma.break.update({
+    where: { id: activeBreak.id },
+    data: { breakIn, duration: durationMinutes, status: "completed" },
+  });
+
+  // Update total break minutes on attendance
+  const allBreaks = await prisma.break.findMany({
+    where: { workspaceId: session.workspaceId, employeeId, attendanceId: record.id, status: "completed" },
+  });
+  const totalBreakMinutes = allBreaks.reduce((sum, b) => sum + (b.duration ?? 0), 0) + durationMinutes;
+  await prisma.attendance.update({
+    where: { id: record.id },
+    data: { breakMinutes: totalBreakMinutes },
+  });
+
+  const timeStr = breakIn.toLocaleTimeString("en-US", { timeZone: "Asia/Kathmandu", hour: "2-digit", minute: "2-digit" });
+  await writeAudit({ session, action: "edit", module: "attendance", description: `Break ended at ${timeStr} — ${durationMinutes}min (max 35min)` });
+  revalidatePath("/attendance");
+  return ok(undefined, `Break ended at ${timeStr} — ${durationMinutes} minutes used`);
 }
 
 export async function attendanceAdjustAction(
@@ -159,7 +330,7 @@ export async function getEmployeeAttendanceDashboardAction(
       return fail("You don't have access to this employee's data");
     }
 
-    const today = startOfDay(now);
+    const today = nepalStartOfDay();
     const [todayRecord, monthlyRecords, breaks, overtimeRecords] = await Promise.all([
       prisma.attendance.findFirst({
         where: { workspaceId: session.workspaceId, employeeId, date: today },

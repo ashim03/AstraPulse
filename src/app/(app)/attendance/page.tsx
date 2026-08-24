@@ -69,6 +69,17 @@ export default async function AttendancePage({
 
   const myRecord = records.find((r) => r.employeeId === user?.employeeId);
 
+  // Get break status for current user
+  let breakActive = false;
+  let breakUsed = false;
+  if (myRecord) {
+    const breaks = await prisma.break.findMany({
+      where: { attendanceId: myRecord.id },
+    });
+    breakActive = breaks.some((b) => b.status === "active");
+    breakUsed = breaks.some((b) => b.status === "completed" || b.status === "exceeded");
+  }
+
   const rows: SmartRow[] = employees.map((e) => {
     const record = recordsMap.get(e.id);
     return {
@@ -102,7 +113,7 @@ export default async function AttendancePage({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ClockButtons
-              myRecord={myRecord ? { clockIn: !!myRecord.clockIn, clockOut: !!myRecord.clockOut } : null}
+              myRecord={myRecord ? { clockIn: !!myRecord.clockIn, clockOut: !!myRecord.clockOut, breakActive, breakUsed } : null}
               hasEmployee={!!user?.employeeId}
             />
             <AttendanceDayPicker selected={dayKey} />

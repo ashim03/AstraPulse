@@ -309,11 +309,13 @@ export async function syncDevice(deviceId: string): Promise<{
     const clockIn = parsedEvents[0].parsedTime;
     const clockOut = parsedEvents.length > 1 ? parsedEvents[parsedEvents.length - 1].parsedTime : null;
 
-    // Calculate metrics using Nepal time
-    const [oh, om] = settings.officeStartTime.split(":").map(Number);
-    const [oeh, oem] = settings.officeEndTime.split(":").map(Number);
-    const officeStartMinutes = oh * 60 + om;
-    const officeEndMinutes = oeh * 60 + oem;
+    // Calculate metrics using Nepal time — new rules
+    // Office: 9:30-17:30, Grace: 10min (≤9:40=Present, >9:40=Absent)
+    // OT threshold: 17:35 (check-out >17:35 = Overtime)
+    const OFFICE_START_MIN = 9 * 60 + 30; // 570
+    const OFFICE_END_MIN = 17 * 60 + 30;  // 1050
+    const GRACE_DEADLINE = OFFICE_START_MIN + (settings.graceMinutes || 10); // 580
+    const OT_THRESHOLD = OFFICE_END_MIN + 5; // 1055
 
     let lateMinutes = 0;
     let earlyMinutes = 0;
@@ -324,43 +326,37 @@ export async function syncDevice(deviceId: string): Promise<{
 
     if (clockIn) {
       const clockInNplMin = nepalHours(clockIn) * 60 + nepalMinutes(clockIn);
-      lateMinutes = Math.max(0, clockInNplMin - officeStartMinutes - settings.graceMinutes);
 
-      if (settings.absentIfLateByMinutes > 0 && lateMinutes >= settings.absentIfLateByMinutes) {
-        status = "absent";
-      } else if (settings.halfDayAfterMinutes > 0 && lateMinutes >= settings.halfDayAfterMinutes) {
-        isHalfDay = true;
-        status = "half_day";
-      } else if (lateMinutes > 0) {
-        status = "late";
-      } else {
+      // New rule: ≤9:40 = Present, >9:40 = Absent
+      if (clockInNplMin <= GRACE_DEADLINE) {
         status = "present";
+        lateMinutes = Math.max(0, clockInNplMin - OFFICE_START_MIN);
+      } else {
+        status = "absent";
+        lateMinutes = clockInNplMin - OFFICE_START_MIN;
       }
     }
 
-    // Working hours
+    // Working hours (excluding break)
+    const existingBreak = await prisma.break.findFirst({
+      where: { workspaceId: device.workspaceId, employeeId: employee.id, attendance: { date: dateUtc } },
+    });
+    const breakMinutes = existingBreak?.duration ?? 0;
+
     if (clockIn && clockOut) {
-      hours = Math.max(0, (clockOut.getTime() - clockIn.getTime()) / 3600000);
+      const totalMinutes = (clockOut.getTime() - clockIn.getTime()) / 60000;
+      hours = Math.max(0, (totalMinutes - breakMinutes) / 60);
     }
 
-    // Early departure
+    // Early departure & overtime using Nepal time
+    let overtimeMinutes = 0;
     if (clockOut) {
       const clockOutNplMin = nepalHours(clockOut) * 60 + nepalMinutes(clockOut);
-      if (clockOutNplMin < officeEndMinutes) {
-        earlyMinutes = officeEndMinutes - clockOutNplMin;
-      }
+      earlyMinutes = Math.max(0, OFFICE_END_MIN - clockOutNplMin);
+      overtimeMinutes = Math.max(0, clockOutNplMin - OT_THRESHOLD);
     }
 
-    // Overtime calculation
-    const officeMinutes = officeEndMinutes - officeStartMinutes;
-    const workedMinutes = Math.round(hours * 60);
-    const isWeekend = !isWorkingDay(settings, dateUtc);
-    const isHoliday = false;
-
-    if (settings.overtimeEnabled) {
-      const otResult = calculateOvertime(workedMinutes, officeMinutes, settings, isWeekend, isHoliday);
-      overtime = otResult.overtimeMinutes / 60;
-    }
+    overtime = overtimeMinutes / 60;
 
     try {
       await prisma.attendance.create({
@@ -377,8 +373,8 @@ export async function syncDevice(deviceId: string): Promise<{
           lateMinutes,
           earlyMinutes,
           isHalfDay,
-          isHoliday,
-          isWeekend,
+          isHoliday: false,
+          isWeekend: !isWorkingDay(settings, dateUtc),
           source: "device",
           deviceId: device.id,
           deviceRecordId: `HIK-${deviceUserId}-${dateStr}-${events.length}`,
