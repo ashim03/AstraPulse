@@ -19,7 +19,7 @@ const DEVICE_PORT = 80;
 const DEVICE_USER = 'admin';
 const DEVICE_PASS = 'Aicnepal@0012!';
 const WORKSPACE_ID = 'cmt5sjd04000062bm41d445cb';
-const POLL_INTERVAL_MS = 15 * 60 * 1000;
+const POLL_INTERVAL_MS = 1 * 60 * 1000;
 const FETCH_DAYS = 7;
 
 // Office hours in Nepal minutes from midnight
