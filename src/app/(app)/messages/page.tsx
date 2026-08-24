@@ -26,6 +26,7 @@ import {
   getUnreadCountAction,
   replyToMessageAction,
   getUsersAction,
+  getMyIdAction,
   type MessageWithRelations,
   type MessageCategory,
 } from "./actions";
@@ -51,17 +52,20 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [filter, setFilter] = useState("");
+  const [myId, setMyId] = useState("");
   const { toast } = useToast();
 
   const load = useCallback(async () => {
-    const [msgRes, unreadRes, usersRes] = await Promise.all([
+    const [msgRes, unreadRes, usersRes, myIdRes] = await Promise.all([
       getMyMessagesAction(),
       getUnreadCountAction(),
       getUsersAction(),
+      getMyIdAction(),
     ]);
     if (msgRes.ok && msgRes.data) setMessages(msgRes.data);
     if (unreadRes.ok && typeof unreadRes.data === "number") setUnreadCount(unreadRes.data);
     if (usersRes.ok && usersRes.data) setUsers(usersRes.data);
+    if (myIdRes.ok && myIdRes.data) setMyId(myIdRes.data);
     setLoading(false);
   }, []);
 
@@ -71,7 +75,6 @@ export default function MessagesPage() {
     return () => clearInterval(interval);
   }, [load]);
 
-  const myId = messages[0]?.sender?.id ?? "";
   const inbox = messages.filter((m) => m.senderId !== myId);
   const sent = messages.filter((m) => m.senderId === myId);
   const display = tab === "inbox" ? inbox : sent;

@@ -23,27 +23,36 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const rolePermissions = parsePermissions(user.role?.permissions ?? "[]");
   const isAdmin = user.role?.name === "Workspace Admin";
 
-  const [notifications, unreadMessageCount] = await Promise.all([
-    prisma.notification.findMany({
-      where: { userId: user.id, workspaceId: user.workspaceId },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    }),
-    prisma.messageRecipient.count({
-      where: { recipientId: user.id, readAt: null },
-    }),
-  ]);
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
+  let notifProps: Notif[] = [];
+  let unreadCount = 0;
+  let unreadMessageCount = 0;
 
-  const notifProps: Notif[] = notifications.map((n) => ({
-    id: n.id,
-    title: n.title,
-    body: n.body,
-    type: n.type,
-    link: n.link,
-    readAt: n.readAt,
-    createdAt: n.createdAt,
-  }));
+  try {
+    const [notifications, msgCount] = await Promise.all([
+      prisma.notification.findMany({
+        where: { userId: user.id, workspaceId: user.workspaceId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      prisma.messageRecipient.count({
+        where: { recipientId: user.id, readAt: null },
+      }),
+    ]);
+    unreadCount = notifications.filter((n) => !n.readAt).length;
+    unreadMessageCount = msgCount;
+
+    notifProps = notifications.map((n) => ({
+      id: n.id,
+      title: n.title,
+      body: n.body,
+      type: n.type,
+      link: n.link,
+      readAt: n.readAt,
+      createdAt: n.createdAt,
+    }));
+  } catch {
+    // Non-critical: continue without notifications
+  }
 
   return (
     <AppShell

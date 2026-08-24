@@ -207,6 +207,9 @@ model Employee {
 
   @@unique([workspaceId, employeeId])
   @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, departmentId])
+  @@index([deviceEmployeeId])
 }
 
 model SalaryComponent {
@@ -249,6 +252,9 @@ model Attendance {
 
   @@unique([employeeId, date])
   @@index([workspaceId])
+  @@index([workspaceId, date])
+  @@index([workspaceId, employeeId])
+  @@index([workspaceId, status])
 }
 
 model AttendanceAdjustment {
@@ -296,6 +302,8 @@ model LeaveRequest {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([workspaceId, employeeId])
+  @@index([workspaceId, status])
 }
 
 model Holiday {
@@ -678,6 +686,10 @@ model Message {
   sender      User               @relation("SentMessages", fields: [senderId], references: [id])
   workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   recipients  MessageRecipient[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, senderId])
+  @@index([workspaceId, createdAt])
 }
 
 model MessageRecipient {
@@ -689,6 +701,8 @@ model MessageRecipient {
   recipient   User      @relation(fields: [recipientId], references: [id])
 
   @@unique([messageId, recipientId])
+  @@index([recipientId])
+  @@index([recipientId, readAt])
 }
 
 model Notification {
@@ -703,6 +717,10 @@ model Notification {
   createdAt   DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@index([workspaceId, userId])
 }
 
 model SubscriptionPlan {

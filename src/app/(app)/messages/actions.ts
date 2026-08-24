@@ -60,7 +60,7 @@ export async function sendMessageAction(
   });
 
   if (recipientId !== session.id) {
-    await notify(recipientId, session.workspaceId, "New message", trimmedSubject, "/messages");
+    await notify(session.workspaceId, recipientId, "New message", trimmedSubject, "/messages");
   }
 
   revalidatePath("/messages");
@@ -76,7 +76,7 @@ export async function getMyMessagesAction(): Promise<ActionResult<MessageWithRel
   }
 
   const sent = await prisma.message.findMany({
-    where: { senderId: session.id },
+    where: { senderId: session.id, workspaceId: session.workspaceId },
     include: {
       sender: { select: { id: true, name: true, email: true } },
       recipients: {
@@ -87,7 +87,7 @@ export async function getMyMessagesAction(): Promise<ActionResult<MessageWithRel
   });
 
   const received = await prisma.message.findMany({
-    where: { recipients: { some: { recipientId: session.id } } },
+    where: { workspaceId: session.workspaceId, recipients: { some: { recipientId: session.id } } },
     include: {
       sender: { select: { id: true, name: true, email: true } },
       recipients: {
@@ -129,7 +129,7 @@ export async function getUnreadCountAction(): Promise<ActionResult<number>> {
   }
 
   const count = await prisma.messageRecipient.count({
-    where: { recipientId: session.id, readAt: null },
+    where: { recipientId: session.id, readAt: null, message: { workspaceId: session.workspaceId } },
   });
 
   return ok(count);
@@ -177,7 +177,7 @@ export async function replyToMessageAction(
   });
 
   if (replyRecipientId !== session.id) {
-    await notify(replyRecipientId, session.workspaceId, "New reply", reply.subject, "/messages");
+    await notify(session.workspaceId, replyRecipientId, "New reply", reply.subject, "/messages");
   }
 
   revalidatePath("/messages");
@@ -199,4 +199,14 @@ export async function getUsersAction(): Promise<ActionResult<{ id: string; name:
   });
 
   return ok(users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role?.name })));
+}
+
+export async function getMyIdAction(): Promise<ActionResult<string>> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Authentication required");
+  }
+  return ok(session.id);
 }
