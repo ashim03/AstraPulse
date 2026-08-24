@@ -223,8 +223,13 @@ export default async function ReportPage({ params, searchParams }: { params: { t
           {Object.keys(totals).length > 0 && (
             <tfoot>
               <tr className="bg-slate-50">
-                <td colSpan={Math.max(1, columns.length - 1)} className="px-4 py-2 text-right font-semibold text-slate-800">{Object.keys(totals).join(" / ")}</td>
-                <td className="px-4 py-2 text-right font-bold text-slate-900 dark:text-slate-100">{money(Object.values(totals)[0] as number)}</td>
+                <td colSpan={Math.max(1, columns.length - Object.keys(totals).length)} className="px-4 py-2 text-right font-semibold text-slate-800" />
+                {Object.entries(totals).map(([label, value]) => (
+                  <td key={label} className="px-4 py-2 text-right">
+                    <span className="text-xs text-slate-500">{label}: </span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{money(value as number)}</span>
+                  </td>
+                ))}
               </tr>
             </tfoot>
           )}

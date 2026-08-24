@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { SmartTable, type SmartColumn, type SmartRow } from "@/components/app/smart-table";
-import { Tabs } from "@/components/ui/tabs";
 import { AuthAuditClient } from "./auth-audit-client";
 
 export const dynamic = "force-dynamic";

@@ -162,7 +162,7 @@ export function PreviewClient({
     try {
       const result = await generatePayrollPreviewAction(initialStart, initialEnd);
       if (result.ok) {
-        setPreviewData(result.data);
+        setPreviewData(result.data ?? []);
       } else {
         toast({ title: result.error || "Failed to load preview", type: "error" });
       }

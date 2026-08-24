@@ -7,10 +7,10 @@ const STATIC_ASSETS = [
   "/login",
   "/dashboard",
   "/attendance",
-  "/staff",
   "/employee",
   "/messages",
   "/manifest.json",
+  "/icons/icon.svg",
 ];
 
 // Install — cache static assets
@@ -93,8 +93,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-72x72.png",
+      icon: "/icons/icon.svg",
+      badge: "/icons/icon.svg",
       tag: data.tag || "astrapulse-notification",
       data: data.url || "/",
       actions: [
