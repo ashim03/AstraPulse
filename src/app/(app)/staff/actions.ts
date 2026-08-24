@@ -61,7 +61,7 @@ export async function createStaffAction(
   const employeeId = await generateEmployeeId(session.workspaceId);
   const email = data.email || `${employeeId.toLowerCase()}@astrapulse.local`;
 
-  const defaultPassword = data.password || "Aicnepal@001";
+  const defaultPassword = data.password || "Change@123";
   const hashedPassword = await hashPassword(defaultPassword);
 
   const role = await prisma.role.findFirst({
