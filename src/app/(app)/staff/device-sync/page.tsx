@@ -227,7 +227,7 @@ export default function DeviceSyncPage() {
       </div>
 
       {/* Sync Stats */}
-      <div className="mb-4 grid grid-cols-3 gap-3">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
           title="Synced"
           value={syncedCount}
@@ -293,8 +293,8 @@ export default function DeviceSyncPage() {
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="pb-2 text-left font-medium text-slate-500">Employee</th>
-                    <th className="pb-2 text-left font-medium text-slate-500">Employee ID</th>
-                    <th className="pb-2 text-left font-medium text-slate-500">Device ID</th>
+                    <th className="hidden pb-2 text-left font-medium text-slate-500 sm:table-cell">Employee ID</th>
+                    <th className="hidden pb-2 text-left font-medium text-slate-500 md:table-cell">Device ID</th>
                     <th className="pb-2 text-left font-medium text-slate-500">Sync Status</th>
                     <th className="pb-2 text-right font-medium text-slate-500">Action</th>
                   </tr>
@@ -312,8 +312,8 @@ export default function DeviceSyncPage() {
                           <p className="font-medium text-slate-700 dark:text-slate-300">{emp.name}</p>
                           <p className="text-xs text-slate-400">{emp.status}</p>
                         </td>
-                        <td className="py-2.5 pr-4 font-mono text-xs text-slate-600">{emp.employeeId}</td>
-                        <td className="py-2.5 pr-4 font-mono text-xs text-slate-600">{emp.deviceEmployeeId ?? "—"}</td>
+                        <td className="hidden py-2.5 pr-4 font-mono text-xs text-slate-600 sm:table-cell">{emp.employeeId}</td>
+                        <td className="hidden py-2.5 pr-4 font-mono text-xs text-slate-600 md:table-cell">{emp.deviceEmployeeId ?? "—"}</td>
                         <td className="py-2.5 pr-4">
                           {syncStatus === "synced" && (
                             <Badge tone="green" dot>Synced</Badge>

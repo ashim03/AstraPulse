@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -319,9 +319,8 @@ export function PreviewClient({
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
                   {filteredData.map((row) => (
-                    <>
+                    <Fragment key={row.employeeId}>
                       <tr
-                        key={row.employeeId}
                         className="cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
                         onClick={() => toggleRow(row.employeeId)}
                       >
@@ -445,7 +444,7 @@ export function PreviewClient({
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
                 <tfoot>

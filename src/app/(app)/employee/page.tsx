@@ -285,13 +285,21 @@ export default async function EmployeePortalPage() {
         </Card>
       </div>
 
-      {/* Change Password */}
-      <Card className="mt-6">
-        <CardHeader title="Account Security" subtitle="Change your login password" />
-        <CardBody>
-          <EmployeeChangePassword />
-        </CardBody>
-      </Card>
+      {/* Change Password & Profile Photo */}
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="Profile Photo" subtitle="Your display photo" />
+          <CardBody>
+            <EmployeeAvatarUpload currentAvatar={employee.avatar} name={employee.name} />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="Account Security" subtitle="Change your login password" />
+          <CardBody>
+            <EmployeeChangePassword />
+          </CardBody>
+        </Card>
+      </div>
     </>
   );
 }
