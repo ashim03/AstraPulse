@@ -18,11 +18,13 @@ export function LeaveManager({
   types,
   employees,
   canApprove,
+  myEmployeeId,
 }: {
   rows: SmartRow[];
   types: LeaveTypeOption[];
   employees: EmployeeOption[];
   canApprove: boolean;
+  myEmployeeId: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -116,12 +118,16 @@ export function LeaveManager({
 
       <Modal open={open} onClose={() => setOpen(false)} title="New Leave Request" description="Submit a leave request" size="lg">
         <form action={submit} className="space-y-4">
-          <Select label="Employee" name="employeeId" required defaultValue="" error={errors.employeeId}>
-            <option value="">Select employee...</option>
-            {employees.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
-            ))}
-          </Select>
+          {!canApprove && myEmployeeId ? (
+            <input type="hidden" name="employeeId" value={myEmployeeId} />
+          ) : (
+            <Select label="Employee" name="employeeId" required defaultValue="" error={errors.employeeId}>
+              <option value="">Select employee...</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>{e.name}</option>
+              ))}
+            </Select>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Select label="Leave type" name="typeId" required defaultValue="" error={errors.typeId}>
               <option value="">Select type...</option>

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { LeaveManager } from "./leave-manager";
+import { LeaveTypeManager } from "./leave-type-manager";
 import { CalendarCheck, Hourglass, CalendarX, UserCheck } from "lucide-react";
 import type { SmartRow } from "@/components/app/smart-table";
 
@@ -30,6 +31,7 @@ export default async function LeavePage() {
   ]);
 
   const canApprove = hasPermission(session, "leave", "approve");
+  const canManage = hasPermission(session, "leave", "manage");
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const approvedDays = requests.filter((r) => r.status === "approved" && r.startDate.getFullYear() === year).reduce((a, b) => a + b.days, 0);
@@ -81,7 +83,24 @@ export default async function LeavePage() {
         types={types.map((t) => ({ id: t.id, name: t.name, daysPerYear: t.daysPerYear }))}
         employees={employees.map((e) => ({ id: e.id, name: e.name }))}
         canApprove={canApprove}
+        myEmployeeId={user?.employeeId ?? null}
       />
+
+      {canManage && (
+        <Card className="mt-6">
+          <CardBody>
+            <LeaveTypeManager
+              types={types.map((t) => ({
+                id: t.id,
+                name: t.name,
+                daysPerYear: t.daysPerYear,
+                carryForward: t.carryForward,
+                color: t.color,
+              }))}
+            />
+          </CardBody>
+        </Card>
+      )}
     </>
   );
 }

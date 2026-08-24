@@ -178,6 +178,49 @@ export async function createLeaveTypeAction(formData: FormData): Promise<ActionR
   return ok(undefined, "Leave type created");
 }
 
+export async function updateLeaveTypeAction(id: string, formData: FormData): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("leave", "manage");
+  } catch {
+    return fail("You don't have permission");
+  }
+  const name = String(formData.get("name") ?? "").trim();
+  const daysPerYear = Number(formData.get("daysPerYear") ?? 0);
+  if (!name) return fail("Leave type name is required", { name: "Required" });
+  const existing = await prisma.leaveType.findFirst({ where: { workspaceId: session.workspaceId, name, NOT: { id } } });
+  if (existing) return fail("Leave type name already exists", { name: "Already exists" });
+  await prisma.leaveType.update({
+    where: { id },
+    data: {
+      name,
+      daysPerYear,
+      carryForward: formData.get("carryForward") === "on",
+      color: String(formData.get("color") ?? "#6366f1"),
+    },
+  });
+  await writeAudit({ session, action: "edit", module: "leave", recordId: id, description: `Updated leave type ${name}` });
+  revalidatePath("/leave");
+  return ok(undefined, "Leave type updated");
+}
+
+export async function deleteLeaveTypeAction(id: string): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("leave", "manage");
+  } catch {
+    return fail("You don't have permission");
+  }
+  const type = await prisma.leaveType.findFirst({ where: { id, workspaceId: session.workspaceId } });
+  if (!type) return fail("Leave type not found");
+  const hasRequests = await prisma.leaveRequest.findFirst({ where: { typeId: id } });
+  if (hasRequests) return fail("Cannot delete leave type with existing requests");
+  await prisma.leaveType.delete({ where: { id } });
+  await writeAudit({ session, action: "delete", module: "leave", recordId: id, description: `Deleted leave type ${type.name}` });
+  revalidatePath("/leave");
+  return ok(undefined, "Leave type deleted");
+}
+
 function toErrors(err: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};
   for (const issue of err.issues) out[issue.path[0]] = issue.message;

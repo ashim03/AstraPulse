@@ -7,7 +7,7 @@ const SECRET = new TextEncoder().encode(
 );
 const SESSION_COOKIE = "astrapulse_session";
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/_next", "/favicon", "/api", "/manifest.json", "/sw.js", "/icons"];
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/_next", "/favicon", "/api", "/manifest.json", "/sw.js", "/icons", "/api/keep-alive"];
 
 const ROLE_DEFAULTS: Record<string, string[]> = {
   "Workspace Admin": ["dashboard:view","analytics:view","staff:*","departments:*","attendance:*","leave:*","holidays:*","tasks:*","work-records:*","advances:*","payroll:*","expenses:*","income:*","accounting:*","invoices:*","payments:*","reports:*","announcements:*","mail:*","audit-logs:*","settings:*","subscription:*","users:*","roles:*"],
