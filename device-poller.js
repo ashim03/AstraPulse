@@ -14,7 +14,7 @@ const http = require('http');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const DEVICE_IP = '192.168.1.64';
+const DEVICE_IP = '192.168.1.69';
 const DEVICE_PORT = 80;
 const DEVICE_USER = 'admin';
 const DEVICE_PASS = 'Aicnepal@0012!';
@@ -178,29 +178,42 @@ async function syncDevice() {
 
   console.log(`[${now.toISOString()}] Syncing attendance from ${fmtTime(startTime)} to ${fmtTime(now)}`);
 
-  const body = JSON.stringify({
-    AcsEventCond: {
-      searchID: `poll-${Date.now()}`,
-      searchResultPosition: 0,
-      maxResults: 150,
-      major: 5,
-      minor: 0,
-      startTime: fmtTime(startTime),
-      endTime: fmtTime(now),
-    },
-  });
+  // Fetch ALL events with pagination
+  let allEvents = [];
+  let position = 0;
+  const maxResults = 50;
+  let hasMore = true;
 
-  const r = await digestRequest('POST', '/ISAPI/AccessControl/AcsEvent?format=json', body);
-  if (r.status !== 200) {
-    throw new Error(`Device returned status ${r.status}: ${r.body.substring(0, 200)}`);
+  while (hasMore) {
+    const body = JSON.stringify({
+      AcsEventCond: {
+        searchID: `poll-${Date.now()}`,
+        searchResultPosition: position,
+        maxResults,
+        major: 5,
+        minor: 0,
+        startTime: fmtTime(startTime),
+        endTime: fmtTime(now),
+      },
+    });
+
+    const r = await digestRequest('POST', '/ISAPI/AccessControl/AcsEvent?format=json', body);
+    if (r.status !== 200) {
+      throw new Error(`Device returned status ${r.status}: ${r.body.substring(0, 200)}`);
+    }
+
+    const data = JSON.parse(r.body);
+    const events = data?.AcsEvent?.InfoList ?? [];
+    const totalMatches = data?.AcsEvent?.totalMatches ?? 0;
+    allEvents = allEvents.concat(events);
+    position += events.length;
+    hasMore = events.length > 0 && position < totalMatches;
+    console.log(`  Fetched page: ${events.length} events (position ${position}/${totalMatches})`);
   }
 
-  const data = JSON.parse(r.body);
-  const events = data?.AcsEvent?.InfoList ?? [];
-  const totalMatches = data?.AcsEvent?.totalMatches ?? 0;
-  console.log(`  Found ${events.length} events (total matches: ${totalMatches})`);
+  console.log(`  Total events: ${allEvents.length}`);
 
-  if (events.length === 0) return { created: 0, updated: 0, skipped: 0 };
+  if (allEvents.length === 0) return { created: 0, updated: 0, skipped: 0 };
 
   const allEmployees = await prisma.employee.findMany({
     where: { workspaceId: WORKSPACE_ID, status: 'active' },
@@ -214,7 +227,7 @@ async function syncDevice() {
 
   // Group by employee + Nepal date
   const grouped = {};
-  for (const evt of events) {
+  for (const evt of allEvents) {
     const empNo = evt.employeeNoString ?? evt.employeeNo ?? '';
     if (!empNo) {
       console.log(`  Skipping event with empty employee ID at time ${evt.time}`);
@@ -329,7 +342,7 @@ async function syncDevice() {
       deviceId: device.id,
       type: 'sync',
       status: 'success',
-      message: `Polled ${events.length} events, created: ${created}, updated: ${updated}, skipped: ${skipped}`,
+      message: `Polled ${allEvents.length} events, created: ${created}, updated: ${updated}, skipped: ${skipped}`,
       recordsSynced: created + updated,
       duration: null,
     },
