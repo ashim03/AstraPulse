@@ -43,14 +43,16 @@ export function FormActions({
   return (
     <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
       {children}
-      {onCancel && (
+      {!children && onCancel && (
         <button type="button" onClick={onCancel} className="btn-secondary">
           {cancelLabel}
         </button>
       )}
-      <button type="submit" disabled={loading} className="btn-primary">
-        {loading ? "Saving..." : submitLabel}
-      </button>
+      {!children && (
+        <button type="submit" disabled={loading} className="btn-primary">
+          {loading ? "Saving..." : submitLabel}
+        </button>
+      )}
     </div>
   );
 }
