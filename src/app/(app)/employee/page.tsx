@@ -173,7 +173,7 @@ export default async function EmployeePortalPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-400">No attendance recorded today. Use Clock In to start your day.</p>
+            <p className="text-sm text-slate-400">No attendance recorded today. Use the attendance machine to clock in.</p>
           )}
         </CardBody>
       </Card>
