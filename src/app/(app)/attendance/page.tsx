@@ -5,15 +5,22 @@ import { prisma } from "@/lib/prisma";
 import { attendanceStatsForDay } from "@/services/attendance";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { SmartTable, type SmartColumn, type SmartRow } from "@/components/app/smart-table";
 import { AttendanceDayPicker } from "./attendance-day-picker";
 import { ClockButtons } from "./clock-buttons";
-import { LogIn, LogOut } from "lucide-react";
 import { AttendanceStats } from "./attendance-stats";
 import { getDataScope, hasPermission } from "@/lib/permissions";
+import { formatTimeNepal } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+const NPL_OFFSET_MS = 5.75 * 60 * 60 * 1000;
+
+function getNepalDay(date: Date): Date {
+  const npl = new Date(date.getTime() + NPL_OFFSET_MS);
+  npl.setHours(0, 0, 0, 0);
+  return new Date(npl.getTime() - NPL_OFFSET_MS);
+}
 
 export default async function AttendancePage({
   searchParams,
@@ -26,7 +33,8 @@ export default async function AttendancePage({
   }
 
   const scope = getDataScope(session);
-  const selected = searchParams.date ? new Date(searchParams.date) : new Date();
+  const now = new Date();
+  const selected = searchParams.date ? getNepalDay(new Date(searchParams.date)) : getNepalDay(now);
   const dayKey = format(selected, "yyyy-MM-dd");
 
   const employeeWhere: Record<string, unknown> = { workspaceId: session.workspaceId };
@@ -67,9 +75,9 @@ export default async function AttendancePage({
       id: e.id,
       name: e.name,
       department: (e as any).department?.name ?? "—",
-      clockIn: record?.clockIn ? format(record.clockIn, "h:mm a") : "—",
-      clockOut: record?.clockOut ? format(record.clockOut, "h:mm a") : "—",
-      hours: record?.hours?.toFixed(2) ?? "0.00",
+      clockIn: formatTimeNepal(record?.clockIn),
+      clockOut: formatTimeNepal(record?.clockOut),
+      hours: (record?.hours ?? 0).toFixed(2),
       status: record?.status ?? "absent",
       source: record?.source ?? "system",
       note: record?.note ?? "—",
@@ -90,7 +98,7 @@ export default async function AttendancePage({
     <>
       <PageHeader
         title="Attendance"
-        subtitle={`Records for ${format(selected, "EEEE, MMMM d, yyyy")}`}
+        subtitle={`Records for ${format(selected, "EEEE, MMMM d, yyyy")} (Nepal Time)`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ClockButtons

@@ -132,6 +132,28 @@ export function formatDateTimeNepal(date: Date | string | null | undefined): str
   }).format(d).replace(",", "");
 }
 
+export function formatTimeNepal(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kathmandu",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+}
+
+export function formatDateNepal(date: Date | string | null | undefined, pattern = "MMM d, yyyy"): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kathmandu",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
 export function downloadCSV(filename: string, rows: (string | number)[][]) {
   const escape = (cell: string | number) => {
     const s = String(cell ?? "");

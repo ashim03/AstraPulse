@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, differenceInMinutes } from "date-fns";
-import { parseDateSafe } from "@/lib/utils";
+import { parseDateSafe, formatTimeNepal } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Clock, LogIn, LogOut, Coffee, TrendingUp, AlertTriangle, CheckCircle2, XCircle, Moon } from "lucide-react";
 import { Select } from "@/components/ui/input";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -228,14 +228,14 @@ export function EmployeeAttendanceClient({
                   <p className="text-xs font-medium text-slate-500">Clock In</p>
                   <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     <LogIn className="h-3.5 w-3.5 text-emerald-500" />
-                    {todayRecord?.clockIn ? format(parseDateSafe(todayRecord.clockIn) ?? new Date(), "h:mm a") : "—"}
+                    {todayRecord?.clockIn ? formatTimeNepal(todayRecord.clockIn) : "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500">Clock Out</p>
                   <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     <LogOut className="h-3.5 w-3.5 text-red-500" />
-                    {todayRecord?.clockOut ? format(parseDateSafe(todayRecord.clockOut) ?? new Date(), "h:mm a") : "—"}
+                    {todayRecord?.clockOut ? formatTimeNepal(todayRecord.clockOut) : "—"}
                   </p>
                 </div>
                 <div>
@@ -410,9 +410,9 @@ export function EmployeeAttendanceClient({
                           </p>
                           <p className="text-xs text-slate-400">
                             {record.clockIn
-                              ? `${format(parseDateSafe(record.clockIn) ?? new Date(), "h:mm a")}`
+                              ? formatTimeNepal(record.clockIn)
                               : "—"}
-                            {record.clockOut ? ` — ${format(parseDateSafe(record.clockOut) ?? new Date(), "h:mm a")}` : ""}
+                            {record.clockOut ? ` — ${formatTimeNepal(record.clockOut)}` : ""}
                           </p>
                         </div>
                         <div className="text-right">

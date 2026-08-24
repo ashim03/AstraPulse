@@ -9,8 +9,29 @@ import {
   type HikvisionDeviceConfig,
   type HikvisionAttendanceEvent,
 } from "@/services/hikvision";
-import { getAttendanceSettings, isLateArrival, calculateOvertime, isWorkingDay } from "@/services/attendance-settings";
-import { format, parseISO, startOfDay, endOfDay, subDays, differenceInMinutes } from "date-fns";
+import { getAttendanceSettings, calculateOvertime, isWorkingDay } from "@/services/attendance-settings";
+import { parseISO, endOfDay, subDays, differenceInMinutes } from "date-fns";
+
+// ─── Nepal Time Helpers (UTC+5:45) ──────────────────────────────────────────
+const NPL_OFFSET_MS = 5.75 * 60 * 60 * 1000;
+
+function toNepalTime(utcDate: Date): Date {
+  return new Date(utcDate.getTime() + NPL_OFFSET_MS);
+}
+
+function nepalHours(d: Date): number { return toNepalTime(d).getUTCHours(); }
+function nepalMinutes(d: Date): number { return toNepalTime(d).getUTCMinutes(); }
+
+function nepalDateStr(utcDate: Date): string {
+  const n = toNepalTime(utcDate);
+  return `${n.getUTCFullYear()}-${String(n.getUTCMonth() + 1).padStart(2, "0")}-${String(n.getUTCDate()).padStart(2, "0")}`;
+}
+
+function startOfDayNepal(utcDate: Date): Date {
+  const n = toNepalTime(utcDate);
+  n.setUTCHours(0, 0, 0, 0);
+  return new Date(n.getTime() - NPL_OFFSET_MS);
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -241,10 +262,12 @@ export async function syncDevice(deviceId: string): Promise<{
   let unmapped = 0;
   let failed = 0;
 
-  // Group events by employee + date to pair clock-in/clock-out
+  // Group events by employee + Nepal date to pair clock-in/clock-out
   const eventsByEmployeeDate = new Map<string, HikvisionAttendanceEvent[]>();
   for (const evt of result.events) {
-    const dateStr = evt.time.split("T")[0];
+    if (!evt.employeeNo) { unmapped++; continue; }
+    const evtTime = parseISO(evt.time);
+    const dateStr = nepalDateStr(evtTime);
     const key = `${evt.employeeNo}:${dateStr}`;
     if (!eventsByEmployeeDate.has(key)) {
       eventsByEmployeeDate.set(key, []);
@@ -262,11 +285,13 @@ export async function syncDevice(deviceId: string): Promise<{
       continue;
     }
 
-    const date = parseISO(dateStr);
+    // Parse date using Nepal date string for grouping
+    const [y, mo, d] = dateStr.split("-").map(Number);
+    const dateUtc = new Date(Date.UTC(y, mo - 1, d, 0, 0, 0));
 
     // Check if already exists
     const existing = await prisma.attendance.findFirst({
-      where: { employeeId: employee.id, date: startOfDay(date) },
+      where: { employeeId: employee.id, date: dateUtc },
     });
 
     if (existing) {
@@ -277,61 +302,30 @@ export async function syncDevice(deviceId: string): Promise<{
     // Sort events by time
     events.sort((a, b) => a.time.localeCompare(b.time));
 
-    // Determine clock-in, clock-out, breaks from events
-    let clockIn: Date | null = null;
-    let clockOut: Date | null = null;
-    const breaks: { breakOut: Date; breakIn?: Date }[] = [];
-    let overtimeIn: Date | null = null;
-    let overtimeOut: Date | null = null;
+    // Parse all event times
+    const parsedEvents = events.map(evt => ({ ...evt, parsedTime: parseISO(evt.time) }));
 
-    for (const evt of events) {
-      const evtTime = parseISO(evt.time);
-      switch (evt.attendanceStatus) {
-        case "checkIn":
-          if (!clockIn || evtTime < clockIn) clockIn = evtTime;
-          break;
-        case "checkOut":
-          if (!clockOut || evtTime > clockOut) clockOut = evtTime;
-          break;
-        case "breakOut":
-          breaks.push({ breakOut: evtTime });
-          break;
-        case "breakIn":
-          if (breaks.length > 0 && !breaks[breaks.length - 1].breakIn) {
-            breaks[breaks.length - 1].breakIn = evtTime;
-          }
-          break;
-        case "overtimeIn":
-          overtimeIn = evtTime;
-          break;
-        case "overtimeOut":
-          overtimeOut = evtTime;
-          break;
-      }
-    }
+    // First event = clockIn, last event = clockOut (device doesn't distinguish)
+    const clockIn = parsedEvents[0].parsedTime;
+    const clockOut = parsedEvents.length > 1 ? parsedEvents[parsedEvents.length - 1].parsedTime : null;
 
-    // If no explicit clock-in/out, use first/last event
-    if (!clockIn && events.length > 0) clockIn = parseISO(events[0].time);
-    if (!clockOut && events.length > 1) clockOut = parseISO(events[events.length - 1].time);
-
-    // Calculate working metrics
-    const officeStart = settings.officeStartTime; // "10:00"
-    const officeEnd = settings.officeEndTime; // "18:00"
+    // Calculate metrics using Nepal time
+    const [oh, om] = settings.officeStartTime.split(":").map(Number);
+    const [oeh, oem] = settings.officeEndTime.split(":").map(Number);
+    const officeStartMinutes = oh * 60 + om;
+    const officeEndMinutes = oeh * 60 + oem;
 
     let lateMinutes = 0;
     let earlyMinutes = 0;
     let hours = 0;
     let overtime = 0;
-    let breakMinutes = 0;
     let isHalfDay = false;
     let status = "present";
 
     if (clockIn) {
-      // Late calculation
-      const lateResult = isLateArrival(settings, clockIn);
-      lateMinutes = lateResult.lateMinutes;
+      const clockInNplMin = nepalHours(clockIn) * 60 + nepalMinutes(clockIn);
+      lateMinutes = Math.max(0, clockInNplMin - officeStartMinutes - settings.graceMinutes);
 
-      // Half-day check
       if (settings.absentIfLateByMinutes > 0 && lateMinutes >= settings.absentIfLateByMinutes) {
         status = "absent";
       } else if (settings.halfDayAfterMinutes > 0 && lateMinutes >= settings.halfDayAfterMinutes) {
@@ -346,39 +340,26 @@ export async function syncDevice(deviceId: string): Promise<{
 
     // Working hours
     if (clockIn && clockOut) {
-      hours = Math.max(0.1, (clockOut.getTime() - clockIn.getTime()) / 3600000);
-    }
-
-    // Break duration
-    for (const brk of breaks) {
-      if (brk.breakIn) {
-        breakMinutes += differenceInMinutes(brk.breakIn, brk.breakOut);
-      }
-    }
-
-    // Check working day
-    const isWeekend = !isWorkingDay(settings, date);
-    const isHoliday = false; // TODO: check against Holiday model
-
-    // Overtime calculation
-    const [startH, startM] = officeStart.split(":").map(Number);
-    const [endH, endM] = officeEnd.split(":").map(Number);
-    const officeMinutes = (endH * 60 + endM) - (startH * 60 + startM);
-    const workedMinutes = Math.round(hours * 60);
-
-    if (settings.overtimeEnabled) {
-      const otResult = calculateOvertime(workedMinutes, officeMinutes, settings, isWeekend, isHoliday);
-      overtime = otResult.overtimeMinutes / 60; // Convert to hours
+      hours = Math.max(0, (clockOut.getTime() - clockIn.getTime()) / 3600000);
     }
 
     // Early departure
     if (clockOut) {
-      const [oEndH, oEndM] = officeEnd.split(":").map(Number);
-      const officeEndMinutes = oEndH * 60 + oEndM;
-      const clockOutMinutes = clockOut.getHours() * 60 + clockOut.getMinutes();
-      if (clockOutMinutes < officeEndMinutes) {
-        earlyMinutes = officeEndMinutes - clockOutMinutes;
+      const clockOutNplMin = nepalHours(clockOut) * 60 + nepalMinutes(clockOut);
+      if (clockOutNplMin < officeEndMinutes) {
+        earlyMinutes = officeEndMinutes - clockOutNplMin;
       }
+    }
+
+    // Overtime calculation
+    const officeMinutes = officeEndMinutes - officeStartMinutes;
+    const workedMinutes = Math.round(hours * 60);
+    const isWeekend = !isWorkingDay(settings, dateUtc);
+    const isHoliday = false;
+
+    if (settings.overtimeEnabled) {
+      const otResult = calculateOvertime(workedMinutes, officeMinutes, settings, isWeekend, isHoliday);
+      overtime = otResult.overtimeMinutes / 60;
     }
 
     try {
@@ -386,13 +367,13 @@ export async function syncDevice(deviceId: string): Promise<{
         data: {
           workspaceId: device.workspaceId,
           employeeId: employee.id,
-          date: startOfDay(date),
-          clockIn: clockIn ?? undefined,
-          clockOut: clockOut ?? undefined,
+          date: dateUtc,
+          clockIn,
+          clockOut,
           status,
           hours: Math.round(hours * 100) / 100,
           overtime: Math.round(overtime * 100) / 100,
-          breakMinutes,
+          breakMinutes: 0,
           lateMinutes,
           earlyMinutes,
           isHalfDay,
@@ -403,24 +384,6 @@ export async function syncDevice(deviceId: string): Promise<{
           deviceRecordId: `HIK-${deviceUserId}-${dateStr}-${events.length}`,
         },
       });
-
-      // Create break records
-      for (const brk of breaks) {
-        if (brk.breakIn) {
-          await prisma.break.create({
-            data: {
-              workspaceId: device.workspaceId,
-              attendanceId: "", // Will be set after attendance creation
-              employeeId: employee.id,
-              breakOut: brk.breakOut,
-              breakIn: brk.breakIn,
-              duration: differenceInMinutes(brk.breakIn, brk.breakOut),
-              status: "completed",
-              isPaid: settings.breakIsPaid,
-            },
-          });
-        }
-      }
 
       newRecords++;
     } catch (e) {

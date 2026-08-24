@@ -10,7 +10,7 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { StatCard } from "@/components/ui/stat-card";
 import { Tabs } from "@/components/ui/tabs";
 import { getAttendanceReportAction } from "../actions";
-import { money, downloadCSV } from "@/lib/utils";
+import { money, downloadCSV, formatTimeNepal } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 type Employee = {
@@ -102,8 +102,8 @@ export function AttendanceReportsClient({
       r.employee.employeeId,
       r.employee.department?.name || "",
       format(new Date(r.date), "yyyy-MM-dd"),
-      r.clockIn ? format(new Date(r.clockIn), "h:mm a") : "",
-      r.clockOut ? format(new Date(r.clockOut), "h:mm a") : "",
+      r.clockIn ? formatTimeNepal(r.clockIn) : "",
+      r.clockOut ? formatTimeNepal(r.clockOut) : "",
       (r.hours ?? 0).toFixed(2),
       r.status,
       r.lateMinutes,
@@ -278,10 +278,10 @@ export function AttendanceReportsClient({
                             {format(new Date(record.date), "MMM d, yyyy")}
                           </td>
                           <td className="px-4 py-3 tabular-nums text-slate-600">
-                            {record.clockIn ? format(new Date(record.clockIn), "h:mm a") : "—"}
+                            {record.clockIn ? formatTimeNepal(record.clockIn) : "—"}
                           </td>
                           <td className="px-4 py-3 tabular-nums text-slate-600">
-                            {record.clockOut ? format(new Date(record.clockOut), "h:mm a") : "—"}
+                            {record.clockOut ? formatTimeNepal(record.clockOut) : "—"}
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
                             {(record.hours ?? 0).toFixed(1)}h
