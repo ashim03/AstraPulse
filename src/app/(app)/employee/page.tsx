@@ -7,6 +7,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/badge";
 import { formatDate, formatTimeNepal } from "@/lib/utils";
 import { EmployeeQuickActions } from "./quick-actions";
+import { EmployeeChangePassword } from "./change-password";
 import {
   Timer,
   TrendingUp,
@@ -282,6 +283,14 @@ export default async function EmployeePortalPage() {
           </CardBody>
         </Card>
       </div>
+
+      {/* Change Password */}
+      <Card className="mt-6">
+        <CardHeader title="Account Security" subtitle="Change your login password" />
+        <CardBody>
+          <EmployeeChangePassword />
+        </CardBody>
+      </Card>
     </>
   );
 }
