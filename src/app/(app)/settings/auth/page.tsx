@@ -28,13 +28,6 @@ export default async function AuthSettingsPage() {
 
   const serializedAuthSettings = {
     id: authSettings.id,
-    emailVerificationRequired: authSettings.emailVerificationRequired,
-    loginOtpEnabled: authSettings.loginOtpEnabled,
-    otpExpirationMinutes: authSettings.otpExpirationMinutes,
-    otpLength: authSettings.otpLength,
-    maxOtpAttempts: authSettings.maxOtpAttempts,
-    otpResendCooldownSeconds: authSettings.otpResendCooldownSeconds,
-    maxOtpResends: authSettings.maxOtpResends,
     passwordMinLength: authSettings.passwordMinLength,
     passwordRequireUppercase: authSettings.passwordRequireUppercase,
     passwordRequireLowercase: authSettings.passwordRequireLowercase,

@@ -2,50 +2,17 @@
 
 import { prisma } from "@/lib/prisma";
 import { fail, ok, type ActionResult } from "@/lib/actions";
-import { createOtp, verifyOtp, sendOtpForType } from "@/services/otp";
-import { hashPassword, validatePassword, createPasswordResetToken, invalidatePasswordResets } from "@/services/password";
+import { hashPassword, validatePassword } from "@/services/password";
 import { logAuthEvent } from "@/services/auth-audit";
 import { sendPasswordChangeConfirmation } from "@/services/brevo";
+import crypto from "crypto";
 
-export async function forgotPasswordSendOtpAction(
-  email: string
-): Promise<ActionResult<{ waitSeconds?: number }>> {
-  const user = await prisma.user.findFirst({
-    where: { email: email.toLowerCase().trim() },
-    select: { id: true, workspaceId: true, name: true },
-  });
-
-  if (!user) {
-    return ok(undefined, "If an account exists with this email, we have sent a verification code.");
-  }
-
-  const result = await sendOtpForType(
-    user.workspaceId,
-    email,
-    user.name,
-    "password_reset",
-    user.id
-  );
-
-  if (!result.success) {
-    return fail(result.error ?? "Failed to send code", { waitSeconds: String(result.cooldown ?? 60) });
-  }
-
-  await logAuthEvent({
-    workspaceId: user.workspaceId,
-    userId: user.id,
-    email,
-    action: "forgot_password",
-    success: true,
-    metadata: { type: "send_otp" },
-  });
-
-  return ok(undefined, "If an account exists with this email, we have sent a verification code.");
+function generateResetToken(): string {
+  return crypto.randomBytes(32).toString("hex");
 }
 
-export async function verifyForgotPasswordOtpAction(
-  email: string,
-  code: string
+export async function forgotPasswordSendTokenAction(
+  email: string
 ): Promise<ActionResult> {
   const user = await prisma.user.findFirst({
     where: { email: email.toLowerCase().trim() },
@@ -53,22 +20,16 @@ export async function verifyForgotPasswordOtpAction(
   });
 
   if (!user) {
-    return fail("Invalid or expired code");
+    return ok(undefined, "If an account exists with this email, a password reset code has been sent.");
   }
 
-  const result = await verifyOtp(user.workspaceId, email, code, "password_reset");
+  const token = generateResetToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-  if (!result.valid) {
-    await logAuthEvent({
-      workspaceId: user.workspaceId,
-      userId: user.id,
-      email,
-      action: "forgot_password",
-      success: false,
-      metadata: { reason: "invalid_otp" },
-    });
-    return fail(result.error ?? "Invalid code");
-  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { twoFactorSecret: token, lastPasswordChange: expiresAt },
+  });
 
   await logAuthEvent({
     workspaceId: user.workspaceId,
@@ -76,37 +37,52 @@ export async function verifyForgotPasswordOtpAction(
     email,
     action: "forgot_password",
     success: true,
-    metadata: { type: "otp_verified" },
+    metadata: { type: "token_generated" },
   });
 
-  return ok(undefined, "Code verified");
+  return ok(undefined, "If an account exists with this email, a password reset code has been sent.");
 }
 
-export async function resetPasswordWithOtpAction(
-  email: string,
-  code: string,
+export async function verifyResetTokenAction(
+  token: string
+): Promise<ActionResult> {
+  if (!token || token.length < 10) {
+    return fail("Invalid reset code");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      twoFactorSecret: token,
+      lastPasswordChange: { gt: new Date() },
+    },
+    select: { id: true, workspaceId: true, email: true },
+  });
+
+  if (!user) {
+    return fail("Invalid or expired reset code");
+  }
+
+  return ok(undefined, "Code verified. You can now set a new password.");
+}
+
+export async function resetPasswordWithTokenAction(
+  token: string,
   newPassword: string
 ): Promise<ActionResult> {
+  if (!token || token.length < 10) {
+    return fail("Invalid reset code");
+  }
+
   const user = await prisma.user.findFirst({
-    where: { email: email.toLowerCase().trim() },
-    select: { id: true, workspaceId: true, name: true, passwordHash: true },
+    where: {
+      twoFactorSecret: token,
+      lastPasswordChange: { gt: new Date() },
+    },
+    select: { id: true, workspaceId: true, email: true, name: true, passwordHash: true },
   });
 
   if (!user) {
-    return fail("Invalid or expired code");
-  }
-
-  const verifyResult = await verifyOtp(user.workspaceId, email, code, "password_reset");
-  if (!verifyResult.valid) {
-    await logAuthEvent({
-      workspaceId: user.workspaceId,
-      userId: user.id,
-      email,
-      action: "reset_password",
-      success: false,
-      metadata: { reason: "invalid_otp" },
-    });
-    return fail(verifyResult.error ?? "Invalid code");
+    return fail("Invalid or expired reset code");
   }
 
   const settings = await prisma.authSettings.findUnique({ where: { workspaceId: user.workspaceId } });
@@ -126,21 +102,21 @@ export async function resetPasswordWithOtpAction(
     where: { id: user.id },
     data: {
       passwordHash: await hashPassword(newPassword),
-      lastPasswordChange: new Date(),
+      twoFactorSecret: null,
+      lastPasswordChange: null,
+      failedLoginAttempts: 0,
     },
   });
 
-  await invalidatePasswordResets(user.id);
-
-  await sendPasswordChangeConfirmation(user.workspaceId, email, user.name).catch(() => {});
+  await sendPasswordChangeConfirmation(user.workspaceId, user.email, user.name);
 
   await logAuthEvent({
     workspaceId: user.workspaceId,
     userId: user.id,
-    email,
+    email: user.email,
     action: "reset_password",
     success: true,
   });
 
-  return ok(undefined, "Password reset successful! You can now log in.");
+  return ok(undefined, "Password reset successful. You can now log in.");
 }

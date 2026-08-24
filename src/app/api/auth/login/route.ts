@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { parsePermissions } from "@/lib/permissions";
 import { isAccountLocked, recordFailedLogin, resetFailedLogins } from "@/services/password";
-import { getAuthSettings } from "@/services/otp";
 import { logAuthEvent } from "@/services/auth-audit";
 
 const SESSION_COOKIE = "astrapulse_session";
@@ -25,10 +24,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Invalid email or password" }, { status: 401 });
     }
 
-    if (user.status === "pending") {
-      return NextResponse.json({ ok: false, error: "Please verify your email before signing in" }, { status: 403 });
-    }
-
     const lockStatus = await isAccountLocked(user.id);
     if (lockStatus.locked) {
       await logAuthEvent({
@@ -43,11 +38,13 @@ export async function POST(request: Request) {
     }
 
     if (!(await verifyPassword(password, user.passwordHash))) {
-      const authSettings = await getAuthSettings(user.workspaceId);
+      const authSettings = await prisma.authSettings.findFirst({
+        where: { workspaceId: user.workspaceId },
+      });
       const lockResult = await recordFailedLogin(
         user.id,
-        authSettings.maxFailedLoginAttempts,
-        authSettings.lockoutDurationMinutes
+        authSettings?.maxFailedLoginAttempts ?? 5,
+        authSettings?.lockoutDurationMinutes ?? 15
       );
       await logAuthEvent({
         workspaceId: user.workspaceId,
@@ -75,15 +72,6 @@ export async function POST(request: Request) {
 
     const rolePermissions = parsePermissions(user.role?.permissions ?? "[]");
     const accountType = user.accountType ?? "organization";
-
-    const authSettings = await getAuthSettings(user.workspaceId);
-    if (authSettings.loginOtpEnabled) {
-      return NextResponse.json({
-        ok: true,
-        requiresOtp: true,
-        email: user.email,
-      });
-    }
 
     const token = await createSession({
       id: user.id,

@@ -190,13 +190,6 @@ export async function testEmailAction(email: string): Promise<ActionResult> {
 
 function sanitizeAuthData(data: Record<string, unknown>): Record<string, unknown> {
   const allowed = [
-    "emailVerificationRequired",
-    "loginOtpEnabled",
-    "otpExpirationMinutes",
-    "otpLength",
-    "maxOtpAttempts",
-    "otpResendCooldownSeconds",
-    "maxOtpResends",
     "passwordMinLength",
     "passwordRequireUppercase",
     "passwordRequireLowercase",

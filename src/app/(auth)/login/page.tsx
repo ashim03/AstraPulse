@@ -40,11 +40,6 @@ function LoginForm() {
         setFormError(data.error);
         return;
       }
-      if (data.requiresOtp) {
-        toast({ type: "info", title: "Verification code sent to your email" });
-        router.push(`/login-otp?email=${encodeURIComponent(data.email ?? email)}`);
-        return;
-      }
       const next = searchParams.get("next");
       window.location.href = next || data.redirect || "/";
     } catch {

@@ -1,34 +1,31 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import {
   Mail,
-  ShieldCheck,
   Lock,
   Eye,
   EyeOff,
   CheckCircle2,
   ArrowLeft,
   ArrowRight,
-  RefreshCw,
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { AuthCard, AuthLogo } from "../components/auth-card";
-import { OtpInput } from "../components/otp-input";
-import { Input, FormField, FieldError } from "@/components/ui/input";
+import { Input, FormField } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
-  forgotPasswordSendOtpAction,
-  verifyForgotPasswordOtpAction,
-  resetPasswordWithOtpAction,
+  forgotPasswordSendTokenAction,
+  verifyResetTokenAction,
+  resetPasswordWithTokenAction,
 } from "./actions";
 import { cn } from "@/lib/utils";
 
-const steps = ["Enter Email", "Verify Code", "New Password", "Done"];
+const steps = ["Enter Email", "Enter Code", "New Password", "Done"];
 
 function StepIndicator({ current }: { current: number }) {
   return (
@@ -39,19 +36,19 @@ function StepIndicator({ current }: { current: number }) {
             className={cn(
               "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors",
               i < current
-                ? "bg-brand-600 text-white"
+                ? "bg-emerald-500 text-white"
                 : i === current
-                ? "bg-brand-100 text-brand-700 ring-2 ring-brand-600 dark:bg-brand-900/30 dark:text-brand-400"
-                : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                ? "bg-indigo-600 text-white"
+                : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
             )}
           >
-            {i < current ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
+            {i < current ? "✓" : i + 1}
           </div>
           {i < steps.length - 1 && (
             <div
               className={cn(
-                "h-0.5 w-6 rounded",
-                i < current ? "bg-brand-600" : "bg-slate-200 dark:bg-slate-700"
+                "h-0.5 w-6",
+                i < current ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"
               )}
             />
           )}
@@ -62,292 +59,214 @@ function StepIndicator({ current }: { current: number }) {
 }
 
 function ForgotPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const tokenParam = searchParams.get("token");
   const { toast } = useToast();
 
-  const initialEmail = searchParams.get("email") ?? "";
-  const [step, setStep] = useState(initialEmail ? 1 : 0);
-  const [email, setEmail] = useState(initialEmail);
-  const [code, setCode] = useState("");
+  const [step, setStep] = useState(tokenParam ? 2 : 0);
+  const [email, setEmail] = useState("");
+  const [resetToken, setResetToken] = useState(tokenParam || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(60);
-  const [resending, setResending] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
-
-  const handleSendOtp = useCallback(async (e: React.FormEvent) => {
+  const handleSendCode = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    setLoading(true);
     setError("");
+    setLoading(true);
     try {
-      const res = await forgotPasswordSendOtpAction(email);
+      const res = await forgotPasswordSendTokenAction(email);
+      setLoading(false);
       if (res.ok) {
+        toast({ type: "success", title: "Reset code sent" });
         setStep(1);
-        setCountdown(60);
-        toast({ type: "success", title: res.message ?? "Code sent!" });
       } else {
         setError(res.error);
       }
     } catch {
-      setError("Something went wrong");
-    } finally {
       setLoading(false);
+      setError("Something went wrong. Please try again.");
     }
   }, [email, toast]);
 
-  const handleVerifyOtp = useCallback(async () => {
-    if (code.length !== 6) return;
-    setLoading(true);
+  const handleVerifyCode = useCallback(async () => {
     setError("");
+    setLoading(true);
     try {
-      const res = await verifyForgotPasswordOtpAction(email, code);
+      const res = await verifyResetTokenAction(resetToken);
+      setLoading(false);
       if (res.ok) {
+        toast({ type: "success", title: "Code verified" });
         setStep(2);
-        toast({ type: "success", title: "Code verified!" });
       } else {
         setError(res.error);
       }
     } catch {
-      setError("Something went wrong");
-    } finally {
       setLoading(false);
+      setError("Something went wrong. Please try again.");
     }
-  }, [email, code, toast]);
+  }, [resetToken, toast]);
 
   const handleResetPassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
     setLoading(true);
-    setError("");
     try {
-      const res = await resetPasswordWithOtpAction(email, code, newPassword);
+      const res = await resetPasswordWithTokenAction(resetToken, newPassword);
+      setLoading(false);
       if (res.ok) {
+        toast({ type: "success", title: "Password reset successful" });
         setStep(3);
-        toast({ type: "success", title: "Password reset!" });
       } else {
         setError(res.error);
       }
     } catch {
-      setError("Something went wrong");
-    } finally {
       setLoading(false);
+      setError("Something went wrong. Please try again.");
     }
-  }, [email, code, newPassword, confirmPassword, toast]);
-
-  const handleResend = useCallback(async () => {
-    if (countdown > 0) return;
-    setResending(true);
-    try {
-      const res = await forgotPasswordSendOtpAction(email);
-      if (res.ok) {
-        setCountdown(60);
-        setCode("");
-        setError("");
-        toast({ type: "success", title: "New code sent!" });
-      } else {
-        toast({ type: "error", title: res.error });
-      }
-    } catch {
-      toast({ type: "error", title: "Failed to resend" });
-    } finally {
-      setResending(false);
-    }
-  }, [email, countdown, toast]);
-
-  const passwordRequirements = [
-    { label: "Minimum 8 characters", met: newPassword.length >= 8 },
-    { label: "One uppercase letter", met: /[A-Z]/.test(newPassword) },
-    { label: "One lowercase letter", met: /[a-z]/.test(newPassword) },
-    { label: "One number", met: /[0-9]/.test(newPassword) },
-    { label: "One special character", met: /[^A-Za-z0-9]/.test(newPassword) },
-  ];
+  }, [resetToken, newPassword, confirmPassword, toast]);
 
   return (
     <AuthCard
-      title="Reset Your Password"
-      subtitle={step < 3 ? steps[step] : undefined}
+      title="Reset Password"
+      subtitle="We'll send you a code to reset your password"
       footer={
-        step < 3 ? (
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-1.5 font-medium text-brand-600 hover:underline"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to login
+        <>
+          Remember your password?{" "}
+          <Link href="/login" className="font-semibold text-brand-600 hover:underline">
+            Sign in
           </Link>
-        ) : undefined
+        </>
       }
     >
       <StepIndicator current={step} />
 
       {step === 0 && (
-        <form onSubmit={handleSendOtp} className="space-y-4">
-          <FormField label="Email address" error={error} required>
+        <form onSubmit={handleSendCode} className="space-y-4">
+          <FormField label="Email address" error={error && !email ? error : undefined}>
             <Input
               type="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(""); }}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              autoComplete="email"
               leftIcon={<Mail className="h-4 w-4" />}
+              required
             />
           </FormField>
-          <Button type="submit" className="w-full min-h-[44px]" loading={loading}>
-            Send Verification Code
+          {error && email && <p className="text-sm text-red-500">{error}</p>}
+          <Button type="submit" className="w-full" loading={loading}>
+            Send Reset Code
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </form>
       )}
 
       {step === 1 && (
         <div className="space-y-4">
-          <OtpInput value={code} onChange={(v) => { setCode(v); setError(""); }} error={error} disabled={loading} />
-
-          {error && <FieldError error={error} />}
-
-          <Button
-            onClick={handleVerifyOtp}
-            className="w-full min-h-[44px]"
-            loading={loading}
-            disabled={code.length !== 6}
-            leftIcon={<ShieldCheck className="h-4 w-4" />}
-          >
-            Verify Code
-          </Button>
-
-          <div className="text-center">
-            {countdown > 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Resend in <span className="font-semibold">{countdown}s</span>
-              </p>
-            ) : (
-              <button
-                onClick={handleResend}
-                disabled={resending}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50"
-              >
-                {resending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Resend code
-              </button>
-            )}
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Enter the 32-character reset code sent to <strong>{email}</strong>
+          </p>
+          <FormField label="Reset code">
+            <Input
+              value={resetToken}
+              onChange={(e) => setResetToken(e.target.value)}
+              placeholder="Paste your reset code"
+              className="font-mono text-sm"
+            />
+          </FormField>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button onClick={handleVerifyCode} loading={loading} className="flex-1">
+              Verify Code
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
+          <button
+            type="button"
+            onClick={async () => {
+              setLoading(true);
+              await forgotPasswordSendTokenAction(email);
+              setLoading(false);
+              toast({ type: "info", title: "New code sent" });
+            }}
+            className="text-sm text-indigo-600 hover:underline w-full text-center"
+            disabled={loading}
+          >
+            Resend code
+          </button>
         </div>
       )}
 
       {step === 2 && (
         <form onSubmit={handleResetPassword} className="space-y-4">
-          <FormField label="New password" required>
+          <FormField label="New password">
             <div className="relative">
               <Input
-                type={showNewPassword ? "text" : "password"}
+                type={showPassword ? "text" : "password"}
                 value={newPassword}
-                onChange={(e) => { setNewPassword(e.target.value); setError(""); }}
+                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                autoComplete="new-password"
                 leftIcon={<Lock className="h-4 w-4" />}
                 className="pr-10"
+                required
               />
               <button
                 type="button"
-                onClick={() => setShowNewPassword((v) => !v)}
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
-                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </FormField>
-
-          {newPassword && (
-            <div className="space-y-1.5">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    newPassword.length >= 12
-                      ? "bg-emerald-500"
-                      : newPassword.length >= 8
-                      ? "bg-amber-500"
-                      : "bg-red-500"
-                  )}
-                  style={{ width: `${Math.min(100, (newPassword.length / 12) * 100)}%` }}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                {passwordRequirements.map((r) => (
-                  <div key={r.label} className="flex items-center gap-1.5 text-xs">
-                    <CheckCircle2
-                      className={cn(
-                        "h-3 w-3",
-                        r.met ? "text-emerald-500" : "text-slate-300 dark:text-slate-600"
-                      )}
-                    />
-                    <span className={r.met ? "text-emerald-600" : "text-slate-500 dark:text-slate-400"}>
-                      {r.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <FormField label="Confirm new password" required>
-            <div className="relative">
-              <Input
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                leftIcon={<Lock className="h-4 w-4" />}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
+          <FormField label="Confirm password">
+            <Input
+              type={showPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              leftIcon={<Lock className="h-4 w-4" />}
+              required
+            />
           </FormField>
-
-          {error && <FieldError error={error} />}
-
-          <Button
-            type="submit"
-            className="w-full min-h-[44px]"
-            loading={loading}
-            disabled={!newPassword || !confirmPassword || newPassword !== confirmPassword}
-          >
-            Reset Password
-          </Button>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <Button variant="outline" type="button" onClick={() => setStep(1)} className="flex-1">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button type="submit" loading={loading} className="flex-1">
+              Reset Password
+            </Button>
+          </div>
         </form>
       )}
 
       {step === 3 && (
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <p className="text-center text-sm text-slate-600 dark:text-slate-300">
-            Password reset successful! You can now log in.
+        <div className="text-center py-6">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500 mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            Password Reset Successfully
+          </h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+            Your password has been updated. You can now sign in with your new password.
           </p>
-          <Button className="mt-2 min-h-[44px]" onClick={() => router.push("/login")}>
-            Go to Login
-          </Button>
+          <Link href="/login">
+            <Button className="w-full">
+              Sign In
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       )}
     </AuthCard>
@@ -356,9 +275,10 @@ function ForgotPasswordForm() {
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense>
-      <AuthLogo />
-      <ForgotPasswordForm />
-    </Suspense>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 px-4">
+      <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>}>
+        <ForgotPasswordForm />
+      </Suspense>
+    </div>
   );
 }

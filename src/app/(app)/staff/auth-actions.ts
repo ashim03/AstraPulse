@@ -44,125 +44,7 @@ async function logAuthEvent(params: {
   }
 }
 
-export async function resendVerificationEmailAction(userId: string): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requirePerm("staff", "edit");
-  } catch {
-    return fail("You don't have permission");
-  }
 
-  try {
-    const user = await prisma.user.findFirst({
-      where: { id: userId, workspaceId: session.workspaceId },
-    });
-    if (!user) return fail("User not found");
-    if (user.emailVerified) return fail("Email is already verified");
-
-    const otpLength = 6;
-    const code = Array.from({ length: otpLength }, () => Math.floor(Math.random() * 10)).join("");
-    const codeHash = hashPassword(code);
-
-    await prisma.otpVerification.deleteMany({
-      where: { userId: user.id, type: "email_verify" },
-    });
-
-    await prisma.otpVerification.create({
-      data: {
-        workspaceId: session.workspaceId,
-        userId: user.id,
-        email: user.email,
-        codeHash,
-        type: "email_verify",
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
-    });
-
-    const emailConfig = await prisma.emailConfig.findUnique({
-      where: { workspaceId: session.workspaceId },
-    });
-    if (emailConfig?.isEnabled && emailConfig.apiKey) {
-      await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": emailConfig.apiKey,
-        },
-        body: JSON.stringify({
-          sender: { name: emailConfig.senderName, email: emailConfig.senderEmail },
-          to: [{ email: user.email }],
-          subject: "AstraPulse - Verify Your Email",
-          htmlContent: "<html><body><h2>Email Verification</h2><p>Your verification code is: <strong>" + code + "</strong></p><p>This code expires in 10 minutes.</p></body></html>",
-        }),
-      }).catch(() => {});
-    }
-
-    await logAuthEvent({
-      workspaceId: session.workspaceId,
-      userId: user.id,
-      email: user.email,
-      action: "admin_verify",
-      success: true,
-      metadata: { action: "resend_verification" },
-    });
-
-    await writeAudit({
-      session,
-      action: "edit",
-      module: "staff",
-      recordId: user.id,
-      description: "Resent verification email to " + user.email,
-    });
-
-    revalidatePath("/staff");
-    return ok(undefined, "Verification email sent");
-  } catch (e) {
-    return fail("Failed to resend verification: " + (e as Error).message);
-  }
-}
-
-export async function manuallyVerifyEmailAction(userId: string): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requirePerm("staff", "edit");
-  } catch {
-    return fail("You don't have permission");
-  }
-
-  try {
-    const user = await prisma.user.findFirst({
-      where: { id: userId, workspaceId: session.workspaceId },
-    });
-    if (!user) return fail("User not found");
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { emailVerified: true, emailVerifiedAt: new Date() },
-    });
-
-    await logAuthEvent({
-      workspaceId: session.workspaceId,
-      userId: user.id,
-      email: user.email,
-      action: "admin_verify",
-      success: true,
-      metadata: { action: "manual_verify" },
-    });
-
-    await writeAudit({
-      session,
-      action: "edit",
-      module: "staff",
-      recordId: user.id,
-      description: "Manually verified email for " + user.email,
-    });
-
-    revalidatePath("/staff");
-    return ok(undefined, "Email verified");
-  } catch (e) {
-    return fail("Failed to verify email: " + (e as Error).message);
-  }
-}
 
 export async function toggleAccountStatusAction(userId: string, status: string): Promise<ActionResult> {
   let session;
@@ -341,10 +223,6 @@ export async function resetAuthSettingsAction(userId: string): Promise<ActionRes
       data: { failedLoginAttempts: 0, lockedUntil: null },
     });
 
-    await prisma.otpVerification.deleteMany({
-      where: { userId: user.id },
-    });
-
     await logAuthEvent({
       workspaceId: session.workspaceId,
       userId: user.id,
@@ -359,7 +237,7 @@ export async function resetAuthSettingsAction(userId: string): Promise<ActionRes
       action: "edit",
       module: "staff",
       recordId: user.id,
-      description: "Reset auth settings for " + user.email + ": cleared OTP attempts, unlocked account",
+      description: "Reset auth settings for " + user.email + ": unlocked account",
     });
 
     revalidatePath("/staff");

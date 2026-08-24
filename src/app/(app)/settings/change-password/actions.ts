@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { fail, ok, writeAudit, type ActionResult } from "@/lib/actions";
 import { validatePassword } from "@/services/password";
-import { getAuthSettings } from "@/services/otp";
+
 import { sendPasswordChangeConfirmation } from "@/services/brevo";
 import { logAuthEvent } from "@/services/auth-audit";
 import bcrypt from "bcryptjs";
@@ -50,13 +50,15 @@ export async function changePasswordAction(
     return fail("New password must be different from current password");
   }
 
-  const settings = await getAuthSettings(session.workspaceId);
+  const settings = await prisma.authSettings.findFirst({
+    where: { workspaceId: session.workspaceId },
+  });
   const validation = validatePassword(newPassword, {
-    minLength: settings.passwordMinLength,
-    requireUppercase: settings.passwordRequireUppercase,
-    requireLowercase: settings.passwordRequireLowercase,
-    requireNumber: settings.passwordRequireNumber,
-    requireSpecial: settings.passwordRequireSpecial,
+    minLength: settings?.passwordMinLength ?? 8,
+    requireUppercase: settings?.passwordRequireUppercase ?? true,
+    requireLowercase: settings?.passwordRequireLowercase ?? true,
+    requireNumber: settings?.passwordRequireNumber ?? true,
+    requireSpecial: settings?.passwordRequireSpecial ?? true,
   });
 
   if (!validation.valid) {
@@ -73,7 +75,7 @@ export async function changePasswordAction(
     },
   });
 
-  if (settings.forceLogoutOnPasswordChange) {
+  if (settings?.forceLogoutOnPasswordChange) {
     await prisma.user.update({
       where: { id: session.id },
       data: {

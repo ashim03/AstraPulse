@@ -21,13 +21,10 @@ type AuthLog = {
 
 const ACTION_BADGE: Record<string, { label: string; tone: BadgeTone }> = {
   register: { label: "Register", tone: "blue" },
-  verify_email: { label: "Verify Email", tone: "green" },
   login: { label: "Login", tone: "indigo" },
-  login_otp: { label: "Login OTP", tone: "violet" },
   forgot_password: { label: "Forgot Password", tone: "amber" },
   reset_password: { label: "Reset Password", tone: "green" },
   change_password: { label: "Change Password", tone: "sky" },
-  admin_verify: { label: "Admin Verify", tone: "rose" },
   admin_disable: { label: "Admin Disable", tone: "rose" },
   admin_force_reset: { label: "Admin Force Reset", tone: "rose" },
 };
@@ -35,13 +32,10 @@ const ACTION_BADGE: Record<string, { label: string; tone: BadgeTone }> = {
 const ACTION_OPTIONS = [
   { value: "", label: "All Actions" },
   { value: "register", label: "Register" },
-  { value: "verify_email", label: "Verify Email" },
   { value: "login", label: "Login" },
-  { value: "login_otp", label: "Login OTP" },
   { value: "forgot_password", label: "Forgot Password" },
   { value: "reset_password", label: "Reset Password" },
   { value: "change_password", label: "Change Password" },
-  { value: "admin_verify", label: "Admin Verify" },
   { value: "admin_disable", label: "Admin Disable" },
   { value: "admin_force_reset", label: "Admin Force Reset" },
 ];

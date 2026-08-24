@@ -1,297 +1,606 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/auth";
-import { hasPermission, canModifyEmployee, canAccessEmployee, getDataScope, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
-import { writeAudit, notify, ok, fail, type ActionResult } from "@/lib/actions";
-import { z } from "zod";
+import { requireSession, hashPassword } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+import { ActionResult, ok, fail, writeAudit } from "@/lib/actions";
+import { syncEmployeeToDevice, unsyncEmployeeFromDevice } from "@/services/device-sync";
 
-async function requirePerm(module: string, action: PermissionAction = "view") {
-  const session = await requireSession();
-  if (!hasPermission(session, module, action)) {
-    throw new Error("FORBIDDEN");
+export type CreateStaffInput = {
+  name: string;
+  email?: string;
+  phone?: string;
+  departmentId?: string;
+  positionId?: string;
+  joiningDate: Date | string;
+  employmentType: string;
+  basicSalary: number;
+  address?: string;
+  gender?: string;
+  dateOfBirth?: Date | string;
+  emergencyContact?: string;
+  emergencyContactName?: string;
+  password?: string;
+};
+
+async function generateEmployeeId(workspaceId: string): Promise<string> {
+  const lastEmployee = await prisma.employee.findFirst({
+    where: { workspaceId },
+    orderBy: { employeeId: "desc" },
+    select: { employeeId: true },
+  });
+
+  if (!lastEmployee?.employeeId) {
+    return "EMP-001";
   }
-  return session;
+
+  const match = lastEmployee.employeeId.match(/EMP-(\d+)/);
+  const nextNum = match ? parseInt(match[1], 10) + 1 : 1;
+  return `EMP-${String(nextNum).padStart(3, "0")}`;
 }
 
-const schema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Valid email required"),
-  employeeId: z.string().optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  departmentId: z.string().optional().or(z.literal("")),
-  positionId: z.string().optional().or(z.literal("")),
-  employmentType: z.string().optional(),
-  salary: z.coerce.number().min(0).optional(),
-  hireDate: z.string().optional().or(z.literal("")),
-  contractEndDate: z.string().optional().or(z.literal("")),
-  status: z.string().optional(),
-  dateOfBirth: z.string().optional().or(z.literal("")),
-  gender: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  emergencyContactName: z.string().optional().or(z.literal("")),
-  emergencyContactPhone: z.string().optional().or(z.literal("")),
-  nationalId: z.string().optional().or(z.literal("")),
-  bankName: z.string().optional().or(z.literal("")),
-  accountNumber: z.string().optional().or(z.literal("")),
-  currency: z.string().optional().or(z.literal("")),
-});
+export async function createStaffAction(
+  data: CreateStaffInput
+): Promise<ActionResult<{ employee: any; syncStatus?: string }>> {
+  const session = await requireSession();
 
-export async function createEmployeeAction(formData: FormData): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requirePerm("staff", "create");
-  } catch {
-    return fail("You don't have permission");
+  if (!hasPermission(session, "staff", "manage")) {
+    return fail("You do not have permission to create staff");
   }
-  const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return fail("Please fix the highlighted fields", toFieldErrors(parsed.error));
 
-  const d = parsed.data;
-  const existing = await prisma.user.findFirst({ where: { workspaceId: session.workspaceId, email: d.email } });
-  if (existing) return fail("An account with this email already exists", { email: "Email already in use" });
-
-  try {
-    const role = await prisma.role.findFirst({ where: { workspaceId: session.workspaceId, name: "Employee" } });
-
-    const employee = await prisma.employee.create({
-      data: {
-        workspaceId: session.workspaceId,
-        name: d.name,
-        employeeId: d.employeeId || `EMP-${String(Math.floor(1000 + Math.random() * 9000))}`,
-        email: d.email,
-        phone: d.phone || null,
-        departmentId: d.departmentId || null,
-        positionId: d.positionId || null,
-        employmentType: (d.employmentType as never) || "full_time",
-        baseSalary: d.salary ?? 0,
-        joinDate: d.hireDate ? new Date(d.hireDate) : new Date(),
-        contractEndDate: d.contractEndDate ? new Date(d.contractEndDate) : null,
-        status: (d.status as never) || "active",
-        dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth) : null,
-        gender: d.gender || null,
-        address: d.address || null,
-        emergencyName: d.emergencyContactName || null,
-        emergencyPhone: d.emergencyContactPhone || null,
-        taxId: d.nationalId || null,
-        bankName: d.bankName || null,
-        bankAccountNumber: d.accountNumber || null,
-      },
+  if (!data.name || !data.joiningDate || !data.employmentType || data.basicSalary == null) {
+    return fail("Missing required fields", {
+      ...(!data.name && { name: "Name is required" }),
+      ...(!data.joiningDate && { joiningDate: "Joining date is required" }),
+      ...(!data.employmentType && { employmentType: "Employment type is required" }),
+      ...(data.basicSalary == null && { basicSalary: "Basic salary is required" }),
     });
+  }
 
-    const user = await prisma.user.create({
+  const employeeId = await generateEmployeeId(session.workspaceId);
+  const email = data.email || `${employeeId.toLowerCase()}@astrapulse.local`;
+
+  const defaultPassword = data.password || "Aicnepal@001";
+  const hashedPassword = await hashPassword(defaultPassword);
+
+  const role = await prisma.role.findFirst({
+    where: { workspaceId: session.workspaceId, name: { contains: "Employee", mode: "insensitive" } },
+  });
+
+  const employee = await prisma.$transaction(async (tx) => {
+    const emp = await tx.employee.create({
       data: {
         workspaceId: session.workspaceId,
-        email: d.email,
-        name: d.name,
-        passwordHash: hashPassword("Change@123"),
-        roleId: role?.id ?? null,
-        employeeId: employee.id,
+        employeeId,
+        name: data.name,
+        email,
+        phone: data.phone || undefined,
+        departmentId: data.departmentId,
+        joinDate: new Date(data.joiningDate),
+        employmentType: data.employmentType,
+        baseSalary: data.basicSalary,
+        address: data.address || undefined,
+        gender: data.gender || undefined,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+        emergencyPhone: data.emergencyContact || undefined,
+        emergencyName: data.emergencyContactName || undefined,
         status: "active",
       },
     });
 
-    await writeAudit({
-      session,
-      action: "create",
-      module: "staff",
-      recordId: employee.id,
-      description: `Created employee ${employee.name}`,
-    });
-    await notify(session.workspaceId, user.id, "Welcome to the workspace", `Your employee account has been created.`, "/dashboard");
-
-    revalidatePath("/staff");
-    return ok(undefined, "Employee added");
-  } catch (e) {
-    return fail("Failed to create employee: " + (e as Error).message);
-  }
-}
-
-export async function updateEmployeeStatusAction(id: string, status: string): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requirePerm("staff", "edit");
-  } catch {
-    return fail("You don't have permission");
-  }
-  const current = await prisma.employee.findFirst({ where: { id, workspaceId: session.workspaceId } });
-  if (!current) return fail("Employee not found");
-  if (!canModifyEmployee(session, id, current.departmentId)) {
-    await writeAudit({ session, action: "denied", module: "staff", recordId: id, description: `Permission denied: cannot modify employee status` });
-    return fail("You don't have permission to modify this employee");
-  }
-  await prisma.employee.update({ where: { id }, data: { status: status as never } });
-  await writeAudit({ session, action: "edit", module: "staff", recordId: id, description: `Updated status of ${current.name} to ${status}` });
-  revalidatePath("/staff");
-  return ok(undefined, "Status updated");
-}
-
-export async function updateEmployeeAction(id: string, formData: FormData): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requirePerm("staff", "edit");
-  } catch {
-    return fail("You don't have permission");
-  }
-  const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return fail("Please fix the highlighted fields", toFieldErrors(parsed.error));
-  const d = parsed.data;
-  try {
-    const current = await prisma.employee.findFirst({ where: { id, workspaceId: session.workspaceId } });
-    if (!current) return fail("Employee not found");
-    if (!canModifyEmployee(session, id, current.departmentId)) {
-      await writeAudit({ session, action: "denied", module: "staff", recordId: id, description: `Permission denied: cannot modify employee` });
-      return fail("You don't have permission to modify this employee");
-    }
-    await prisma.employee.update({
-      where: { id },
+    await tx.user.create({
       data: {
-        name: d.name,
-        email: d.email,
-        phone: d.phone || null,
-        departmentId: d.departmentId || null,
-        positionId: d.positionId || null,
-        employmentType: (d.employmentType as never) || "full_time",
-        baseSalary: d.salary ?? 0,
-        contractEndDate: d.contractEndDate ? new Date(d.contractEndDate) : null,
-        status: (d.status as never) || "active",
-        address: d.address || null,
+        workspaceId: session.workspaceId,
+        name: data.name,
+        email,
+        passwordHash: hashedPassword,
+        roleId: role?.id,
+        employeeId: emp.id,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        status: "active",
       },
     });
-    await prisma.user.updateMany({ where: { employeeId: id }, data: { name: d.name, email: d.email } });
-    await writeAudit({ session, action: "edit", module: "staff", recordId: id, description: `Updated employee ${d.name}` });
-    revalidatePath("/staff");
-    revalidatePath(`/staff/${id}`);
-    return ok(undefined, "Employee updated");
-  } catch (e) {
-    return fail("Failed to update employee: " + (e as Error).message);
+
+    return emp;
+  });
+
+  let syncStatus = "no_device";
+
+  const activeDevice = await prisma.attendanceDevice.findFirst({
+    where: { workspaceId: session.workspaceId, isActive: true },
+  });
+
+  if (activeDevice) {
+    const result = await syncEmployeeToDevice(
+      { id: employee.id, employeeId: employee.employeeId, name: employee.name },
+      activeDevice.id
+    );
+    syncStatus = result.success ? "synced" : "failed";
   }
+
+  await writeAudit({
+    session,
+    action: "create",
+    module: "staff",
+    recordId: employee.id,
+    description: `Created staff member ${employee.name} (${employee.employeeId})`,
+    after: { employeeId, name: employee.name, email: employee.email },
+  });
+
+  revalidatePath("/staff");
+
+  return ok({ employee, syncStatus }, `Staff member ${employee.name} created successfully`);
+}
+
+export async function updateStaffAction(
+  id: string,
+  data: Partial<CreateStaffInput>
+): Promise<ActionResult> {
+  const session = await requireSession();
+
+  if (!hasPermission(session, "staff", "manage")) {
+    return fail("You do not have permission to update staff");
+  }
+
+  const existing = await prisma.employee.findUnique({ where: { id } });
+  if (!existing) {
+    return fail("Staff member not found");
+  }
+
+  const before = {
+    name: existing.name,
+    email: existing.email,
+    departmentId: existing.departmentId,
+  };
+
+  const updateData: Record<string, any> = {};
+
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.departmentId !== undefined) updateData.departmentId = data.departmentId;
+  if (data.employmentType !== undefined) updateData.employmentType = data.employmentType;
+  if (data.basicSalary !== undefined) updateData.baseSalary = data.basicSalary;
+  if (data.address !== undefined) updateData.address = data.address;
+  if (data.gender !== undefined) updateData.gender = data.gender;
+  if (data.dateOfBirth !== undefined) updateData.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+  if (data.emergencyContact !== undefined) updateData.emergencyPhone = data.emergencyContact;
+  if (data.emergencyContactName !== undefined) updateData.emergencyName = data.emergencyContactName;
+
+  const employee = await prisma.employee.update({
+    where: { id },
+    data: updateData,
+  });
+
+  if (data.name && data.name !== existing.name) {
+    const user = await prisma.user.findFirst({
+      where: { employeeId: id },
+    });
+    if (user) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { name: data.name },
+      });
+    }
+  }
+
+  await writeAudit({
+    session,
+    action: "update",
+    module: "staff",
+    recordId: id,
+    description: `Updated staff member ${employee.name} (${employee.employeeId})`,
+    before,
+    after: { ...updateData },
+  });
+
+  revalidatePath("/staff");
+
+  return ok(null, `Staff member ${employee.name} updated successfully`);
+}
+
+export async function deactivateStaffAction(id: string): Promise<ActionResult> {
+  const session = await requireSession();
+
+  if (!hasPermission(session, "staff", "manage")) {
+    return fail("You do not have permission to deactivate staff");
+  }
+
+  const existing = await prisma.employee.findUnique({
+    where: { id },
+    include: { workspace: { include: { attendanceDevices: true } } },
+  });
+
+  if (!existing) {
+    return fail("Staff member not found");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.employee.update({
+      where: { id },
+      data: { status: "inactive" },
+    });
+
+    const user = await tx.user.findFirst({ where: { employeeId: id } });
+    if (user) {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { status: "inactive" },
+      });
+    }
+  });
+
+  if (existing.deviceEmployeeId) {
+    await unsyncEmployeeFromDevice(id).catch(() => {});
+  }
+
+  await writeAudit({
+    session,
+    action: "deactivate",
+    module: "staff",
+    recordId: id,
+    description: `Deactivated staff member ${existing.name} (${existing.employeeId})`,
+  });
+
+  revalidatePath("/staff");
+
+  return ok(null, `Staff member ${existing.name} has been deactivated`);
+}
+
+export async function getStaffListAction(
+  filters?: { departmentId?: string; status?: string }
+): Promise<ActionResult> {
+  const session = await requireSession();
+
+  if (!hasPermission(session, "staff", "view")) {
+    return fail("You do not have permission to view staff");
+  }
+
+  const where: Record<string, any> = { workspaceId: session.workspaceId };
+
+  if (filters?.departmentId) {
+    where.departmentId = filters.departmentId;
+  }
+
+  if (filters?.status) {
+    where.status = filters.status;
+  }
+
+  const employees = await prisma.employee.findMany({
+    where,
+    include: {
+      department: { select: { id: true, name: true } },
+    },
+    orderBy: { employeeId: "asc" },
+  });
+
+  const employeesWithUserStatus = await Promise.all(
+    employees.map(async (emp) => {
+      const user = await prisma.user.findFirst({
+        where: { employeeId: emp.id },
+        select: { id: true, status: true, email: true },
+      });
+
+      return {
+        ...emp,
+        userAccount: user,
+        deviceSyncStatus: emp.deviceEmployeeId ? "synced" : emp.status === "active" ? "pending" : "inactive",
+      };
+    })
+  );
+
+  await writeAudit({
+    session,
+    action: "view",
+    module: "staff",
+    description: `Viewed staff list (${employeesWithUserStatus.length} employees)`,
+  });
+
+  return ok(employeesWithUserStatus);
+}
+
+export async function resyncEmployeeAction(employeeId: string): Promise<ActionResult> {
+  const session = await requireSession();
+
+  if (!hasPermission(session, "staff", "manage")) {
+    return fail("You do not have permission to manage staff");
+  }
+
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+  });
+
+  if (!employee) {
+    return fail("Staff member not found");
+  }
+
+  const device = await prisma.attendanceDevice.findFirst({
+    where: { workspaceId: session.workspaceId, isActive: true },
+  });
+
+  if (!device) {
+    return fail("No active attendance device found");
+  }
+
+  const result = await syncEmployeeToDevice(
+    { id: employee.id, employeeId: employee.employeeId, name: employee.name },
+    device.id
+  );
+
+  await writeAudit({
+    session,
+    action: "resync",
+    module: "staff",
+    recordId: employeeId,
+    description: `Resynced employee ${employee.employeeId} to device: ${result.message}`,
+  });
+
+  revalidatePath("/staff");
+
+  if (result.success) {
+    return ok(null, `Employee ${employee.name} synced successfully`);
+  }
+
+  return fail(`Sync failed: ${result.message}`);
+}
+
+export async function createEmployeeAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireSession();
+  if (!hasPermission(session, "staff", "manage")) return fail("Permission denied");
+
+  const name = String(fd.get("name") || "").trim();
+  const email = String(fd.get("email") || "").trim() || undefined;
+  const phone = String(fd.get("phone") || "").trim() || undefined;
+  const departmentId = String(fd.get("departmentId") || "").trim() || undefined;
+  const positionId = String(fd.get("positionId") || "").trim() || undefined;
+  const joinDate = String(fd.get("joinDate") || fd.get("joiningDate") || new Date().toISOString().split("T")[0]);
+  const employmentType = String(fd.get("employmentType") || "full_time");
+  const baseSalary = parseFloat(String(fd.get("baseSalary") || fd.get("basicSalary") || "0"));
+  const address = String(fd.get("address") || "").trim() || undefined;
+  const gender = String(fd.get("gender") || "").trim() || undefined;
+  const dateOfBirth = String(fd.get("dateOfBirth") || "").trim() || undefined;
+  const emergencyPhone = String(fd.get("emergencyPhone") || fd.get("emergencyContact") || "").trim() || undefined;
+  const emergencyName = String(fd.get("emergencyName") || fd.get("emergencyContactName") || "").trim() || undefined;
+
+  if (!name) return fail("Name is required");
+
+  const count = await prisma.employee.count({ where: { workspaceId: session.workspaceId } });
+  const employeeId = `EMP-${String(count + 1).padStart(3, "0")}`;
+
+  const password = String(fd.get("password") || "Aicnepal@001");
+  const hashed = await hashPassword(password);
+
+  const employee = await prisma.employee.create({
+    data: {
+      workspaceId: session.workspaceId,
+      employeeId,
+      name,
+      email: email || `${employeeId.toLowerCase()}@astrapulse.local`,
+      phone,
+      departmentId: departmentId || undefined,
+      positionId: positionId || undefined,
+      joinDate: new Date(joinDate),
+      employmentType,
+      baseSalary,
+      address,
+      gender,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      emergencyPhone,
+      emergencyName,
+      status: "active",
+    },
+  });
+
+  const role = await prisma.role.findFirst({
+    where: { workspaceId: session.workspaceId, name: { contains: "Employee", mode: "insensitive" } },
+  });
+
+  const user = await prisma.user.create({
+    data: {
+      workspaceId: session.workspaceId,
+      employeeId: employee.id,
+      name,
+      email: email || `${employeeId.toLowerCase()}@astrapulse.local`,
+      passwordHash: hashed,
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+      status: "active",
+      roleId: role?.id,
+    },
+  });
+
+  let syncMessage = "Device sync skipped (no device configured)";
+  try {
+    const device = await prisma.attendanceDevice.findFirst({
+      where: { workspaceId: session.workspaceId, isActive: true },
+    });
+    if (device) {
+      const { syncEmployeeToDevice } = await import("@/services/device-sync");
+      const result = await syncEmployeeToDevice(
+        { id: employee.id, employeeId: employee.employeeId, name: employee.name },
+        device.id,
+      );
+      syncMessage = result.message;
+    }
+  } catch (e: any) {
+    syncMessage = `Device sync error: ${e.message}`;
+  }
+
+  await writeAudit({
+    session,
+    action: "create",
+    module: "staff",
+    recordId: employee.id,
+    description: `Created employee ${employeeId} (${name}). Device sync: ${syncMessage}`,
+  });
+
+  revalidatePath("/staff");
+  revalidatePath("/departments");
+  return ok({ employee, user, syncMessage }, `Employee ${employeeId} created`);
+}
+
+export async function updateEmployeeAction(id: string, fd: FormData): Promise<ActionResult> {
+  const session = await requireSession();
+  if (!hasPermission(session, "staff", "manage")) return fail("Permission denied");
+
+  const employee = await prisma.employee.findUnique({ where: { id } });
+  if (!employee) return fail("Employee not found");
+
+  const data: any = {};
+  for (const [key, val] of Array.from(fd.entries())) {
+    if (key === "basicSalary") data[key] = parseFloat(String(val)) || 0;
+    else if (key === "joiningDate" || key === "dateOfBirth") data[key] = val ? new Date(String(val)) : undefined;
+    else if (val !== null && val !== undefined && String(val).trim() !== "") data[key] = String(val).trim();
+  }
+
+  const updated = await prisma.employee.update({ where: { id }, data });
+
+  if (data.name && data.name !== employee.name) {
+    await prisma.user.updateMany({
+      where: { employeeId: employee.id },
+      data: { name: data.name },
+    });
+  }
+
+  if (data.name && data.name !== employee.name) {
+    try {
+      const device = await prisma.attendanceDevice.findFirst({
+        where: { workspaceId: session.workspaceId, isActive: true },
+      });
+      if (device && employee.employeeId) {
+        const { updateDeviceUser } = await import("@/services/device-sync");
+        await updateDeviceUser(
+          { ipAddress: device.ipAddress, port: device.port, username: device.username ?? "admin", password: device.password ?? "" },
+          employee.employeeId,
+          data.name,
+        );
+      }
+    } catch {}
+  }
+
+  await writeAudit({
+    session,
+    action: "update",
+    module: "staff",
+    recordId: id,
+    description: `Updated employee ${employee.employeeId}`,
+  });
+
+  revalidatePath("/staff");
+  revalidatePath(`/staff/${id}`);
+  return ok(updated, "Employee updated");
 }
 
 export async function deleteEmployeeAction(id: string): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requirePerm("staff", "delete");
-  } catch {
-    return fail("You don't have permission");
-  }
-  const employee = await prisma.employee.findFirst({ where: { id, workspaceId: session.workspaceId } });
+  const session = await requireSession();
+  if (!hasPermission(session, "staff", "manage")) return fail("Permission denied");
+
+  const employee = await prisma.employee.findUnique({ where: { id } });
   if (!employee) return fail("Employee not found");
+
+  try {
+    if (employee.employeeId) {
+      const { unsyncEmployeeFromDevice } = await import("@/services/device-sync");
+      await unsyncEmployeeFromDevice(employee.employeeId);
+    }
+  } catch {}
+
+  await prisma.user.deleteMany({ where: { employeeId: id } });
   await prisma.employee.delete({ where: { id } });
-  await writeAudit({ session, action: "delete", module: "staff", recordId: id, description: `Deleted employee ${employee.name}` });
+
+  await writeAudit({
+    session,
+    action: "delete",
+    module: "staff",
+    recordId: id,
+    description: `Deleted employee ${employee.employeeId} (${employee.name})`,
+  });
+
   revalidatePath("/staff");
-  return ok(undefined, "Employee deleted");
+  return ok(null, `Employee ${employee.employeeId} deleted`);
 }
 
-export async function createDepartmentAction(formData: FormData): Promise<ActionResult> {
-  try {
-    const session = await requirePerm("departments", "create");
-    const name = String(formData.get("name") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
-    if (!name) return fail("Department name is required", { name: "Required" });
-    const existing = await prisma.department.findFirst({ where: { workspaceId: session.workspaceId, name } });
-    if (existing) return fail("Department already exists", { name: "Already exists" });
-    await prisma.department.create({ data: { workspaceId: session.workspaceId, name, description: description || null } });
-    await writeAudit({ session, action: "create", module: "departments", description: `Created department ${name}` });
-    revalidatePath("/departments");
-    return ok(undefined, "Department created");
-  } catch (e) {
-    return fail("Failed to create department. Please try again.");
-  }
-}
+export async function createDepartmentAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireSession();
+  if (!hasPermission(session, "department", "manage")) return fail("Permission denied");
 
-export async function updateDepartmentAction(id: string, formData: FormData): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requirePerm("departments", "edit");
-  } catch {
-    return fail("You don't have permission");
-  }
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return fail("Department name is required", { name: "Required" });
-  const dept = await prisma.department.findFirst({ where: { id, workspaceId: session.workspaceId } });
-  if (!dept) return fail("Department not found");
-  await prisma.department.update({ where: { id }, data: { name, description: String(formData.get("description") ?? "").trim() || null } });
-  await writeAudit({ session, action: "edit", module: "departments", recordId: id, description: `Renamed department to ${name}` });
+  const name = String(fd.get("name") || "").trim();
+  const description = String(fd.get("description") || "").trim() || undefined;
+
+  if (!name) return fail("Department name is required");
+
+  const existing = await prisma.department.findFirst({
+    where: { workspaceId: session.workspaceId, name },
+  });
+  if (existing) return fail("Department with this name already exists");
+
+  const department = await prisma.department.create({
+    data: { workspaceId: session.workspaceId, name, description },
+  });
+
+  await writeAudit({
+    session,
+    action: "create",
+    module: "department",
+    recordId: department.id,
+    description: `Created department: ${name}`,
+  });
+
   revalidatePath("/departments");
-  return ok(undefined, "Department updated");
+  return ok(department, `Department "${name}" created`);
+}
+
+export async function updateDepartmentAction(id: string, fd: FormData): Promise<ActionResult> {
+  const session = await requireSession();
+  if (!hasPermission(session, "department", "manage")) return fail("Permission denied");
+
+  const dept = await prisma.department.findUnique({ where: { id } });
+  if (!dept) return fail("Department not found");
+
+  const name = String(fd.get("name") || "").trim();
+  const description = String(fd.get("description") || "").trim() || undefined;
+
+  if (!name) return fail("Department name is required");
+
+  const updated = await prisma.department.update({
+    where: { id },
+    data: { name, description },
+  });
+
+  await writeAudit({
+    session,
+    action: "update",
+    module: "department",
+    recordId: id,
+    description: `Updated department: ${name}`,
+  });
+
+  revalidatePath("/departments");
+  return ok(updated, `Department "${name}" updated`);
 }
 
 export async function deleteDepartmentAction(id: string): Promise<ActionResult> {
-  try {
-    const session = await requirePerm("departments", "delete");
-    const dept = await prisma.department.findFirst({ where: { id, workspaceId: session.workspaceId } });
-    if (!dept) return fail("Department not found");
-    await prisma.department.delete({ where: { id } });
-    await writeAudit({ session, action: "delete", module: "departments", recordId: id, description: `Deleted department ${dept.name}` });
-    revalidatePath("/departments");
-    return ok(undefined, "Department deleted");
-  } catch (e) {
-    return fail("Failed to delete department. It may have employees assigned to it.");
-  }
-}
+  const session = await requireSession();
+  if (!hasPermission(session, "department", "manage")) return fail("Permission denied");
 
-export async function getStaffWithFiltersAction(filters: {
-  search?: string;
-  department?: string;
-  employmentType?: string;
-  status?: string;
-  gender?: string;
-  sortBy?: string;
-  sortOrder?: string;
-  letter?: string;
-}): Promise<ActionResult<unknown[]>> {
-  try {
-    const session = await requireSession();
-    if (!hasPermission(session, "staff", "view")) {
-      await writeAudit({ session, action: "denied", module: "staff", description: "Permission denied: staff:view" });
-      return fail("You don't have permission to view staff");
-    }
-    const scope = getDataScope(session);
-    const where: Record<string, unknown> = { workspaceId: session.workspaceId };
+  const dept = await prisma.department.findUnique({ where: { id } });
+  if (!dept) return fail("Department not found");
 
-    if (scope === "self") {
-      where.id = session.employeeId;
-    } else if (scope === "department" && session.departmentId) {
-      where.departmentId = session.departmentId;
-    }
+  const empCount = await prisma.employee.count({ where: { departmentId: id } });
+  if (empCount > 0) return fail(`Cannot delete: ${empCount} employee(s) still in this department`);
 
-    if (filters.search) {
-      const q = filters.search;
-      where.OR = [
-        { name: { contains: q, mode: "insensitive" } },
-        { employeeId: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-      ];
-    }
-    if (filters.department && scope !== "self") where.departmentId = filters.department;
-    if (filters.employmentType) where.employmentType = filters.employmentType;
-    if (filters.status) where.status = filters.status;
-    if (filters.gender) where.gender = filters.gender;
-    if (filters.letter) {
-      where.name = { startsWith: filters.letter, mode: "insensitive" };
-    }
+  await prisma.department.delete({ where: { id } });
 
-    const sortField = filters.sortBy || "name";
-    const sortDir = filters.sortOrder === "desc" ? "desc" : "asc";
-    const orderBy: Record<string, string> = { [sortField]: sortDir };
+  await writeAudit({
+    session,
+    action: "delete",
+    module: "department",
+    recordId: id,
+    description: `Deleted department: ${dept.name}`,
+  });
 
-    const employees = await prisma.employee.findMany({
-      where,
-      include: { department: true, position: true },
-      orderBy,
-    });
-
-    return ok(employees);
-  } catch (e) {
-    return fail("Failed to load staff: " + (e as Error).message);
-  }
-}
-
-function toFieldErrors(err: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of err.issues) out[issue.path[0]] = issue.message;
-  return out;
+  revalidatePath("/departments");
+  return ok(null, `Department "${dept.name}" deleted`);
 }

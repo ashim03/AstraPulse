@@ -35,7 +35,6 @@ export default async function StaffPage({
   const gender = typeof searchParams.gender === "string" ? searchParams.gender : "";
   const sortBy = typeof searchParams.sortBy === "string" ? searchParams.sortBy : "name";
   const sortOrder = typeof searchParams.sortOrder === "string" ? searchParams.sortOrder : "asc";
-  const verificationFilter = typeof searchParams.verification === "string" ? searchParams.verification : "";
   const accountStatusFilter = typeof searchParams.accountStatus === "string" ? searchParams.accountStatus : "";
 
   const where: Record<string, unknown> = { workspaceId: session.workspaceId };
@@ -60,12 +59,6 @@ export default async function StaffPage({
   if (gender) where.gender = gender;
   if (letter) where.name = { startsWith: letter, mode: "insensitive" };
 
-  if (verificationFilter === "verified") {
-    where.user = { is: { emailVerified: true } };
-  } else if (verificationFilter === "unverified") {
-    where.user = { is: { emailVerified: false } };
-  }
-
   if (accountStatusFilter) {
     where.user = { ...(where.user as Record<string, unknown>), is: { status: accountStatusFilter } };
   }
@@ -82,8 +75,6 @@ export default async function StaffPage({
         position: { select: { id: true, name: true } },
         user: {
           select: {
-            emailVerified: true,
-            emailVerifiedAt: true,
             status: true,
             lastLoginAt: true,
           },
@@ -102,9 +93,6 @@ export default async function StaffPage({
   const active = empArr.filter((e) => e.status === "active").length;
   const onLeave = empArr.filter((e) => e.status === "on_leave").length;
   const contract = empArr.filter((e) => e.employmentType === "contract").length;
-  const verifiedCount = empArr.filter((e) => e.user?.emailVerified).length;
-  const unverifiedCount = empArr.filter((e) => e.user && !e.user.emailVerified).length;
-
   const rows: SmartRow[] = (employees as any[]).map((e) => ({
     id: e.id,
     name: e.name,
@@ -116,7 +104,6 @@ export default async function StaffPage({
     status: e.status,
     joinDate: e.joinDate ? formatDate(e.joinDate, "yyyy-MM-dd") : "",
     salary: canViewSensitive ? e.baseSalary : undefined,
-    emailVerified: e.user?.emailVerified ?? false,
     accountStatus: e.user?.status ?? "active",
     lastLogin: e.user?.lastLoginAt ? formatDate(e.user.lastLoginAt, "MMM dd, yyyy HH:mm") : "Never",
   }));
@@ -142,16 +129,6 @@ export default async function StaffPage({
         intern: { label: "Intern" },
         probation: { label: "Probation" },
       },
-    },
-    {
-      key: "emailVerified",
-      header: "Email Verified",
-      kind: "badge",
-      badgeMap: {
-        true: { label: "Verified", tone: "green" },
-        false: { label: "Unverified", tone: "red" },
-      },
-      badgeFallback: "Pending",
     },
     {
       key: "accountStatus",
@@ -201,26 +178,6 @@ export default async function StaffPage({
           }
         />
         <StatCard title="On Leave" value={onLeave} icon={UserMinus} />
-        <StatCard
-          title="Verified"
-          value={verifiedCount}
-          icon={MailCheck}
-          footer={
-            <Badge tone="green" dot className="mt-1">
-              Email verified
-            </Badge>
-          }
-        />
-        <StatCard
-          title="Unverified"
-          value={unverifiedCount}
-          icon={MailX}
-          footer={
-            <Badge tone="red" dot className="mt-1">
-              Pending verification
-            </Badge>
-          }
-        />
       </div>
 
       <StaffFilters departments={departments} />
@@ -234,14 +191,6 @@ export default async function StaffPage({
           searchKeys={["name", "email", "department", "position", "employeeId"]}
           searchPlaceholder="Search by name, email, department..."
           filters={[
-            {
-              key: "emailVerified",
-              label: "Verification Status",
-              options: [
-                { value: "true", label: "Verified" },
-                { value: "false", label: "Unverified" },
-              ],
-            },
             {
               key: "accountStatus",
               label: "Account Status",

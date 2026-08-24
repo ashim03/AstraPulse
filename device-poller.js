@@ -14,12 +14,11 @@ const http = require('http');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const DEVICE_IP = '192.168.1.69';
+const DEVICE_IP = '192.168.1.64';
 const DEVICE_PORT = 80;
 const DEVICE_USER = 'admin';
 const DEVICE_PASS = 'Aicnepal@0012!';
 const WORKSPACE_ID = 'cmt5sjd04000062bm41d445cb';
-const DEVICE_ID = 'hikvision-main';
 const POLL_INTERVAL_MS = 15 * 60 * 1000;
 const FETCH_DAYS = 7;
 
@@ -140,6 +139,36 @@ function isWeekend(dateUtc) {
   return day === 0 || day === 6;
 }
 
+// ─── Find device record ──────────────────────────────────────────────────────
+
+async function getDeviceRecord() {
+  // Try to find an active device for this workspace
+  let device = await prisma.attendanceDevice.findFirst({
+    where: { workspaceId: WORKSPACE_ID, isActive: true },
+  });
+
+  // If no device exists, create one
+  if (!device) {
+    device = await prisma.attendanceDevice.create({
+      data: {
+        workspaceId: WORKSPACE_ID,
+        name: 'Hikvision DS-K1A8503EF-B',
+        model: 'DS-K1A8503EF-B',
+        ipAddress: DEVICE_IP,
+        port: DEVICE_PORT,
+        protocol: 'isapi',
+        username: DEVICE_USER,
+        password: DEVICE_PASS,
+        isActive: true,
+        status: 'online',
+      },
+    });
+    console.log(`  Created device record: ${device.id}`);
+  }
+
+  return device;
+}
+
 // ─── Main sync logic ─────────────────────────────────────────────────────────
 
 async function syncDevice() {
@@ -202,6 +231,9 @@ async function syncDevice() {
     if (!grouped[key]) grouped[key] = { employee: emp, date: nepalDateStr, events: [] };
     grouped[key].events.push({ time: evtTime, raw: evt });
   }
+
+  // Get the real device record for foreign key references
+  const device = await getDeviceRecord();
 
   let created = 0, updated = 0, skipped = 0;
 
@@ -284,7 +316,7 @@ async function syncDevice() {
           isHoliday: false,
           isWeekend: isWeekend(dateUtc),
           source: 'device',
-          deviceId: DEVICE_ID,
+          deviceId: device.id,
         },
       });
       created++;
@@ -294,13 +326,19 @@ async function syncDevice() {
 
   await prisma.attendanceDeviceLog.create({
     data: {
-      deviceId: DEVICE_ID,
+      deviceId: device.id,
       type: 'sync',
       status: 'success',
       message: `Polled ${events.length} events, created: ${created}, updated: ${updated}, skipped: ${skipped}`,
       recordsSynced: created + updated,
       duration: null,
     },
+  });
+
+  // Update device last sync
+  await prisma.attendanceDevice.update({
+    where: { id: device.id },
+    data: { lastSyncAt: new Date(), lastSyncStatus: 'success' },
   });
 
   return { created, updated, skipped };
@@ -315,16 +353,23 @@ async function poll() {
   } catch (e) {
     console.error(`  Error: ${e.message}`);
     try {
+      const device = await getDeviceRecord();
       await prisma.attendanceDeviceLog.create({
         data: {
-          deviceId: DEVICE_ID,
+          deviceId: device.id,
           type: 'sync',
           status: 'failed',
           message: e.message,
           recordsSynced: 0,
         },
       });
-    } catch {}
+      await prisma.attendanceDevice.update({
+        where: { id: device.id },
+        data: { lastSyncStatus: 'failed', errorMessage: e.message },
+      });
+    } catch (logErr) {
+      console.error(`  Failed to log error: ${logErr.message}`);
+    }
   }
 }
 

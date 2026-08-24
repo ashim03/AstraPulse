@@ -15,8 +15,7 @@ import {
 import { bootstrapWorkspace } from "@/server/bootstrap";
 import { fail, ok, writeAudit, type ActionResult } from "@/lib/actions";
 import { parsePermissions } from "@/lib/permissions";
-import { createOtp, verifyOtp, sendOtpForType, getAuthSettings } from "@/services/otp";
-import { sendOtpEmail, sendPasswordChangeConfirmation } from "@/services/brevo";
+import { sendPasswordChangeConfirmation } from "@/services/brevo";
 import { isAccountLocked, recordFailedLogin, resetFailedLogins } from "@/services/password";
 import { logAuthEvent } from "@/services/auth-audit";
 
@@ -26,7 +25,7 @@ const loginSchema = z.object({
   code: z.string().optional(),
 });
 
-export async function loginAction(input: { email: string; password: string }): Promise<ActionResult<{ need2fa: boolean; userId?: string; accountType?: string; requiresOtp?: boolean; email?: string }>> {
+export async function loginAction(input: { email: string; password: string }): Promise<ActionResult<{ need2fa: boolean; userId?: string; accountType?: string }>> {
   const parsed = loginSchema.pick({ email: true, password: true }).safeParse(input);
   if (!parsed.success) {
     return fail("Please check your details", Object.fromEntries(parsed.error.issues.map((i) => [i.path[0], i.message])));
@@ -40,10 +39,6 @@ export async function loginAction(input: { email: string; password: string }): P
 
   if (!user || user.status === "inactive") {
     return fail("Invalid email or password");
-  }
-
-  if (user.status === "pending") {
-    return fail("Please verify your email before signing in");
   }
 
   const lockStatus = await isAccountLocked(user.id);
@@ -60,11 +55,13 @@ export async function loginAction(input: { email: string; password: string }): P
   }
 
   if (!(await verifyPassword(password, user.passwordHash))) {
-    const authSettings = await getAuthSettings(user.workspaceId);
+    const authSettings = await prisma.authSettings.findFirst({
+      where: { workspaceId: user.workspaceId },
+    });
     const lockResult = await recordFailedLogin(
       user.id,
-      authSettings.maxFailedLoginAttempts,
-      authSettings.lockoutDurationMinutes
+      authSettings?.maxFailedLoginAttempts ?? 5,
+      authSettings?.lockoutDurationMinutes ?? 15
     );
     await logAuthEvent({
       workspaceId: user.workspaceId,
@@ -105,36 +102,6 @@ export async function loginAction(input: { email: string; password: string }): P
       description: `${user.name} signed in (2FA pending)`,
     });
     return ok({ need2fa: true, userId: user.id });
-  }
-
-  const authSettings = await getAuthSettings(user.workspaceId);
-  if (authSettings.loginOtpEnabled) {
-    const otpResult = await sendOtpForType(
-      user.workspaceId,
-      email,
-      user.name,
-      "login",
-      user.id
-    );
-
-    if (otpResult.success) {
-      await writeAudit({
-        session: {
-          id: user.id,
-          workspaceId: user.workspaceId,
-          name: user.name,
-          email: user.email,
-          role: user.role?.name ?? "",
-          rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
-          accountType: user.accountType ?? "organization",
-          employeeId: user.employeeId ?? null,
-        },
-        action: "login",
-        module: "auth",
-        description: `${user.name} signed in (OTP sent)`,
-      });
-      return ok({ requiresOtp: true, email, need2fa: false });
-    }
   }
 
   await resetFailedLogins(user.id);
@@ -193,103 +160,6 @@ export async function verifyTwoFactorAction(userId: string, code: string): Promi
   redirect(acctType === "super_admin" ? "/super-admin" : "/");
 }
 
-export async function verifyLoginOtpAction(
-  email: string,
-  code: string
-): Promise<ActionResult<{ accountType?: string }>> {
-  const user = await prisma.user.findFirst({
-    where: { email: email.toLowerCase().trim() },
-    include: { role: true, employee: true },
-  });
-
-  if (!user) {
-    return fail("Invalid code");
-  }
-
-  const result = await verifyOtp(user.workspaceId, email, code, "login");
-
-  if (!result.valid) {
-    await logAuthEvent({
-      workspaceId: user.workspaceId,
-      userId: user.id,
-      email,
-      action: "login_otp",
-      success: false,
-      metadata: { remainingAttempts: result.remainingAttempts },
-    });
-    return fail(result.error ?? "Invalid code");
-  }
-
-  await resetFailedLogins(user.id);
-
-  await setSessionCookie({
-    id: user.id,
-    workspaceId: user.workspaceId,
-    name: user.name,
-    email: user.email,
-    role: user.role?.name ?? "Employee",
-    rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
-    accountType: user.accountType ?? "organization",
-    employeeId: user.employeeId ?? null,
-    departmentId: user.employee?.departmentId ?? null,
-  });
-  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-
-  await logAuthEvent({
-    workspaceId: user.workspaceId,
-    userId: user.id,
-    email,
-    action: "login_otp",
-    success: true,
-  });
-
-  await writeAudit({
-    session: {
-      id: user.id,
-      workspaceId: user.workspaceId,
-      name: user.name,
-      email: user.email,
-      role: user.role?.name ?? "",
-      rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
-      accountType: user.accountType ?? "organization",
-      employeeId: user.employeeId ?? null,
-    },
-    action: "login",
-    module: "auth",
-    description: `${user.name} signed in (OTP verified)`,
-  });
-
-  const acctType = user.accountType ?? "organization";
-  redirect(acctType === "super_admin" ? "/super-admin" : "/");
-}
-
-export async function resendLoginOtpAction(
-  email: string
-): Promise<ActionResult<{ waitSeconds?: number }>> {
-  const user = await prisma.user.findFirst({
-    where: { email: email.toLowerCase().trim() },
-    select: { id: true, workspaceId: true, name: true },
-  });
-
-  if (!user) {
-    return fail("User not found");
-  }
-
-  const result = await sendOtpForType(
-    user.workspaceId,
-    email,
-    user.name,
-    "login",
-    user.id
-  );
-
-  if (!result.success) {
-    return fail(result.error ?? "Failed to resend code", { waitSeconds: String(result.cooldown ?? 60) });
-  }
-
-  return ok(undefined, "Code resent");
-}
-
 const registerSchema = z.object({
   companyName: z.string().min(2, "Company name is required"),
   email: z.string().email("Enter a valid email"),
@@ -302,7 +172,7 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-export async function registerAction(input: z.infer<typeof registerSchema>): Promise<ActionResult<{ requiresVerification?: boolean; email?: string }>> {
+export async function registerAction(input: z.infer<typeof registerSchema>): Promise<ActionResult> {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
     return fail("Please fix the highlighted fields", Object.fromEntries(parsed.error.issues.map((i) => [i.path[0], i.message])));
@@ -331,26 +201,6 @@ export async function registerAction(input: z.infer<typeof registerSchema>): Pro
     success: true,
   });
 
-  const authSettings = await getAuthSettings(workspace.id);
-  if (authSettings.emailVerificationRequired) {
-    const otpResult = await sendOtpForType(
-      workspace.id,
-      user.email,
-      user.name,
-      "email_verify",
-      user.id
-    );
-
-    if (otpResult.success) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { status: "pending" },
-      });
-
-      return ok({ requiresVerification: true, email: user.email }, "Please verify your email to continue.");
-    }
-  }
-
   await setSessionCookie({
     id: user.id,
     workspaceId: workspace.id,
@@ -361,82 +211,6 @@ export async function registerAction(input: z.infer<typeof registerSchema>): Pro
     accountType: "organization",
     employeeId: null,
     departmentId: null,
-  });
-
-  redirect("/");
-}
-
-export async function verifyRegistrationAction(
-  email: string,
-  code: string
-): Promise<ActionResult> {
-  const user = await prisma.user.findFirst({
-    where: { email: email.toLowerCase().trim() },
-    include: { role: true, employee: true },
-  });
-
-  if (!user) {
-    return fail("User not found");
-  }
-
-  const result = await verifyOtp(user.workspaceId, email, code, "email_verify");
-
-  if (!result.valid) {
-    await logAuthEvent({
-      workspaceId: user.workspaceId,
-      userId: user.id,
-      email,
-      action: "verify_email",
-      success: false,
-      metadata: { source: "registration", remainingAttempts: result.remainingAttempts },
-    });
-    return fail(result.error ?? "Invalid code");
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerified: true,
-      emailVerifiedAt: new Date(),
-      status: "active",
-    },
-  });
-
-  await setSessionCookie({
-    id: user.id,
-    workspaceId: user.workspaceId,
-    name: user.name,
-    email: user.email,
-    role: user.role?.name ?? "Workspace Admin",
-    rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
-    accountType: user.accountType ?? "organization",
-    employeeId: user.employeeId ?? null,
-    departmentId: user.employee?.departmentId ?? null,
-  });
-
-  await logAuthEvent({
-    workspaceId: user.workspaceId,
-    userId: user.id,
-    email,
-    action: "verify_email",
-    success: true,
-    metadata: { source: "registration" },
-  });
-
-  await writeAudit({
-    session: {
-      id: user.id,
-      workspaceId: user.workspaceId,
-      name: user.name,
-      email: user.email,
-      role: user.role?.name ?? "",
-      rolePermissions: parsePermissions(user.role?.permissions ?? "[]"),
-      accountType: user.accountType ?? "organization",
-      employeeId: user.employeeId ?? null,
-    },
-    action: "register",
-    module: "auth",
-    description: `${user.name} verified email and registered`,
   });
 
   redirect("/");
@@ -459,41 +233,109 @@ export async function forgotPasswordAction(email: string): Promise<ActionResult>
   if (!user) return ok(undefined, "If an account exists, a reset link has been sent.");
 
   const token = generateTotpSecret().replace(/[-_]/g, "");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
   await prisma.user.update({
     where: { id: user.id },
-    data: { twoFactorSecret: null },
+    data: { twoFactorSecret: token, lastPasswordChange: expiresAt },
   });
-  // Store reset token (demo: reuse twoFactorSecret slot with a prefix)
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { twoFactorSecret: `reset:${token}` },
+
+  await writeAudit({
+    session: {
+      id: user.id,
+      workspaceId: user.workspaceId,
+      name: user.name,
+      email: user.email,
+      role: "Employee",
+      rolePermissions: [],
+      accountType: user.accountType ?? "organization",
+      employeeId: null,
+    },
+    action: "forgot_password",
+    module: "auth",
+    description: `Password reset requested for ${user.email}`,
   });
-  return ok(undefined, `Reset token (demo): ${token}`);
+
+  return ok(undefined, "If an account exists, a reset link has been sent.");
 }
 
-export async function resetPasswordAction(token: string, password: string): Promise<ActionResult> {
-  const parsed = z.string().min(8).safeParse(password);
+export async function resetPasswordAction(token: string, newPassword: string): Promise<ActionResult> {
+  const parsed = z.string().min(8).safeParse(newPassword);
   if (!parsed.success) return fail("Password must be at least 8 characters");
 
-  const users = await prisma.user.findMany({ where: { twoFactorSecret: { startsWith: "reset:" } } });
-  const user = users.find((u) => (u.twoFactorSecret ?? "").split(":")[1] === token);
-  if (!user) return fail("Invalid or expired reset token");
+  const user = await prisma.user.findFirst({
+    where: { twoFactorSecret: token },
+  });
 
+  if (!user || !user.lastPasswordChange || user.lastPasswordChange < new Date()) {
+    return fail("Invalid or expired reset link");
+  }
+
+  const hashed = await hashPassword(parsed.data);
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash: hashPassword(password), twoFactorSecret: null },
+    data: {
+      passwordHash: hashed,
+      twoFactorSecret: null,
+      lastPasswordChange: null,
+      failedLoginAttempts: 0,
+    },
   });
-  return ok(undefined, "Password updated. You can now sign in.");
+
+  await sendPasswordChangeConfirmation(user.workspaceId, user.email, user.name);
+
+  await writeAudit({
+    session: {
+      id: user.id,
+      workspaceId: user.workspaceId,
+      name: user.name,
+      email: user.email,
+      role: "Employee",
+      rolePermissions: [],
+      accountType: user.accountType ?? "organization",
+      employeeId: null,
+    },
+    action: "reset_password",
+    module: "auth",
+    description: `Password reset completed for ${user.email}`,
+  });
+
+  return ok(undefined, "Password reset successful. You can now log in.");
 }
 
-export async function enableTwoFactorAction(enabled: boolean): Promise<ActionResult<{ secret: string }>> {
+export async function enableTwoFactorAction(enabled: boolean): Promise<ActionResult<{ secret?: string; uri?: string }>> {
   const session = await getSession();
   if (!session) return fail("Not authenticated");
+
   if (enabled) {
     const secret = generateTotpSecret();
-    await prisma.user.update({ where: { id: session.id }, data: { twoFactorSecret: secret, twoFactorEnabled: true } });
+    await prisma.user.update({
+      where: { id: session.id },
+      data: { twoFactorSecret: secret },
+    });
     return ok({ secret });
+  } else {
+    await prisma.user.update({
+      where: { id: session.id },
+      data: { twoFactorEnabled: false, twoFactorSecret: null },
+    });
+    return ok(undefined, "Two-factor authentication disabled");
   }
-  await prisma.user.update({ where: { id: session.id }, data: { twoFactorSecret: null, twoFactorEnabled: false } });
-  return ok(undefined, "Two-factor authentication disabled");
+}
+
+export async function confirmTwoFactorAction(code: string): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return fail("Not authenticated");
+
+  const user = await prisma.user.findUnique({ where: { id: session.id } });
+  if (!user?.twoFactorSecret) return fail("Two-factor setup not initiated");
+
+  if (!verifyTotp(user.twoFactorSecret, code)) return fail("Invalid code. Please try again.");
+
+  await prisma.user.update({
+    where: { id: session.id },
+    data: { twoFactorEnabled: true },
+  });
+
+  return ok(undefined, "Two-factor authentication enabled");
 }

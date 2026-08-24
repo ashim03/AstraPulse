@@ -84,7 +84,7 @@ model User {
   lastLoginAt         DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
-  emailVerified       Boolean              @default(false)
+  emailVerified       Boolean              @default(true)
   emailVerifiedAt     DateTime?
   failedLoginAttempts Int                  @default(0)
   lastPasswordChange  DateTime?
@@ -671,6 +671,7 @@ model Message {
   senderId    String
   subject     String
   body        String?
+  category    String             @default("general")
   attachment  String?
   parentId    String?
   createdAt   DateTime           @default(now())

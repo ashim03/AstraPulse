@@ -9,6 +9,7 @@ module.exports = {
       max_memory_restart: "200M",
       env: {
         NODE_ENV: "production",
+        DATABASE_URL: "postgresql://neondb_owner:npg_fln5L3DUpWIO@ep-morning-silence-azwk6ejv-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
       },
       // Restart on crash
       exp_backoff_restart_delay: 1000,

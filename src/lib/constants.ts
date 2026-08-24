@@ -585,5 +585,3 @@ export const NOTIFICATION_TYPES = {
 export const CHART_COLORS = ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#64748b"];
 
 export const SUBSCRIPTION_STATUSES = ["trial", "active", "past_due", "cancelled", "expired"];
-
-export const EMAIL_VERIFICATION_REQUIRED = false;

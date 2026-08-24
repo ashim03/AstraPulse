@@ -46,11 +46,6 @@ export default function RegisterPage() {
         setFieldErrors(res.fieldErrors ?? {});
         return;
       }
-      if (res.data?.requiresVerification) {
-        toast({ type: "info", title: res.message ?? "Please verify your email" });
-        router.push(`/verify-email?email=${encodeURIComponent(res.data.email ?? form.email)}`);
-        return;
-      }
       window.location.href = "/";
     } catch (err: any) {
       setLoading(false);

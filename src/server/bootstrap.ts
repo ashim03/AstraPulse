@@ -87,6 +87,8 @@ export async function bootstrapWorkspace(input: BootstrapInput) {
       passwordHash: hashPassword(input.password),
       roleId: roleIds["Workspace Admin"],
       status: "active",
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
     },
   });
 

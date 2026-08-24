@@ -15,13 +15,6 @@ import {
 
 type AuthSettings = {
   id: string;
-  emailVerificationRequired: boolean;
-  loginOtpEnabled: boolean;
-  otpExpirationMinutes: number;
-  otpLength: number;
-  maxOtpAttempts: number;
-  otpResendCooldownSeconds: number;
-  maxOtpResends: number;
   passwordMinLength: number;
   passwordRequireUppercase: boolean;
   passwordRequireLowercase: boolean;
@@ -266,82 +259,10 @@ export function AuthSettingsClient({
         <Card>
           <CardHeader
             title="Authentication Settings"
-            subtitle="Configure authentication, OTP, and security policies"
+            subtitle="Configure authentication and security policies"
             action={<Shield className="h-5 w-5 text-slate-400" />}
           />
           <CardBody className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Email Verification</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Require users to verify their email before accessing the system</p>
-              </div>
-              <Switch
-                checked={authSettings.emailVerificationRequired}
-                onCheckedChange={(v) => updateAuth("emailVerificationRequired", v)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Login OTP</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Require OTP verification for staff login</p>
-              </div>
-              <Switch
-                checked={authSettings.loginOtpEnabled}
-                onCheckedChange={(v) => updateAuth("loginOtpEnabled", v)}
-              />
-            </div>
-
-            <CollapsibleSection title="OTP Settings" icon={<Shield className="h-4 w-4 text-violet-500" />}>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input
-                  label="OTP Expiration (minutes)"
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={authSettings.otpExpirationMinutes}
-                  onChange={(e) => updateAuth("otpExpirationMinutes", parseInt(e.target.value) || 5)}
-                  className={inputClass}
-                />
-                <Input
-                  label="OTP Length (digits)"
-                  type="number"
-                  min={4}
-                  max={8}
-                  value={authSettings.otpLength}
-                  onChange={(e) => updateAuth("otpLength", parseInt(e.target.value) || 6)}
-                  className={inputClass}
-                />
-                <Input
-                  label="Max OTP Attempts"
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={authSettings.maxOtpAttempts}
-                  onChange={(e) => updateAuth("maxOtpAttempts", parseInt(e.target.value) || 5)}
-                  className={inputClass}
-                />
-                <Input
-                  label="Resend Cooldown (seconds)"
-                  type="number"
-                  min={10}
-                  max={300}
-                  value={authSettings.otpResendCooldownSeconds}
-                  onChange={(e) => updateAuth("otpResendCooldownSeconds", parseInt(e.target.value) || 60)}
-                  className={inputClass}
-                />
-                <Input
-                  label="Max OTP Resends"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={authSettings.maxOtpResends}
-                  onChange={(e) => updateAuth("maxOtpResends", parseInt(e.target.value) || 3)}
-                  className={inputClass}
-                />
-              </div>
-            </CollapsibleSection>
-
             <CollapsibleSection title="Password Requirements" icon={<Shield className="h-4 w-4 text-emerald-500" />}>
               <Input
                 label="Minimum Length"

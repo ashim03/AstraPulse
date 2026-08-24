@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/auth";
 import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
-import { buildPayrollRun } from "@/services/payroll";
+import { buildPayrollRun, calculateEmployeePayroll, generatePayslip, getEmployeePayslips, getPayrollSummary } from "@/services/payroll";
 import { z } from "zod";
 
 async function requirePermission(module: string, action: PermissionAction = "view") {
@@ -378,4 +378,256 @@ export async function runAutoSalaryAction(periodId: string): Promise<ActionResul
     const message = e instanceof Error ? e.message : "Failed to generate payroll";
     return fail(message);
   }
+}
+
+// ─── New Actions ───────────────────────────────────────────────────────────
+
+export async function generatePayrollAction(month: string): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "create");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  if (!/^\d{4}-\d{2}$/.test(month)) return fail("Month must be YYYY-MM");
+
+  const existing = await prisma.payroll.findFirst({
+    where: { workspaceId: session.workspaceId, period: month },
+  });
+  if (existing) return fail(`Payroll for ${month} already exists`);
+
+  const employees = await prisma.employee.findMany({
+    where: { workspaceId: session.workspaceId, status: { in: ["active", "on_leave"] } },
+    select: { id: true },
+  });
+
+  if (employees.length === 0) return fail("No active employees");
+
+  const payrollDataList: Array<Awaited<ReturnType<typeof calculateEmployeePayroll>>> = [];
+  for (const emp of employees) {
+    try {
+      const data = await calculateEmployeePayroll(emp.id, month);
+      payrollDataList.push(data);
+    } catch {
+      // skip employees that fail calculation
+    }
+  }
+
+  if (payrollDataList.length === 0) return fail("Failed to calculate payroll for any employee");
+
+  const totals = payrollDataList.reduce(
+    (acc, d) => ({
+      gross: acc.gross + d.gross,
+      deductions: acc.deductions + d.totalDeductions + d.advanceDeduction,
+      tax: acc.tax + d.tax,
+      net: acc.net + d.net,
+    }),
+    { gross: 0, deductions: 0, tax: 0, net: 0 }
+  );
+
+  const payroll = await prisma.payroll.create({
+    data: {
+      workspaceId: session.workspaceId,
+      period: month,
+      name: `Payroll ${month}`,
+      status: "calculated",
+      grossTotal: Math.round(totals.gross * 100) / 100,
+      deductionTotal: Math.round(totals.deductions * 100) / 100,
+      taxTotal: Math.round(totals.tax * 100) / 100,
+      netTotal: Math.round(totals.net * 100) / 100,
+      employerCostTotal: Math.round(totals.gross * 100) / 100,
+      processedAt: new Date(),
+      items: {
+        create: payrollDataList.map((d) => ({
+          employeeId: d.employeeId,
+          baseSalary: d.baseSalary,
+          allowances: d.allowances,
+          bonuses: d.bonuses,
+          overtime: d.overtimePay,
+          overtimeHours: d.overtimeHours,
+          weekendPay: d.weekendPay,
+          holidayPay: d.holidayPay,
+          gross: d.gross,
+          lateDeduction: d.lateDeduction,
+          absentDeduction: d.absentDeduction,
+          halfDayDeduction: d.halfDayDeduction,
+          leaveDeduction: d.leaveDeduction,
+          deductions: d.totalDeductions,
+          tax: d.tax,
+          advanceDeduction: d.advanceDeduction,
+          benefits: 0,
+          net: d.net,
+          employerCost: d.gross,
+          workingDays: d.workingDays,
+          presentDays: d.presentDays,
+          absentDays: d.absentDays,
+          halfDays: d.halfDays,
+          paidLeaveDays: d.paidLeaveDays,
+          unpaidLeaveDays: d.unpaidLeaveDays,
+          totalHours: d.totalHours,
+          paymentStatus: "pending",
+        })),
+      },
+    },
+  });
+
+  await writeAudit({
+    session,
+    action: "create",
+    module: "payroll",
+    recordId: payroll.id,
+    description: `Generated payroll ${month} (${payrollDataList.length} employees, net ${payroll.netTotal})`,
+  });
+
+  revalidatePath("/payroll");
+  return ok({
+    payrollId: payroll.id,
+    employeeCount: payrollDataList.length,
+    netTotal: payroll.netTotal,
+  }, "Payroll generated successfully");
+}
+
+export async function getPayrollAction(month: string): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "view");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const summary = await getPayrollSummary(session.workspaceId, month);
+  return ok(summary);
+}
+
+export async function getPayslipAction(payslipId: string): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "view");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const payslip = await prisma.payrollItem.findFirst({
+    where: { id: payslipId },
+    include: {
+      employee: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          employeeId: true,
+          department: { select: { name: true } },
+          position: { select: { name: true } },
+          bankName: true,
+          bankAccountNumber: true,
+          accountHolder: true,
+          taxId: true,
+        },
+      },
+      payroll: {
+        select: { period: true, name: true, status: true },
+      },
+    },
+  });
+
+  if (!payslip) return fail("Payslip not found");
+
+  return ok(payslip);
+}
+
+export async function getMyPayrollAction(): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Not authenticated");
+  }
+
+  if (!session.employeeId) return fail("No employee profile found");
+
+  const payslips = await getEmployeePayslips(session.employeeId);
+  return ok(payslips);
+}
+
+export async function getPayrollSettingsAction(): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "view");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const settings = await prisma.attendanceSettings.findFirst({
+    where: { workspaceId: session.workspaceId },
+  });
+
+  const salaryConfigs = await prisma.salaryConfig.findMany({
+    where: { workspaceId: session.workspaceId },
+  });
+
+  return ok({
+    attendanceSettings: settings,
+    salaryConfigs,
+  });
+}
+
+export async function updatePayrollSettingsAction(data: {
+  lateDeductionPerMinute?: number;
+  absentDeductionEnabled?: boolean;
+  halfDayDeductionPercent?: number;
+  overtimeRateMultiplier?: number;
+  weekendOvertimeRate?: number;
+  holidayOvertimeRate?: number;
+  taxEnabled?: boolean;
+  taxRate?: number;
+}): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("payroll", "manage");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const attendanceUpdate: Record<string, unknown> = {};
+  if (data.lateDeductionPerMinute !== undefined) attendanceUpdate.lateDeductionPerMinute = data.lateDeductionPerMinute;
+  if (data.absentDeductionEnabled !== undefined) attendanceUpdate.absentDeductionEnabled = data.absentDeductionEnabled;
+  if (data.halfDayDeductionPercent !== undefined) attendanceUpdate.halfDayDeductionPercent = data.halfDayDeductionPercent;
+  if (data.overtimeRateMultiplier !== undefined) attendanceUpdate.overtimeRateMultiplier = data.overtimeRateMultiplier;
+  if (data.weekendOvertimeRate !== undefined) attendanceUpdate.weekendOvertimeRate = data.weekendOvertimeRate;
+  if (data.holidayOvertimeRate !== undefined) attendanceUpdate.holidayOvertimeRate = data.holidayOvertimeRate;
+
+  if (Object.keys(attendanceUpdate).length > 0) {
+    const existing = await prisma.attendanceSettings.findFirst({
+      where: { workspaceId: session.workspaceId },
+    });
+    if (existing) {
+      await prisma.attendanceSettings.update({
+        where: { id: existing.id },
+        data: attendanceUpdate,
+      });
+    }
+  }
+
+  if (data.taxEnabled !== undefined || data.taxRate !== undefined) {
+    const salaryUpdate: Record<string, unknown> = {};
+    if (data.taxEnabled !== undefined) salaryUpdate.taxEnabled = data.taxEnabled;
+    if (data.taxRate !== undefined) salaryUpdate.taxRate = data.taxRate;
+
+    await prisma.salaryConfig.updateMany({
+      where: { workspaceId: session.workspaceId },
+      data: salaryUpdate,
+    });
+  }
+
+  await writeAudit({
+    session,
+    action: "update",
+    module: "payroll-settings",
+    description: "Updated payroll settings",
+  });
+
+  revalidatePath("/payroll");
+  revalidatePath("/payroll/settings");
+  return ok(undefined, "Payroll settings updated");
 }

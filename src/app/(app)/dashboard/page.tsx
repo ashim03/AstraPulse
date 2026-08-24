@@ -1,7 +1,7 @@
 import { format, subDays, startOfDay, endOfDay, startOfMonth } from "date-fns";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { money, formatDate } from "@/lib/utils";
+import { money, formatDate, formatTimeNepal } from "@/lib/utils";
 import { attendanceStatsForDay, attendanceTrend } from "@/services/attendance";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody } from "@/components/ui/card";
@@ -29,6 +29,11 @@ import {
   AlertCircle,
   ClipboardList,
   HardDrive,
+  Wifi,
+  WifiOff,
+  MessageSquare,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import { NeedsAttention } from "./needs-attention";
 import { RecentActivity } from "./recent-activity";
@@ -789,6 +794,74 @@ export default async function DashboardPage() {
       prisma.attendanceDevice.findMany({ where: { workspaceId: wsId } }),
     ]);
 
+  // Additional admin-specific queries
+  const [
+    pendingCorrections,
+    unreadMessages,
+    todayLeaveOnApproved,
+    todayLateAttendees,
+    todayOvertimeAttendees,
+    recentAuditLogs,
+    todayAttendanceRecords,
+  ] = await Promise.all([
+    prisma.attendanceAdjustment.count({ where: { workspaceId: wsId, status: "pending" } }),
+    prisma.messageRecipient.count({
+      where: {
+        recipientId: session.id,
+        readAt: null,
+      },
+    }),
+    prisma.leaveRequest.count({
+      where: {
+        workspaceId: wsId,
+        status: "approved",
+        startDate: { lte: todayEnd },
+        endDate: { gte: todayStart },
+      },
+    }),
+    prisma.attendance.findMany({
+      where: {
+        workspaceId: wsId,
+        date: { gte: todayStart, lte: todayEnd },
+        lateMinutes: { gt: 0 },
+      },
+      include: { employee: { select: { id: true, name: true, employeeId: true, department: { select: { name: true } } } } },
+      orderBy: { lateMinutes: "desc" },
+    }),
+    prisma.attendance.findMany({
+      where: {
+        workspaceId: wsId,
+        date: { gte: todayStart, lte: todayEnd },
+        overtime: { gt: 0 },
+      },
+      include: { employee: { select: { id: true, name: true, employeeId: true, department: { select: { name: true } } } } },
+      orderBy: { overtime: "desc" },
+    }),
+    prisma.auditLog.findMany({
+      where: { workspaceId: wsId },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.attendance.findMany({
+      where: {
+        workspaceId: wsId,
+        date: { gte: todayStart, lte: todayEnd },
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            name: true,
+            employeeId: true,
+            department: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { clockIn: "asc" },
+    }),
+  ]);
+
   let safePayrolls: any[] = [];
   let safeExpenses: any[] = [];
   let safeIncomes: any[] = [];
@@ -931,6 +1004,13 @@ export default async function DashboardPage() {
   const subscription = workspace?.subscription;
   const employeesGrowth = await prisma.employee.count({ where: { workspaceId: wsId, joinDate: { gte: monthStart } } });
 
+  // Device sync status
+  const primaryDevice = devices.length > 0 ? devices[0] : null;
+  const deviceOnline = primaryDevice?.status === "online";
+  const lastSyncAt = primaryDevice?.lastSyncAt ?? null;
+  const deviceSyncedEmployees = employees.filter((e: any) => e.deviceEmployeeId).length;
+  const failedSyncCount = employees.filter((e: any) => e.status === "active" && !e.deviceEmployeeId).length;
+
   return (
     <>
       <PageHeader
@@ -990,7 +1070,186 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Attendance pulse + coordination */}
+      {/* ── Summary Cards Row ── */}
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
+        <Link href="/staff" className="block transition hover:scale-[1.01]">
+          <StatCard title="Total Staff" value={totalEmployees} change={employeesGrowth > 0 ? employeesGrowth * 10 : 0} trend={employeesGrowth > 0 ? "up" : "flat"} icon={Users} tooltip="Active employees" footer={<p className="text-xs text-slate-400">{activeEmployees} active</p>} />
+        </Link>
+        <Link href="/attendance" className="block transition hover:scale-[1.01]">
+          <StatCard title="Present Today" value={`${todayAttendance.present}`} trend="flat" icon={UserCheck} footer={<p className="text-xs text-emerald-600">{Math.round((todayAttendance.present / Math.max(1, activeEmployees)) * 100)}% rate</p>} />
+        </Link>
+        <Link href="/attendance" className="block transition hover:scale-[1.01]">
+          <StatCard title="Absent Today" value={todayAttendance.absent} icon={AlertTriangle} footer={<p className="text-xs text-red-600">of {activeEmployees} active</p>} />
+        </Link>
+        <Link href="/leave" className="block transition hover:scale-[1.01]">
+          <StatCard title="On Leave" value={todayLeaveOnApproved} icon={CalendarDays} footer={pendingLeaveCount > 0 ? <p className="text-xs text-amber-600">{pendingLeaveCount} pending</p> : undefined} />
+        </Link>
+        <Link href="/attendance" className="block transition hover:scale-[1.01]">
+          <StatCard title="Late Today" value={todayLateAttendees.length} icon={Clock} footer={todayLateAttendees.length > 0 ? <p className="text-xs text-amber-600">{todayLateAttendees.length > 0 ? `${todayLateAttendees[0]?.lateMinutes}m max` : ""}</p> : undefined} />
+        </Link>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
+        <Link href="/attendance" className="block transition hover:scale-[1.01]">
+          <StatCard title="Overtime Today" value={todayOvertimeAttendees.length} icon={Activity} footer={todayOvertimeAttendees.length > 0 ? <p className="text-xs text-emerald-600">{todayOvertimeAttendees.reduce((s, a) => s + a.overtime, 0).toFixed(1)}h total</p> : undefined} />
+        </Link>
+        <Link href="/leave" className="block transition hover:scale-[1.01]">
+          <StatCard title="Pending Leaves" value={pendingLeaveCount} icon={CalendarDays} />
+        </Link>
+        <Link href="/attendance" className="block transition hover:scale-[1.01]">
+          <StatCard title="Pending Corrections" value={pendingCorrections} icon={ClipboardList} />
+        </Link>
+        <Link href="/mail" className="block transition hover:scale-[1.01]">
+          <StatCard title="Unread Messages" value={unreadMessages} icon={MessageSquare} />
+        </Link>
+        <Link href="/staff/device-sync" className="block transition hover:scale-[1.01]">
+          <StatCard
+            title="Device Sync"
+            value={deviceOnline ? "Online" : "Offline"}
+            icon={deviceOnline ? Wifi : WifiOff}
+            iconClass={deviceOnline ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}
+            footer={<p className="text-xs text-slate-400">{deviceSyncedEmployees} synced · {failedSyncCount} pending</p>}
+          />
+        </Link>
+      </div>
+
+      {/* ── Today's Attendance Table + Device Status ── */}
+      <div className="mb-4 grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardBody className="p-4 sm:px-5 sm:py-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="section-title flex items-center gap-2">
+                <Activity className="h-4 w-4 text-brand-500" /> Today&apos;s Attendance
+              </h3>
+              <Link href="/attendance" className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            {todayAttendanceRecords.length === 0 ? (
+              <p className="text-sm text-slate-400">No attendance records for today.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="pb-2 text-left font-medium text-slate-500">Employee</th>
+                      <th className="pb-2 text-left font-medium text-slate-500">Department</th>
+                      <th className="pb-2 text-left font-medium text-slate-500">Clock In</th>
+                      <th className="pb-2 text-left font-medium text-slate-500">Clock Out</th>
+                      <th className="pb-2 text-left font-medium text-slate-500">Status</th>
+                      <th className="pb-2 text-right font-medium text-slate-500">Hours</th>
+                      <th className="pb-2 text-right font-medium text-slate-500">Late</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {todayAttendanceRecords.map((att) => (
+                      <tr key={att.id} className="hover:bg-slate-50/50">
+                        <td className="py-2.5 pr-4">
+                          <div className="flex items-center gap-2">
+                            <Avatar name={att.employee.name} size="xs" />
+                            <div>
+                              <p className="font-medium text-slate-700 dark:text-slate-300">{att.employee.name}</p>
+                              <p className="text-xs text-slate-400">{att.employee.employeeId}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2.5 pr-4 text-slate-500">{att.employee.department?.name ?? "—"}</td>
+                        <td className="py-2.5 pr-4 font-mono text-xs text-slate-600">{formatTimeNepal(att.clockIn)}</td>
+                        <td className="py-2.5 pr-4 font-mono text-xs text-slate-600">{formatTimeNepal(att.clockOut)}</td>
+                        <td className="py-2.5 pr-4"><StatusBadge status={att.status} /></td>
+                        <td className="py-2.5 pr-4 text-right font-mono text-xs text-slate-600">{att.hours > 0 ? `${att.hours.toFixed(1)}h` : "—"}</td>
+                        <td className="py-2.5 text-right font-mono text-xs">
+                          {att.lateMinutes > 0 ? (
+                            <span className="text-amber-600">{att.lateMinutes}m</span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
+        {/* Device Status Card */}
+        <Card>
+          <CardBody className="p-4 sm:px-5 sm:py-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="section-title flex items-center gap-2">
+                <HardDrive className="h-4 w-4 text-sky-500" /> Device Status
+              </h3>
+              {primaryDevice && (
+                <span className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${deviceOnline ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${deviceOnline ? "bg-emerald-500" : "bg-red-500"}`} />
+                  {deviceOnline ? "Online" : "Offline"}
+                </span>
+              )}
+            </div>
+            {!primaryDevice ? (
+              <div className="text-center py-6">
+                <HardDrive className="mx-auto h-8 w-8 text-slate-300" />
+                <p className="mt-2 text-sm text-slate-400">No device configured</p>
+                <Link href="/attendance/settings" className="mt-2 inline-block text-xs font-medium text-brand-600 hover:underline">
+                  Set up device
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Device</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{primaryDevice.name}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">IP Address</span>
+                    <span className="text-xs font-mono text-slate-600">{primaryDevice.ipAddress}</span>
+                  </div>
+                  {primaryDevice.model && (
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-xs text-slate-400">Model</span>
+                      <span className="text-xs text-slate-600">{primaryDevice.model}</span>
+                    </div>
+                  )}
+                  {primaryDevice.serialNumber && (
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-xs text-slate-400">Serial</span>
+                      <span className="text-xs font-mono text-slate-600">{primaryDevice.serialNumber}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Last Sync</span>
+                    <span className="text-xs font-medium text-slate-600">
+                      {lastSyncAt ? formatDate(lastSyncAt, "MMM d, HH:mm") : "Never"}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Employees Synced</span>
+                    <span className="text-xs font-semibold text-emerald-600">{deviceSyncedEmployees}/{totalEmployees}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Failed Syncs</span>
+                    <span className={`text-xs font-semibold ${failedSyncCount > 0 ? "text-red-600" : "text-slate-600"}`}>
+                      {failedSyncCount}
+                    </span>
+                  </div>
+                </div>
+
+                <Link href="/staff/device-sync" className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-brand-200 hover:bg-brand-50/30 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+                  <RefreshCw className="h-4 w-4" /> Manage Device Sync
+                </Link>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* ── Attendance pulse + coordination ── */}
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <Link href="/attendance" className="block lg:col-span-2">
           <Card className="transition hover:shadow-md">
@@ -1065,16 +1324,16 @@ export default async function DashboardPage() {
                 <span className="text-sm font-semibold text-slate-700">{money(outstandingAdvances)}</span>
               </Link>
               {hasPermission(session, "attendance", "device") && devices.length > 0 && (
-                <Link href="/attendance/settings" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-sky-200 hover:bg-sky-50/40 dark:hover:bg-slate-700">
+                <Link href="/staff/device-sync" className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:border-sky-200 hover:bg-sky-50/40 dark:hover:bg-slate-700">
                   <div className="flex items-center gap-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-600"><HardDrive className="h-4 w-4" /></span>
                     <div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Attendance devices</p>
-                      <p className="text-xs text-slate-400">{devices.filter((d: any) => d.status === "online").length}/{devices.length} online</p>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Device sync</p>
+                      <p className="text-xs text-slate-400">{deviceSyncedEmployees}/{totalEmployees} synced</p>
                     </div>
                   </div>
-                  {devices.some((d: any) => d.lastSyncAt) && (
-                    <span className="text-xs text-slate-400">Last sync {formatDate(devices.filter((d: any) => d.lastSyncAt).sort((a: any, b: any) => new Date(b.lastSyncAt).getTime() - new Date(a.lastSyncAt).getTime())[0].lastSyncAt, "MMM d, HH:mm")}</span>
+                  {lastSyncAt && (
+                    <span className="text-xs text-slate-400">Last sync {formatDate(lastSyncAt, "MMM d, HH:mm")}</span>
                   )}
                 </Link>
               )}
@@ -1085,15 +1344,6 @@ export default async function DashboardPage() {
 
       {/* KPI row */}
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Link href="/staff" className="block transition hover:scale-[1.01]">
-          <StatCard title="Total Employees" value={totalEmployees} change={employeesGrowth > 0 ? employeesGrowth * 10 : 0} trend={employeesGrowth > 0 ? "up" : "flat"} icon={Users} tooltip="Total headcount" />
-        </Link>
-        <Link href="/attendance" className="block transition hover:scale-[1.01]">
-          <StatCard title="Present Today" value={`${todayAttendance.present}`} trend="flat" icon={UserCheck} footer={<p className="text-xs text-emerald-600">{Math.round((todayAttendance.present / Math.max(1, activeEmployees)) * 100)}% attendance rate</p>} />
-        </Link>
-        <Link href="/leave" className="block transition hover:scale-[1.01]">
-          <StatCard title="Employees on Leave" value={onLeave} icon={CalendarDays} />
-        </Link>
         {canViewPayroll && (
           <Link href="/payroll" className="block transition hover:scale-[1.01]">
             <StatCard title="Payroll This Month" value={money(payrollNet)} change={latestPayroll ? 2.4 : 0} trend="up" icon={Wallet} />
@@ -1125,6 +1375,50 @@ export default async function DashboardPage() {
       <div className="mb-4">
         <DashboardCharts data={chartsData} role={session.role} />
       </div>
+
+      {/* ── Recent Activity (Last 5 Audit Logs) ── */}
+      <Card className="mb-4">
+        <CardBody className="p-4 sm:px-5 sm:py-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="section-title flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-brand-500" /> Recent Activity
+            </h3>
+            {hasPermission(session, "audit-logs", "view") && (
+              <Link href="/audit-logs" className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
+          </div>
+          {recentAuditLogs.length === 0 ? (
+            <p className="text-sm text-slate-400">No recent activity.</p>
+          ) : (
+            <div className="space-y-2">
+              {recentAuditLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`h-2 w-2 rounded-full ${
+                      log.action === "create" ? "bg-emerald-500" :
+                      log.action === "update" ? "bg-blue-500" :
+                      log.action === "delete" ? "bg-red-500" :
+                      "bg-slate-400"
+                    }`} />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {log.user?.name ?? "System"} · {log.module}
+                      </p>
+                      <p className="text-xs text-slate-400">{log.description}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-400">{formatDate(log.createdAt, "MMM d, HH:mm")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Needs attention + recent activity */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
