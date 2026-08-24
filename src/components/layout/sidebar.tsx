@@ -33,35 +33,17 @@ export function WorkspaceSwitcher({ name, plan, collapsed }: { name: string; pla
     );
   }
   return (
-    <Dropdown
-      width="w-64"
-      trigger={
-        <button className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-left transition hover:border-brand-200 hover:bg-brand-50/40">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-            {name.charAt(0)}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{name}</span>
-            <span className="block truncate text-[11px] text-slate-400 dark:text-slate-500">
-              {plan ?? "Free"} plan
-            </span>
-          </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-400" />
-        </button>
-      }
-    >
-      <div className="px-3.5 py-2">
-        <p className="text-xs font-medium text-slate-500">Current workspace</p>
-        <p className="mt-0.5 text-sm font-semibold text-slate-800">{name}</p>
-      </div>
-      <DropdownSeparator />
-      <div className="px-3.5 py-2 text-xs text-slate-500">
-        This workspace is the only one in this demo. Invite teammates to collaborate.
-      </div>
-      <DropdownSeparator />
-      <DropdownItem icon={<Sparkles className="h-4 w-4" />} onClick={() => { window.location.href = "/subscription"; }}>Upgrade workspace</DropdownItem>
-      <DropdownItem icon={<Building2 className="h-4 w-4" />} onClick={() => { window.location.href = "/subscription"; }}>Create new workspace</DropdownItem>
-    </Dropdown>
+    <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+        {name.charAt(0)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-200">{name}</span>
+        <span className="block truncate text-[11px] text-slate-400 dark:text-slate-500">
+          {plan ?? "Free"} plan
+        </span>
+      </span>
+    </div>
   );
 }
 

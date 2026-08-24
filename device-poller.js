@@ -351,7 +351,7 @@ async function syncDevice() {
   // Update device last sync
   await prisma.attendanceDevice.update({
     where: { id: device.id },
-    data: { lastSyncAt: new Date(), lastSyncStatus: 'success' },
+    data: { lastSyncAt: new Date(), lastSyncStatus: 'success', status: 'online', errorMessage: null },
   });
 
   return { created, updated, skipped };
@@ -378,7 +378,7 @@ async function poll() {
       });
       await prisma.attendanceDevice.update({
         where: { id: device.id },
-        data: { lastSyncStatus: 'failed', errorMessage: e.message },
+        data: { lastSyncStatus: 'failed', status: 'error', errorMessage: e.message },
       });
     } catch (logErr) {
       console.error(`  Failed to log error: ${logErr.message}`);

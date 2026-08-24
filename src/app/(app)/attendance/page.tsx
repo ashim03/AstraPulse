@@ -44,7 +44,10 @@ export default async function AttendancePage({
     employeeWhere.id = session.employeeId ?? "__none__";
   }
 
-  const attendanceWhere: Record<string, unknown> = { workspaceId: session.workspaceId, date: selected };
+  const attendanceWhere: Record<string, unknown> = {
+    workspaceId: session.workspaceId,
+    date: { gte: selected, lt: new Date(selected.getTime() + 24 * 60 * 60 * 1000) },
+  };
   if (scope === "department" && session.departmentId) {
     attendanceWhere.employee = { departmentId: session.departmentId };
   } else if (scope === "self") {

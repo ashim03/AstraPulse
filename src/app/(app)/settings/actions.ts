@@ -55,3 +55,61 @@ export async function updateProfileAction(formData: FormData): Promise<ActionRes
   revalidatePath("/settings");
   return ok(undefined, "Profile updated");
 }
+
+export async function uploadLogoAction(formData: FormData): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requirePermission("settings", "edit");
+  } catch {
+    return fail("You don't have permission");
+  }
+
+  const file = formData.get("logo") as File | null;
+  if (!file || file.size === 0) return fail("No file uploaded");
+  if (file.size > 2 * 1024 * 1024) return fail("File too large (max 2MB)");
+  if (!file.type.startsWith("image/")) return fail("File must be an image");
+
+  const bytes = await file.arrayBuffer();
+  const base64 = Buffer.from(bytes).toString("base64");
+  const dataUri = `data:${file.type};base64,${base64}`;
+
+  await prisma.workspace.update({
+    where: { id: session.workspaceId },
+    data: { logo: dataUri },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/");
+  return ok(undefined, "Logo uploaded");
+}
+
+export async function uploadAvatarAction(formData: FormData): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    return fail("Not authenticated");
+  }
+
+  const file = formData.get("avatar") as File | null;
+  if (!file || file.size === 0) return fail("No file uploaded");
+  if (file.size > 2 * 1024 * 1024) return fail("File too large (max 2MB)");
+  if (!file.type.startsWith("image/")) return fail("File must be an image");
+
+  const bytes = await file.arrayBuffer();
+  const base64 = Buffer.from(bytes).toString("base64");
+  const dataUri = `data:${file.type};base64,${base64}`;
+
+  // Update employee avatar (linked to user)
+  const user = await prisma.user.findUnique({ where: { id: session.id }, select: { employeeId: true } });
+  if (user?.employeeId) {
+    await prisma.employee.update({
+      where: { id: user.employeeId },
+      data: { avatar: dataUri },
+    });
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/employee");
+  return ok(undefined, "Avatar uploaded");
+}

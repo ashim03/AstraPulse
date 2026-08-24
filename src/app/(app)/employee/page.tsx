@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { formatDate, formatTimeNepal } from "@/lib/utils";
 import { EmployeeQuickActions } from "./quick-actions";
 import { EmployeeChangePassword } from "./change-password";
+import { EmployeeAvatarUpload } from "./avatar-upload";
 import {
   Timer,
   TrendingUp,

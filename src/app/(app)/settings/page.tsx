@@ -37,6 +37,7 @@ export default async function SettingsPage() {
           timezone: workspace?.timezone ?? "America/New_York",
           dateFormat: workspace?.dateFormat ?? "MM/DD/YYYY",
           fiscalYearStart: workspace?.fiscalYearStart ?? 1,
+          logo: workspace?.logo,
         }}
         profile={{ name: user?.name ?? "", email: user?.email ?? "" }}
         canEdit={canEdit}

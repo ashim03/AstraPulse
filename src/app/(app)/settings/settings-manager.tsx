@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
-import { useState } from "react";
-import { Lock, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { Lock, Eye, EyeOff, CheckCircle2, XCircle, Upload, Building2 } from "lucide-react";
 import { CURRENCIES, TIMEZONES, COUNTRIES } from "@/lib/constants";
-import { updateWorkspaceSettingsAction, updateProfileAction } from "./actions";
+import { updateWorkspaceSettingsAction, updateProfileAction, uploadLogoAction } from "./actions";
 import { changePasswordAction } from "./change-password/actions";
 import { getPasswordStrength } from "@/services/password";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ export type WorkspaceSettings = {
   timezone: string;
   dateFormat: string;
   fiscalYearStart: number;
+  logo?: string | null;
 };
 
 export type ProfileSettings = { name: string; email: string };
@@ -125,6 +126,12 @@ export function SettingsManager({ workspace, profile, canEdit = true }: { worksp
             </div>
           )}
         </form>
+        {canEdit && (
+          <div className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-700">
+            <p className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">Company Logo</p>
+            <LogoUpload currentLogo={workspace.logo} />
+          </div>
+        )}
       </Card>
 
       <Card className="p-5">
@@ -266,6 +273,58 @@ export function SettingsManager({ workspace, profile, canEdit = true }: { worksp
           </div>
         </form>
       </Card>
+    </div>
+  );
+}
+
+function LogoUpload({ currentLogo }: { currentLogo?: string | null }) {
+  const { toast } = useToast();
+  const router = useRouter();
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(currentLogo ?? null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large (max 2MB)", type: "error" });
+      return;
+    }
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("logo", file);
+    try {
+      const res = await uploadLogoAction(fd);
+      if (res.ok) {
+        toast({ title: "Logo uploaded", type: "success" });
+        setPreview(URL.createObjectURL(file));
+        router.refresh();
+      } else {
+        toast({ title: res.error, type: "error" });
+      }
+    } catch {
+      toast({ title: "Upload failed", type: "error" });
+    }
+    setUploading(false);
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+        {preview ? (
+          <img src={preview} alt="Company logo" className="h-full w-full rounded-xl object-contain p-1" />
+        ) : (
+          <Building2 className="h-6 w-6 text-slate-400" />
+        )}
+      </div>
+      <div>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        <Button type="button" variant="secondary" size="sm" leftIcon={<Upload className="h-4 w-4" />} loading={uploading} onClick={() => fileRef.current?.click()}>
+          Upload logo
+        </Button>
+        <p className="mt-1 text-xs text-slate-400">PNG, JPG up to 2MB</p>
+      </div>
     </div>
   );
 }
