@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, parseISO, differenceInMinutes } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, differenceInMinutes } from "date-fns";
+import { parseDateSafe } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Clock, LogIn, LogOut, Coffee, TrendingUp, AlertTriangle, CheckCircle2, XCircle, Moon } from "lucide-react";
 import { Select } from "@/components/ui/input";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -113,7 +114,7 @@ export function EmployeeAttendanceClient({
   };
 
   const handleMonthChange = (direction: "prev" | "next") => {
-    const current = parseISO(month + "-01");
+    const current = parseDateSafe(month + "-01") ?? new Date();
     const newMonth = direction === "next" ? addMonths(current, 1) : subMonths(current, 1);
     const newMonthStr = format(newMonth, "yyyy-MM");
     setMonth(newMonthStr);
@@ -138,8 +139,9 @@ export function EmployeeAttendanceClient({
             ? "text-violet-500"
             : "text-slate-400";
 
-  const monthStart = startOfMonth(parseISO(month + "-01"));
-  const monthEnd = endOfMonth(parseISO(month + "-01"));
+  const parsedMonth = parseDateSafe(month + "-01") ?? new Date();
+  const monthStart = startOfMonth(parsedMonth);
+  const monthEnd = endOfMonth(parsedMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startDayOfWeek = getDay(monthStart);
 
@@ -147,7 +149,7 @@ export function EmployeeAttendanceClient({
 
   const stats = data?.stats;
   const workingHoursData = (data?.dailyData || []).filter((d) => d.hours > 0).map((d) => ({
-    date: format(parseISO(d.date), "d"),
+    date: format(parseDateSafe(d.date) ?? new Date(), "d"),
     hours: d.hours,
   }));
   const maxHours = Math.max(8, ...workingHoursData.map((d) => d.hours));
@@ -173,7 +175,7 @@ export function EmployeeAttendanceClient({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="min-w-[140px] text-center text-sm font-medium text-slate-700 dark:text-slate-300">
-            {format(parseISO(month + "-01"), "MMMM yyyy")}
+            {format(parseDateSafe(month + "-01") ?? new Date(), "MMMM yyyy")}
           </span>
           <Button variant="ghost" size="icon-sm" onClick={() => handleMonthChange("next")}>
             <ChevronRight className="h-4 w-4" />
@@ -226,14 +228,14 @@ export function EmployeeAttendanceClient({
                   <p className="text-xs font-medium text-slate-500">Clock In</p>
                   <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     <LogIn className="h-3.5 w-3.5 text-emerald-500" />
-                    {todayRecord?.clockIn ? format(parseISO(todayRecord.clockIn as unknown as string), "h:mm a") : "—"}
+                    {todayRecord?.clockIn ? format(parseDateSafe(todayRecord.clockIn) ?? new Date(), "h:mm a") : "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500">Clock Out</p>
                   <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                     <LogOut className="h-3.5 w-3.5 text-red-500" />
-                    {todayRecord?.clockOut ? format(parseISO(todayRecord.clockOut as unknown as string), "h:mm a") : "—"}
+                    {todayRecord?.clockOut ? format(parseDateSafe(todayRecord.clockOut) ?? new Date(), "h:mm a") : "—"}
                   </p>
                 </div>
                 <div>
@@ -304,7 +306,7 @@ export function EmployeeAttendanceClient({
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader title="Monthly Calendar" subtitle={format(parseISO(month + "-01"), "MMMM yyyy")} />
+              <CardHeader title="Monthly Calendar" subtitle={format(parseDateSafe(month + "-01") ?? new Date(), "MMMM yyyy")} />
               <CardBody>
                 <div className="grid grid-cols-7 gap-1">
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
@@ -404,13 +406,13 @@ export function EmployeeAttendanceClient({
                         <div className={cn("h-2.5 w-2.5 shrink-0 rounded-full", STATUS_COLORS[record.status] || "bg-slate-300")} />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            {format(parseISO(record.date), "MMM d, yyyy")}
+                            {format(parseDateSafe(record.date) ?? new Date(), "MMM d, yyyy")}
                           </p>
                           <p className="text-xs text-slate-400">
                             {record.clockIn
-                              ? `${format(parseISO(record.clockIn), "h:mm a")}`
+                              ? `${format(parseDateSafe(record.clockIn) ?? new Date(), "h:mm a")}`
                               : "—"}
-                            {record.clockOut ? ` — ${format(parseISO(record.clockOut), "h:mm a")}` : ""}
+                            {record.clockOut ? ` — ${format(parseDateSafe(record.clockOut) ?? new Date(), "h:mm a")}` : ""}
                           </p>
                         </div>
                         <div className="text-right">
@@ -440,10 +442,10 @@ export function EmployeeAttendanceClient({
                         <Coffee className="h-4 w-4 shrink-0 text-amber-500" />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            {format(parseISO(brk.breakOut as unknown as string), "MMM d, h:mm a")}
+                            {format(parseDateSafe(brk.breakOut) ?? new Date(), "MMM d, h:mm a")}
                           </p>
                           <p className="text-xs text-slate-400">
-                            {brk.breakIn ? `Returned at ${format(parseISO(brk.breakIn as unknown as string), "h:mm a")}` : "Still on break"}
+                            {brk.breakIn ? `Returned at ${format(parseDateSafe(brk.breakIn) ?? new Date(), "h:mm a")}` : "Still on break"}
                           </p>
                         </div>
                         <Badge tone={brk.status === "completed" ? "green" : brk.status === "late_return" ? "red" : "blue"}>

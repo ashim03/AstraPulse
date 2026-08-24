@@ -31,21 +31,29 @@ export function num(value: number | null | undefined): string {
   return (numberFormatter ?? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 })).format(v);
 }
 
+export function parseDateSafe(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === "string") return parseISO(value);
+  if (typeof value === "number") return new Date(value);
+  return null;
+}
+
 export function formatDate(value: Date | string | null | undefined, pattern = "MMM d, yyyy"): string {
-  if (!value) return "—";
-  const d = typeof value === "string" ? parseISO(value) : value;
+  const d = parseDateSafe(value);
+  if (!d) return "—";
   return format(d, pattern);
 }
 
 export function formatDateTime(value: Date | string | null | undefined): string {
-  if (!value) return "—";
-  const d = typeof value === "string" ? parseISO(value) : value;
+  const d = parseDateSafe(value);
+  if (!d) return "—";
   return format(d, "MMM d, yyyy h:mm a");
 }
 
 export function timeAgo(value: Date | string | null | undefined): string {
-  if (!value) return "—";
-  const d = typeof value === "string" ? parseISO(value) : value;
+  const d = parseDateSafe(value);
+  if (!d) return "—";
   return formatDistanceToNowStrict(d, { addSuffix: true });
 }
 
