@@ -81,6 +81,21 @@ export function toDateKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
 
+export function nepalDateKey(date?: Date): string {
+  const d = date ?? new Date();
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kathmandu", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
+export function nepalMonthKey(date?: Date): string {
+  const d = date ?? new Date();
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kathmandu", year: "numeric", month: "2-digit" }).format(d);
+}
+
+export function nepalTodayLong(date?: Date): string {
+  const d = date ?? new Date();
+  return new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kathmandu", weekday: "long", year: "numeric", month: "long", day: "numeric" }).format(d);
+}
+
 export function monthKey(date: Date): string {
   return format(date, "yyyy-MM");
 }

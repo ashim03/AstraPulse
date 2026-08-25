@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, differenceInMinutes } from "date-fns";
-import { parseDateSafe, formatTimeNepal } from "@/lib/utils";
+import { parseDateSafe, formatTimeNepal, nepalDateKey } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Clock, LogIn, LogOut, Coffee, TrendingUp, AlertTriangle, CheckCircle2, XCircle, Moon } from "lucide-react";
 import { Select } from "@/components/ui/input";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -326,7 +326,7 @@ export function EmployeeAttendanceClient({
                     const dateKey = format(day, "yyyy-MM-dd");
                     const record = dailyMap.get(dateKey);
                     const status = record?.status || "";
-                    const isToday = format(new Date(), "yyyy-MM-dd") === dateKey;
+                    const isToday = nepalDateKey() === dateKey;
 
                     return (
                       <div

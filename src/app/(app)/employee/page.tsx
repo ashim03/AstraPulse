@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/badge";
-import { formatDate, formatTimeNepal } from "@/lib/utils";
+import { formatDate, formatTimeNepal, nepalTodayLong } from "@/lib/utils";
 import { EmployeeQuickActions } from "./quick-actions";
 import { EmployeeChangePassword } from "./change-password";
 import { EmployeeAvatarUpload } from "./avatar-upload";
@@ -165,7 +165,7 @@ export default async function EmployeePortalPage() {
 
       {/* Today's Attendance Detail */}
       <Card className="mb-6">
-        <CardHeader title="Today's Attendance" subtitle={format(new Date(), "EEEE, MMMM d, yyyy")} />
+        <CardHeader title="Today's Attendance" subtitle={nepalTodayLong()} />
         <CardBody>
           {todayRecordData ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { format, subDays } from "date-fns";
+import { format, subDays, parseISO } from "date-fns";
+import { nepalDateKey } from "@/lib/utils";
 import { FileText, Download, Printer, Loader2, CalendarDays, Users, Clock, AlertTriangle, XCircle, TrendingUp } from "lucide-react";
 import { Input, Select } from "@/components/ui/input";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -69,8 +70,8 @@ export function AttendanceReportsClient({
   departments: Array<{ id: string; name: string }>;
 }) {
   const [reportType, setReportType] = useState("summary");
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [startDate, setStartDate] = useState(() => format(subDays(parseISO(nepalDateKey()), 30), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(() => nepalDateKey());
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");

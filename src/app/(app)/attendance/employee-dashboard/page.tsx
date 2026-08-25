@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { Breadcrumb } from "@/components/ui/page-header";
+import { nepalMonthKey } from "@/lib/utils";
 import { EmployeeAttendanceClient } from "./employee-attendance-client";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function EmployeeAttendanceDashboard({
     redirect("/?error=access_denied");
   }
   const selectedEmployeeId = typeof searchParams.employeeId === "string" ? searchParams.employeeId : "";
-  const selectedMonth = typeof searchParams.month === "string" ? searchParams.month : format(new Date(), "yyyy-MM");
+  const selectedMonth = typeof searchParams.month === "string" ? searchParams.month : nepalMonthKey();
 
   const employees = await prisma.employee.findMany({
     where: { workspaceId: session.workspaceId, status: "active" },
