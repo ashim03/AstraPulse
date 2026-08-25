@@ -486,10 +486,20 @@ export async function updateEmployeeAction(id: string, fd: FormData): Promise<Ac
 
   const updated = await prisma.employee.update({ where: { id }, data });
 
-  if (data.name && data.name !== employee.name) {
+  // Update user record (name, email, password)
+  const userUpdate: Record<string, any> = {};
+  if (data.name && data.name !== employee.name) userUpdate.name = data.name;
+  if (data.email && data.email !== employee.email) userUpdate.email = data.email;
+
+  // Handle password reset
+  if (raw.newPassword) {
+    userUpdate.passwordHash = await hashPassword(raw.newPassword);
+  }
+
+  if (Object.keys(userUpdate).length > 0) {
     await prisma.user.updateMany({
       where: { employeeId: employee.id },
-      data: { name: data.name },
+      data: userUpdate,
     });
   }
 

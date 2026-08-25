@@ -176,6 +176,19 @@ export function EmployeeForm({
         </FormSection>
       )}
 
+      {isEdit && (
+        <FormSection title="Login Password" description="Set or reset this employee's login password">
+          <FormGrid>
+            <div>
+              <Input label="New password" name="newPassword" type="password" placeholder="Leave blank to keep current" />
+            </div>
+          </FormGrid>
+          <p className="mt-3 text-xs text-slate-400">
+            Enter a new password to reset it. Leave blank to keep the current password.
+          </p>
+        </FormSection>
+      )}
+
       <FormActions>
         <Button type="button" variant="secondary" onClick={() => router.back()}>Cancel</Button>
         <Button type="submit" disabled={pending}>{pending ? "Saving..." : isEdit ? "Save Changes" : "Add Employee"}</Button>
