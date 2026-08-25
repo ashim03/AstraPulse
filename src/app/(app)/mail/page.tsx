@@ -68,6 +68,7 @@ export default async function MailPage() {
         users={users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role })) as UserOption[]}
         meId={session.id}
         unreadCount={unreadCount}
+        canDelete={hasPermission(session, "mail", "delete")}
       />
     </div>
   );

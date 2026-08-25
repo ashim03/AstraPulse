@@ -71,6 +71,8 @@ export default async function TasksPage() {
         rows={rows}
         employees={employees.map((e) => ({ id: e.id, name: e.name }))}
         departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+        canCreate={hasPermission(session, "tasks", "create")}
+        canEdit={hasPermission(session, "tasks", "edit")}
       />
     </>
   );

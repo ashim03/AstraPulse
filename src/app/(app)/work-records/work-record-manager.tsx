@@ -17,10 +17,14 @@ export function WorkRecordManager({
   rows,
   employees,
   stats,
+  canApprove = false,
+  canDelete = false,
 }: {
   rows: SmartRow[];
   employees: EmployeeOption[];
   stats: { billable: number; approved: number; pending: number; total: number };
+  canApprove?: boolean;
+  canDelete?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -84,28 +88,32 @@ export function WorkRecordManager({
         searchKeys={["employee", "project"]}
         searchPlaceholder="Search records..."
         filters={[{ key: "status", label: "Status", options: ["pending", "approved", "rejected"].map((s) => ({ value: s, label: s })) }]}
-        rowActions={[
-          {
-            label: "Approve",
-            icon: <Check className="h-4 w-4" />,
-            tone: "success",
-            show: (r) => r.status === "pending",
-            onClick: (r) => approve(String(r.id)),
-          },
-          {
-            label: "Reject",
-            icon: <X className="h-4 w-4" />,
-            tone: "danger",
-            show: (r) => r.status === "pending",
-            onClick: (r) => remove(String(r.id)),
-          },
-          {
-            label: "Delete",
-            icon: <Trash2 className="h-4 w-4" />,
-            tone: "danger",
-            onClick: (r) => remove(String(r.id)),
-          },
-        ]}
+        rowActions={(canApprove || canDelete) ? [
+          ...(canApprove ? [
+            {
+              label: "Approve",
+              icon: <Check className="h-4 w-4" />,
+              tone: "success" as const,
+              show: (r: SmartRow) => r.status === "pending",
+              onClick: (r: SmartRow) => approve(String(r.id)),
+            },
+            {
+              label: "Reject",
+              icon: <X className="h-4 w-4" />,
+              tone: "danger" as const,
+              show: (r: SmartRow) => r.status === "pending",
+              onClick: (r: SmartRow) => remove(String(r.id)),
+            },
+          ] : []),
+          ...(canDelete ? [
+            {
+              label: "Delete",
+              icon: <Trash2 className="h-4 w-4" />,
+              tone: "danger" as const,
+              onClick: (r: SmartRow) => remove(String(r.id)),
+            },
+          ] : []),
+        ] : undefined}
       />
 
       <Modal open={open} onClose={() => setOpen(false)} title="Log work" description="Record billable hours against a project" size="lg">

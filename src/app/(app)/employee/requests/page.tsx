@@ -106,15 +106,20 @@ function EmployeeRequestsContent() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [corrRes, leaveRes, balRes] = await Promise.all([
-      getMyCorrections(),
-      getMyLeaveRequests(),
-      getLeaveBalance(),
-    ]);
-    if (corrRes.ok) setCorrections(corrRes.data as Correction[]);
-    if (leaveRes.ok) setLeaveRequests(leaveRes.data as LeaveReq[]);
-    if (balRes.ok) setLeaveBalance(balRes.data as LeaveBal[]);
-    setLoading(false);
+    try {
+      const [corrRes, leaveRes, balRes] = await Promise.all([
+        getMyCorrections(),
+        getMyLeaveRequests(),
+        getLeaveBalance(),
+      ]);
+      if (corrRes.ok) setCorrections(corrRes.data as Correction[]);
+      if (leaveRes.ok) setLeaveRequests(leaveRes.data as LeaveReq[]);
+      if (balRes.ok) setLeaveBalance(balRes.data as LeaveBal[]);
+    } catch {
+      toast({ title: "Failed to load data", type: "error" });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -128,22 +133,27 @@ function EmployeeRequestsContent() {
       return;
     }
     setSubmitting(true);
-    const res = await submitAttendanceCorrection({
-      date: correctionForm.date,
-      type: correctionForm.type as CorrectionType,
-      reason: correctionForm.reason,
-      clockIn: correctionForm.clockIn || undefined,
-      clockOut: correctionForm.clockOut || undefined,
-    });
-    setSubmitting(false);
-    if (res.ok) {
-      toast({ title: res.message ?? "Submitted", type: "success" });
-      setShowCorrectionModal(false);
-      setCorrectionForm({ date: "", type: "", reason: "", clockIn: "", clockOut: "" });
-      setErrors({});
-      loadData();
-    } else {
-      toast({ title: res.error, type: "error" });
+    try {
+      const res = await submitAttendanceCorrection({
+        date: correctionForm.date,
+        type: correctionForm.type as CorrectionType,
+        reason: correctionForm.reason,
+        clockIn: correctionForm.clockIn || undefined,
+        clockOut: correctionForm.clockOut || undefined,
+      });
+      if (res.ok) {
+        toast({ title: res.message ?? "Submitted", type: "success" });
+        setShowCorrectionModal(false);
+        setCorrectionForm({ date: "", type: "", reason: "", clockIn: "", clockOut: "" });
+        setErrors({});
+        loadData();
+      } else {
+        toast({ title: res.error, type: "error" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", type: "error" });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -154,33 +164,42 @@ function EmployeeRequestsContent() {
       return;
     }
     setSubmitting(true);
-    const res = await submitLeaveRequest({
-      typeId: leaveForm.typeId,
-      startDate: leaveForm.startDate,
-      endDate: leaveForm.endDate,
-      days: parseFloat(leaveForm.days) || 1,
-      reason: leaveForm.reason,
-      isHalfDay: leaveForm.isHalfDay,
-    });
-    setSubmitting(false);
-    if (res.ok) {
-      toast({ title: res.message ?? "Submitted", type: "success" });
-      setShowLeaveModal(false);
-      setLeaveForm({ typeId: "", startDate: "", endDate: "", days: "", reason: "", isHalfDay: false });
-      setErrors({});
-      loadData();
-    } else {
-      toast({ title: res.error, type: "error" });
+    try {
+      const res = await submitLeaveRequest({
+        typeId: leaveForm.typeId,
+        startDate: leaveForm.startDate,
+        endDate: leaveForm.endDate,
+        days: parseFloat(leaveForm.days) || 1,
+        reason: leaveForm.reason,
+        isHalfDay: leaveForm.isHalfDay,
+      });
+      if (res.ok) {
+        toast({ title: res.message ?? "Submitted", type: "success" });
+        setShowLeaveModal(false);
+        setLeaveForm({ typeId: "", startDate: "", endDate: "", days: "", reason: "", isHalfDay: false });
+        setErrors({});
+        loadData();
+      } else {
+        toast({ title: res.error, type: "error" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", type: "error" });
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function handleCancel(id: string) {
-    const res = await cancelLeaveRequest(id);
-    if (res.ok) {
-      toast({ title: res.message ?? "Cancelled", type: "success" });
-      loadData();
-    } else {
-      toast({ title: res.error, type: "error" });
+    try {
+      const res = await cancelLeaveRequest(id);
+      if (res.ok) {
+        toast({ title: res.message ?? "Cancelled", type: "success" });
+        loadData();
+      } else {
+        toast({ title: res.error, type: "error" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", type: "error" });
     }
   }
 

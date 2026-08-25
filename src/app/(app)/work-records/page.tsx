@@ -63,6 +63,8 @@ export default async function WorkRecordsPage() {
         rows={rows}
         employees={employees.map((e) => ({ id: e.id, name: e.name })) as EmployeeOption[]}
         stats={stats}
+        canApprove={hasPermission(session, "work-records", "approve")}
+        canDelete={hasPermission(session, "work-records", "delete")}
       />
     </div>
   );

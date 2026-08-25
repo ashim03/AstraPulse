@@ -34,14 +34,19 @@ function nepalStartOfDay(): Date {
 export default async function EmployeePortalPage() {
   const session = await requireSession();
 
-  const user = await prisma.user.findFirst({
-    where: { id: session.id, workspaceId: session.workspaceId },
-    include: {
-      employee: {
-        include: { department: true, position: true },
+  let user;
+  try {
+    user = await prisma.user.findFirst({
+      where: { id: session.id, workspaceId: session.workspaceId },
+      include: {
+        employee: {
+          include: { department: true, position: true },
+        },
       },
-    },
-  });
+    });
+  } catch {
+    user = null;
+  }
 
   const employee = user?.employee;
   if (!employee) {
@@ -62,42 +67,52 @@ export default async function EmployeePortalPage() {
   const today = nepalStartOfDay();
   const sevenDaysAgo = subDays(today, 7);
 
-  // Fetch today's record first (needed for break query)
-  const todayRecordData = await prisma.attendance.findFirst({
-    where: { workspaceId: session.workspaceId, employeeId, date: today },
-  });
+  let todayRecordData: Awaited<ReturnType<typeof prisma.attendance.findFirst>> = null;
+  let recentAttendance: Awaited<ReturnType<typeof prisma.attendance.findMany>> = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let recentLeaves: any[] = [];
+  let unreadMessages = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let activeBreak: any = null;
 
-  // Fetch remaining data in parallel
-  const [recentAttendance, recentLeaves, unreadMessages, activeBreak] = await Promise.all([
-    prisma.attendance.findMany({
-      where: {
-        workspaceId: session.workspaceId,
-        employeeId,
-        date: { gte: sevenDaysAgo, lte: endOfDay(today) },
-      },
-      orderBy: { date: "desc" },
-      take: 7,
-    }),
-    prisma.leaveRequest.findMany({
-      where: { workspaceId: session.workspaceId, employeeId },
-      include: { type: true },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
-    prisma.notification.count({
-      where: { workspaceId: session.workspaceId, userId: session.id, readAt: null },
-    }),
-    todayRecordData
-      ? prisma.break.findFirst({
-          where: {
-            workspaceId: session.workspaceId,
-            employeeId,
-            attendanceId: todayRecordData.id,
-            status: "active",
-          },
-        })
-      : null,
-  ]);
+  try {
+    todayRecordData = await prisma.attendance.findFirst({
+      where: { workspaceId: session.workspaceId, employeeId, date: today },
+    });
+
+    [recentAttendance, recentLeaves, unreadMessages, activeBreak] = await Promise.all([
+      prisma.attendance.findMany({
+        where: {
+          workspaceId: session.workspaceId,
+          employeeId,
+          date: { gte: sevenDaysAgo, lte: endOfDay(today) },
+        },
+        orderBy: { date: "desc" },
+        take: 7,
+      }),
+      prisma.leaveRequest.findMany({
+        where: { workspaceId: session.workspaceId, employeeId },
+        include: { type: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      prisma.notification.count({
+        where: { workspaceId: session.workspaceId, userId: session.id, readAt: null },
+      }),
+      todayRecordData
+        ? prisma.break.findFirst({
+            where: {
+              workspaceId: session.workspaceId,
+              employeeId,
+              attendanceId: todayRecordData.id,
+              status: "active",
+            },
+          })
+        : null,
+    ]);
+  } catch {
+    // Silently handle — defaults above will render gracefully
+  }
 
   const breakActive = !!activeBreak;
 

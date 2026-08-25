@@ -16,12 +16,13 @@ const ROLE_DEFAULTS: Record<string, string[]> = {
   "Finance Manager": ["dashboard:view","analytics:view","staff:view","attendance:view","payroll:view","payroll:create","payroll:approve","payroll:manage","payroll:preview","payroll:periods","expenses:view","expenses:create","expenses:edit","expenses:approve","income:view","income:create","income:edit","accounting:view","accounting:create","accounting:edit","invoices:view","invoices:create","invoices:edit","invoices:approve","payments:view","payments:create","payments:edit","reports:view","reports:export","advances:view","advances:approve"],
   "Payroll Staff": ["dashboard:view","staff:view","attendance:view","payroll:view","payroll:create","payroll:preview","expenses:view","reports:view"],
   "Manager": ["dashboard:view","staff:view","departments:view","attendance:view","attendance:employee_dashboard","leave:view","leave:approve","tasks:view","tasks:create","tasks:edit","tasks:assign","work-records:view","work-records:approve","announcements:view","mail:view","mail:create"],
-  "Employee": ["dashboard:view","attendance:view","attendance:create","leave:view","leave:create","tasks:view","work-records:view","work-records:create","holidays:view","announcements:view","mail:view","mail:create"],
+  "Employee": ["dashboard:view","attendance:view","attendance:create","leave:view","leave:create","tasks:view","work-records:view","work-records:create","holidays:view","announcements:view","mail:view","mail:create","settings:view"],
 };
 
 const PROTECTED_ROUTES: Record<string, { module: string; action: string }> = {
-  "/settings": { module: "settings", action: "edit" },
+  "/settings": { module: "settings", action: "view" },
   "/settings/auth": { module: "settings", action: "auth" },
+  "/settings/change-password": { module: "settings", action: "view" },
   "/subscription": { module: "subscription", action: "manage" },
   "/audit-logs": { module: "audit-logs", action: "view" },
   "/staff/new": { module: "staff", action: "create" },

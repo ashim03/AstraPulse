@@ -93,6 +93,7 @@ export function SettingsManager({ workspace, profile, canEdit = true }: { worksp
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
+      {canEdit && (
       <Card className="p-5">
         <h2 className="mb-1 text-lg font-semibold text-slate-800 dark:text-slate-200">Workspace</h2>
         <p className="mb-4 text-sm text-slate-500">Company-wide information used across reports and documents.</p>
@@ -133,6 +134,7 @@ export function SettingsManager({ workspace, profile, canEdit = true }: { worksp
           </div>
         )}
       </Card>
+      )}
 
       <Card className="p-5">
         <h2 className="mb-1 text-lg font-semibold text-slate-800 dark:text-slate-200">Your profile</h2>

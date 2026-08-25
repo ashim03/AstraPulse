@@ -18,10 +18,14 @@ export function TaskManager({
   rows,
   employees,
   departments,
+  canCreate = true,
+  canEdit = true,
 }: {
   rows: SmartRow[];
   employees: Option[];
   departments: Option[];
+  canCreate?: boolean;
+  canEdit?: boolean;
 }) {
   const [view, setView] = useState<"list" | "board">("list");
   const [open, setOpen] = useState(false);
@@ -82,9 +86,11 @@ export function TaskManager({
             <KanbanSquare className="h-4 w-4" /> Board
           </button>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => { setEditing(null); setErrors({}); setOpen(true); }}>
-          New Task
-        </Button>
+        {canCreate && (
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => { setEditing(null); setErrors({}); setOpen(true); }}>
+            New Task
+          </Button>
+        )}
       </div>
 
       {view === "list" ? (
@@ -95,7 +101,7 @@ export function TaskManager({
           searchKeys={["title", "assignee", "description"]}
           searchPlaceholder="Search tasks..."
           filters={[{ key: "status", label: "Status", options: TASK_STATUSES }]}
-          rowActions={[
+          rowActions={canEdit ? [
             { label: "Edit", icon: <Pencil className="h-4 w-4" />, onClick: (r) => { setEditing(r); setErrors({}); setOpen(true); } },
             {
               label: "Complete",
@@ -104,7 +110,7 @@ export function TaskManager({
               show: (r) => r.status !== "completed",
               onClick: (r) => moveStatus(String(r.id), "completed"),
             },
-          ]}
+          ] : undefined}
           emptyTitle="No tasks"
           emptyDescription="Create a task to get started."
           exportFilename="tasks.csv"

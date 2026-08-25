@@ -40,6 +40,7 @@ export default async function LeavePage() {
 
   const rows: SmartRow[] = requests.map((r) => ({
     id: r.id,
+    employeeId: r.employeeId,
     name: r.employee.name,
     department: r.employee.department?.name ?? "—",
     type: r.type.name,

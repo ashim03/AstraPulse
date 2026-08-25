@@ -34,11 +34,13 @@ export function MessageManager({
   users,
   meId,
   unreadCount,
+  canDelete = true,
 }: {
   rows: MessageRow[];
   users: UserOption[];
   meId: string;
   unreadCount: number;
+  canDelete?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("inbox");
   const [selected, setSelected] = useState<MessageRow | null>(null);
@@ -121,9 +123,11 @@ export function MessageManager({
               <Button variant="outline" size="sm" onClick={() => setSelected(null)}>
                 <ArrowLeft className="h-4 w-4 mr-1" /> Back
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => remove(selected.id)}>
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </Button>
+              {canDelete && (
+                <Button variant="ghost" size="sm" onClick={() => remove(selected.id)}>
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              )}
             </div>
           </div>
           <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
@@ -220,16 +224,18 @@ export function MessageManager({
                     {m.mine ? `To: ${m.recipients}` : `From: ${m.sender}`} • {m.date}
                   </p>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    remove(m.id);
-                  }}
-                  className="shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {canDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      remove(m.id);
+                    }}
+                    className="shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </Card>
             ))}
             {filtered.length === 0 && (

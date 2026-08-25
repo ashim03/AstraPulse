@@ -52,10 +52,10 @@ export function UserMenu({
         </div>
       </div>
       <div className="py-1">
-        <DropdownItem icon={<User className="h-4 w-4" />} onClick={() => router.push("/settings")}>
+        <DropdownItem icon={<User className="h-4 w-4" />} onClick={() => router.push(role === "Employee" ? "/employee" : "/settings")}>
           My profile
         </DropdownItem>
-        <DropdownItem icon={<Shield className="h-4 w-4" />} onClick={() => router.push("/settings/change-password")}>
+        <DropdownItem icon={<Shield className="h-4 w-4" />} onClick={() => router.push(role === "Employee" ? "/employee" : "/settings/change-password")}>
           Change password
         </DropdownItem>
         {role === "Workspace Admin" && (

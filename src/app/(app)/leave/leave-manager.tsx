@@ -108,7 +108,14 @@ export function LeaveManager({
                   onClick: (r) => decide(String(r.id), cancelLeaveRequestAction, "Cancelled"),
                 },
               ]
-            : undefined
+            : [
+                {
+                  label: "Cancel",
+                  icon: <Ban className="h-4 w-4" />,
+                  show: (r) => r.status === "pending" && !!myEmployeeId && r.employeeId === myEmployeeId,
+                  onClick: (r) => decide(String(r.id), cancelLeaveRequestAction, "Cancelled"),
+                },
+              ]
         }
         emptyTitle="No leave requests"
         emptyDescription="Create a request to get started."
