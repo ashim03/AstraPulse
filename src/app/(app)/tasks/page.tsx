@@ -21,8 +21,8 @@ export default async function TasksPage() {
   const taskWhere: Record<string, unknown> = { workspaceId: session.workspaceId };
   if (scope === "self") {
     taskWhere.OR = [
-      { assignedToId: session.employeeId },
-      { createdById: session.employeeId },
+      { assigneeId: session.employeeId },
+      { createdBy: session.employeeId },
     ];
   } else if (scope === "department" && session.departmentId) {
     taskWhere.assignee = { departmentId: session.departmentId };
