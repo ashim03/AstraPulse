@@ -225,6 +225,107 @@ async function syncDevice() {
     if (emp.deviceEmployeeId) empMap[emp.deviceEmployeeId] = emp;
   }
 
+  // Discover unmapped device user IDs
+  const unmappedUserIds = new Set();
+  for (const evt of allEvents) {
+    const empNo = evt.employeeNoString ?? evt.employeeNo ?? '';
+    if (empNo && !empMap[empNo]) unmappedUserIds.add(empNo);
+  }
+
+  // Auto-create employees for unmapped device users
+  if (unmappedUserIds.size > 0) {
+    console.log(`  Found ${unmappedUserIds.size} unmapped device user(s), fetching names from device...`);
+
+    // Fetch user list from device to get names
+    const deviceUserNames = {};
+    try {
+      let uPosition = 0;
+      let uHasMore = true;
+      while (uHasMore) {
+        const uBody = JSON.stringify({
+          UserInfoSearchCond: {
+            searchID: `poll-users-${Date.now()}`,
+            searchResultPosition: uPosition,
+            maxResults: 50,
+          },
+        });
+        const uRes = await digestRequest('POST', '/ISAPI/AccessControl/UserInfo/Search?format=json', uBody);
+        if (uRes.status === 200) {
+          const uData = JSON.parse(uRes.body);
+          const uInfo = uData?.UserInfoSearch ?? uData;
+          const uList = uInfo?.UserInfo ?? [];
+          const uTotal = parseInt(uInfo?.totalMatches ?? '0', 10);
+          for (const u of uList) {
+            const no = u.employeeNoString ?? u.employeeNo ?? '';
+            if (no) deviceUserNames[no] = u.name ?? '';
+          }
+          uPosition += uList.length;
+          uHasMore = uList.length > 0 && uPosition < uTotal;
+        } else {
+          uHasMore = false;
+        }
+      }
+    } catch (e) {
+      console.log(`  Warning: Could not fetch user names from device: ${e.message}`);
+    }
+
+    // Get Employee role
+    const empRole = await prisma.role.findFirst({
+      where: { workspaceId: WORKSPACE_ID, name: { contains: 'Employee', mode: 'insensitive' } },
+    });
+
+    for (const unmappedId of unmappedUserIds) {
+      const name = deviceUserNames[unmappedId] || `Device User ${unmappedId}`;
+
+      // Generate employee ID
+      const lastEmp = await prisma.employee.findFirst({
+        where: { workspaceId: WORKSPACE_ID },
+        orderBy: { employeeId: 'desc' },
+        select: { employeeId: true },
+      });
+      let nextEmpId = 'EMP-001';
+      if (lastEmp?.employeeId) {
+        const match = lastEmp.employeeId.match(/EMP-(\d+)/);
+        const nextNum = match ? parseInt(match[1], 10) + 1 : 1;
+        nextEmpId = `EMP-${String(nextNum).padStart(3, '0')}`;
+      }
+
+      const email = `device-${unmappedId.toLowerCase()}@astrapulse.local`;
+
+      // Create employee
+      const newEmp = await prisma.employee.create({
+        data: {
+          workspaceId: WORKSPACE_ID,
+          employeeId: nextEmpId,
+          name,
+          email,
+          joinDate: new Date(),
+          deviceEmployeeId: unmappedId,
+          status: 'active',
+        },
+      });
+
+      // Create user account (admin must set password via staff page)
+      await prisma.user.create({
+        data: {
+          workspaceId: WORKSPACE_ID,
+          name,
+          email,
+          passwordHash: '',
+          employeeId: newEmp.id,
+          roleId: empRole?.id,
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+          status: 'active',
+        },
+      });
+
+      // Update empMap
+      empMap[unmappedId] = { id: newEmp.id, name, deviceEmployeeId: unmappedId };
+      console.log(`  Auto-created employee: ${name} (${nextEmpId}) for device user ${unmappedId}`);
+    }
+  }
+
   // Group by employee + Nepal date
   const grouped = {};
   for (const evt of allEvents) {
@@ -235,7 +336,7 @@ async function syncDevice() {
     }
     const emp = empMap[empNo];
     if (!emp) {
-      console.log(`  Skipping event for unmapped employee: ${empNo}`);
+      console.log(`  Skipping event for unknown employee: ${empNo}`);
       continue;
     }
     const evtTime = new Date(evt.time);
@@ -342,7 +443,7 @@ async function syncDevice() {
       deviceId: device.id,
       type: 'sync',
       status: 'success',
-      message: `Polled ${allEvents.length} events, created: ${created}, updated: ${updated}, skipped: ${skipped}`,
+      message: `Polled ${allEvents.length} events, created: ${created}, updated: ${updated}, skipped: ${skipped}, auto-mapped: ${unmappedUserIds.size}`,
       recordsSynced: created + updated,
       duration: null,
     },

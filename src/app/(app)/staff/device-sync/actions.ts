@@ -405,3 +405,250 @@ export async function getDeviceSyncData() {
     failedSyncLogs,
   };
 }
+
+/**
+ * Fetch the list of users registered on the physical device via ISAPI,
+ * then compare with employees in the database.
+ */
+export async function fetchDeviceUserListAction(): Promise<{
+  success: boolean;
+  message: string;
+  deviceUsers: Array<{ employeeNo: string; name: string; mapped: boolean; employeeId?: string; employeeName?: string }>;
+}> {
+  const session = await requireSession();
+  if (!hasPermission(session, "attendance", "device")) {
+    return { success: false, message: "Access denied", deviceUsers: [] };
+  }
+
+  const device = await prisma.attendanceDevice.findFirst({
+    where: { workspaceId: session.workspaceId, isActive: true },
+  });
+
+  if (!device) {
+    return { success: false, message: "No active device found", deviceUsers: [] };
+  }
+
+  try {
+    const ip = device.ipAddress;
+    const port = device.port;
+    const user = device.username || "admin";
+    const pass = device.password || "";
+
+    const httpReq = (path: string, headers: Record<string, string>, method: string, body?: string): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: string }> => {
+      return new Promise((resolve, reject) => {
+        const opts: http.RequestOptions = { hostname: ip, port, path, headers: headers || {}, method: method || "GET", timeout: 15000 };
+        const req = http.request(opts, (res) => {
+          let data = "";
+          res.on("data", (c: Buffer) => (data += c));
+          res.on("end", () => resolve({ status: res.statusCode || 0, headers: res.headers, body: data }));
+        });
+        req.on("error", reject);
+        req.on("timeout", () => { req.destroy(); reject(new Error("Connection timed out")); });
+        if (body) req.write(body);
+        req.end();
+      });
+    };
+
+    const md5 = (s: string): string => createHash("md5").update(s).digest("hex");
+
+    const digestPost = async (path: string, body: string): Promise<{ status: number; body: string }> => {
+      const initHeaders: Record<string, string> = { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body).toString() };
+      const r0 = await httpReq(path, initHeaders, "POST", body);
+      if (r0.status === 200) return r0;
+      const wwwAuth = r0.headers["www-authenticate"] as string;
+      if (!wwwAuth || !wwwAuth.includes("Digest")) return r0;
+      const realm = wwwAuth.match(/realm="([^"]+)"/)?.[1] || "";
+      const nonce = wwwAuth.match(/nonce="([^"]+)"/)?.[1] || "";
+      const qopMatch = wwwAuth.match(/qop="([^"]+)"/);
+      const qop = qopMatch ? qopMatch[1] : "auth";
+      const nc = "00000001";
+      const cnonce = randomBytes(8).toString("hex");
+      const ha1 = md5(user + ":" + realm + ":" + pass);
+      const ha2 = md5("POST:" + path);
+      const response = md5(ha1 + ":" + nonce + ":" + nc + ":" + cnonce + ":" + qop + ":" + ha2);
+      const authHeader = `Digest username="${user}", realm="${realm}", nonce="${nonce}", uri="${path}", response="${response}", qop=${qop}, nc=${nc}, cnonce="${cnonce}"`;
+      const authHeaders: Record<string, string> = { Authorization: authHeader, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body).toString() };
+      return httpReq(path, authHeaders, "POST", body);
+    };
+
+    // Fetch all users from device with pagination
+    let allUsers: Array<{ employeeNo: string; name: string }> = [];
+    let position = 0;
+    const maxResults = 50;
+    let hasMore = true;
+
+    while (hasMore) {
+      const body = JSON.stringify({
+        UserInfoSearchCond: {
+          searchID: `user-list-${Date.now()}`,
+          searchResultPosition: position,
+          maxResults,
+        },
+      });
+
+      const r = await digestPost("/ISAPI/AccessControl/UserInfo/Search?format=json", body);
+      if (r.status !== 200) {
+        throw new Error(`Device returned status ${r.status}`);
+      }
+
+      const data = JSON.parse(r.body);
+      const info = data?.UserInfoSearch ?? data;
+      const list = info?.UserInfo ?? [];
+      const total = parseInt(info?.totalMatches ?? "0", 10);
+
+      for (const u of list) {
+        allUsers.push({
+          employeeNo: u.employeeNoString ?? u.employeeNo ?? "",
+          name: u.name ?? "",
+        });
+      }
+
+      position += list.length;
+      hasMore = list.length > 0 && position < total;
+    }
+
+    // Get existing employees with deviceEmployeeId
+    const employees = await prisma.employee.findMany({
+      where: { workspaceId: session.workspaceId },
+      select: { id: true, employeeId: true, name: true, deviceEmployeeId: true },
+    });
+
+    // Build mapping
+    const deviceToEmployee = new Map<string, { id: string; employeeId: string; name: string }>();
+    for (const emp of employees) {
+      if (emp.deviceEmployeeId) {
+        deviceToEmployee.set(emp.deviceEmployeeId, emp);
+      }
+    }
+
+    const deviceUsers = allUsers.map((du) => {
+      const emp = deviceToEmployee.get(du.employeeNo);
+      return {
+        employeeNo: du.employeeNo,
+        name: du.name,
+        mapped: !!emp,
+        employeeId: emp?.employeeId,
+        employeeName: emp?.name,
+      };
+    });
+
+    return {
+      success: true,
+      message: `Found ${allUsers.length} users on device. ${allUsers.length - deviceUsers.filter((u) => u.mapped).length} unmapped.`,
+      deviceUsers,
+    };
+  } catch (e: any) {
+    return { success: false, message: `Failed to fetch device users: ${e.message}`, deviceUsers: [] };
+  }
+}
+
+/**
+ * Create a new employee from a device user and map them.
+ */
+export async function createEmployeeFromDeviceAction(
+  deviceUserId: string,
+  deviceUserName: string
+): Promise<ActionResponse> {
+  const session = await requireSession();
+  if (!hasPermission(session, "staff", "create")) {
+    return { success: false, message: "Access denied" };
+  }
+
+  // Check if already mapped
+  const existing = await prisma.employee.findFirst({
+    where: { workspaceId: session.workspaceId, deviceEmployeeId: deviceUserId },
+  });
+  if (existing) {
+    return { success: false, message: `Device user ${deviceUserId} is already mapped to ${existing.name}` };
+  }
+
+  // Generate employee ID
+  const lastEmployee = await prisma.employee.findFirst({
+    where: { workspaceId: session.workspaceId },
+    orderBy: { employeeId: "desc" },
+    select: { employeeId: true },
+  });
+  let employeeId = "EMP-001";
+  if (lastEmployee?.employeeId) {
+    const match = lastEmployee.employeeId.match(/EMP-(\d+)/);
+    const nextNum = match ? parseInt(match[1], 10) + 1 : 1;
+    employeeId = `EMP-${String(nextNum).padStart(3, "0")}`;
+  }
+
+  // Get default role
+  const defaultRole = await prisma.role.findFirst({
+    where: { workspaceId: session.workspaceId, name: "Employee" },
+  });
+
+  // Create user account
+  const user = await prisma.user.create({
+    data: {
+      workspaceId: session.workspaceId,
+      email: `device-${deviceUserId.toLowerCase()}@astrapulse.local`,
+      name: deviceUserName || `Device User ${deviceUserId}`,
+      passwordHash: "", // No password — admin should set it
+      emailVerified: true,
+      status: "active",
+      roleId: defaultRole?.id,
+    },
+  });
+
+  // Create employee and link to user
+  const emp = await prisma.employee.create({
+    data: {
+      workspaceId: session.workspaceId,
+      employeeId,
+      name: deviceUserName || `Device User ${deviceUserId}`,
+      email: `device-${deviceUserId.toLowerCase()}@astrapulse.local`,
+      joinDate: new Date(),
+      deviceEmployeeId: deviceUserId,
+      status: "active",
+    },
+  });
+
+  // Link user to employee
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { employeeId: emp.id },
+  });
+
+  revalidatePath("/staff/device-sync");
+  revalidatePath("/staff");
+  return { success: true, message: `Created employee "${emp.name}" (${employeeId}) and mapped to device user ${deviceUserId}` };
+}
+
+/**
+ * Map a device user ID to an existing employee.
+ */
+export async function mapDeviceUserToEmployee(
+  employeeId: string,
+  deviceUserId: string
+): Promise<ActionResponse> {
+  const session = await requireSession();
+  if (!hasPermission(session, "staff", "edit")) {
+    return { success: false, message: "Access denied" };
+  }
+
+  const employee = await prisma.employee.findFirst({
+    where: { id: employeeId, workspaceId: session.workspaceId },
+  });
+  if (!employee) {
+    return { success: false, message: "Employee not found" };
+  }
+
+  // Check if device user is already mapped to someone else
+  const existingMap = await prisma.employee.findFirst({
+    where: { workspaceId: session.workspaceId, deviceEmployeeId: deviceUserId, id: { not: employeeId } },
+  });
+  if (existingMap) {
+    return { success: false, message: `Device user ${deviceUserId} is already mapped to ${existingMap.name}` };
+  }
+
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { deviceEmployeeId: deviceUserId },
+  });
+
+  revalidatePath("/staff/device-sync");
+  return { success: true, message: `Mapped device user ${deviceUserId} to ${employee.name}` };
+}

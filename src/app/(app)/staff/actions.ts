@@ -272,24 +272,16 @@ export async function getStaffListAction(
     where,
     include: {
       department: { select: { id: true, name: true } },
+      user: { select: { id: true, status: true, email: true } },
     },
     orderBy: { employeeId: "asc" },
   });
 
-  const employeesWithUserStatus = await Promise.all(
-    employees.map(async (emp) => {
-      const user = await prisma.user.findFirst({
-        where: { employeeId: emp.id },
-        select: { id: true, status: true, email: true },
-      });
-
-      return {
-        ...emp,
-        userAccount: user,
-        deviceSyncStatus: emp.deviceEmployeeId ? "synced" : emp.status === "active" ? "pending" : "inactive",
-      };
-    })
-  );
+  const employeesWithUserStatus = employees.map((emp) => ({
+    ...emp,
+    userAccount: emp.user ?? null,
+    deviceSyncStatus: emp.deviceEmployeeId ? "synced" : emp.status === "active" ? "pending" : "inactive",
+  }));
 
   await writeAudit({
     session,
@@ -448,11 +440,48 @@ export async function updateEmployeeAction(id: string, fd: FormData): Promise<Ac
   const employee = await prisma.employee.findUnique({ where: { id } });
   if (!employee) return fail("Employee not found");
 
-  const data: any = {};
+  const data: Record<string, any> = {};
+
+  const raw: Record<string, string> = {};
   for (const [key, val] of Array.from(fd.entries())) {
-    if (key === "basicSalary") data[key] = parseFloat(String(val)) || 0;
-    else if (key === "joiningDate" || key === "dateOfBirth") data[key] = val ? new Date(String(val)) : undefined;
-    else if (val !== null && val !== undefined && String(val).trim() !== "") data[key] = String(val).trim();
+    if (val !== null && val !== undefined && String(val).trim() !== "") {
+      raw[key] = String(val).trim();
+    }
+  }
+
+  // Map form field names to Prisma column names
+  if (raw.name !== undefined) data.name = raw.name;
+  if (raw.email !== undefined) data.email = raw.email;
+  if (raw.phone !== undefined) data.phone = raw.phone;
+  if (raw.departmentId !== undefined) data.departmentId = raw.departmentId || null;
+  if (raw.positionId !== undefined) data.positionId = raw.positionId || null;
+  if (raw.employmentType !== undefined) data.employmentType = raw.employmentType;
+  if (raw.status !== undefined) data.status = raw.status;
+  if (raw.gender !== undefined) data.gender = raw.gender;
+  if (raw.address !== undefined) data.address = raw.address;
+
+  // Salary: form uses "salary", DB uses "baseSalary"
+  if (raw.salary !== undefined) data.baseSalary = parseFloat(raw.salary) || 0;
+
+  // Dates
+  if (raw.hireDate !== undefined) data.joinDate = raw.hireDate ? new Date(raw.hireDate) : null;
+  if (raw.contractEndDate !== undefined) data.contractEndDate = raw.contractEndDate ? new Date(raw.contractEndDate) : null;
+  if (raw.dateOfBirth !== undefined) data.dateOfBirth = raw.dateOfBirth ? new Date(raw.dateOfBirth) : null;
+
+  // Emergency contacts: form uses "emergencyContactName/Phone", DB uses "emergencyName/Phone"
+  if (raw.emergencyContactName !== undefined) data.emergencyName = raw.emergencyContactName;
+  if (raw.emergencyContactPhone !== undefined) data.emergencyPhone = raw.emergencyContactPhone;
+
+  // National ID: form uses "nationalId", DB uses "taxId"
+  if (raw.nationalId !== undefined) data.taxId = raw.nationalId;
+
+  // Employee ID (allow admin to override)
+  if (raw.employeeId !== undefined && raw.employeeId !== employee.employeeId) {
+    data.employeeId = raw.employeeId;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return ok(null, "No changes to save");
   }
 
   const updated = await prisma.employee.update({ where: { id }, data });
@@ -465,19 +494,24 @@ export async function updateEmployeeAction(id: string, fd: FormData): Promise<Ac
   }
 
   if (data.name && data.name !== employee.name) {
-    try {
-      const device = await prisma.attendanceDevice.findFirst({
-        where: { workspaceId: session.workspaceId, isActive: true },
-      });
+    // Fire-and-forget: don't let slow device block the save
+    prisma.attendanceDevice.findFirst({
+      where: { workspaceId: session.workspaceId, isActive: true },
+    }).then(async (device) => {
       if (device && employee.employeeId) {
-        const { updateDeviceUser } = await import("@/services/device-sync");
-        await updateDeviceUser(
-          { ipAddress: device.ipAddress, port: device.port, username: device.username ?? "admin", password: device.password ?? "" },
-          employee.employeeId,
-          data.name,
-        );
+        try {
+          const { updateDeviceUser } = await import("@/services/device-sync");
+          await Promise.race([
+            updateDeviceUser(
+              { ipAddress: device.ipAddress, port: device.port, username: device.username ?? "admin", password: device.password ?? "" },
+              employee.employeeId!,
+              data.name,
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Device timeout")), 5000)),
+          ]);
+        } catch {}
       }
-    } catch {}
+    }).catch(() => {});
   }
 
   await writeAudit({
