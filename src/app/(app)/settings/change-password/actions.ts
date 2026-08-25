@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { fail, ok, writeAudit, type ActionResult } from "@/lib/actions";
 import { validatePassword } from "@/services/password";
 
@@ -13,10 +13,9 @@ export async function changePasswordAction(
   currentPassword: string,
   newPassword: string
 ): Promise<ActionResult> {
-  let session;
-  try {
-    session = await requireSession();
-  } catch {
+  const session = await getSession();
+
+  if (!session) {
     return fail("Not authenticated");
   }
 
