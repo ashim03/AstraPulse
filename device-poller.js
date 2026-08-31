@@ -349,7 +349,57 @@ async function syncDevice() {
   // Get the real device record for foreign key references
   const device = await getDeviceRecord();
 
+  // Collect employee-date pairs for batch queries
+  const pairs = [];
+  for (const [key, group] of Object.entries(grouped)) {
+    const { employee, date: nepalDateStr } = group;
+    const [y, mo, d] = nepalDateStr.split('-').map(Number);
+    const dateUtc = new Date(Date.UTC(y, mo - 1, d, 0, 0, 0));
+    pairs.push({ employeeId: employee.id, dateUtc, key });
+  }
+
+  // Batch fetch existing attendance records and breaks in parallel
+  const uniqueEmpIds = [...new Set(pairs.map(p => p.employeeId))];
+  const [existingRecords, allBreaks] = await Promise.all([
+    pairs.length > 0
+      ? prisma.attendance.findMany({
+          where: {
+            OR: pairs.map(p => ({ workspaceId: WORKSPACE_ID, employeeId: p.employeeId, date: p.dateUtc })),
+          },
+          select: { id: true, employeeId: true, date: true, clockOut: true },
+        })
+      : Promise.resolve([]),
+    uniqueEmpIds.length > 0
+      ? prisma.break.findMany({
+          where: {
+            workspaceId: WORKSPACE_ID,
+            employeeId: { in: uniqueEmpIds },
+          },
+          select: { employeeId: true, duration: true, attendance: { select: { employeeId: true, date: true } } },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  // Build lookup maps
+  const existingMap = {};
+  for (const rec of existingRecords) {
+    existingMap[`${rec.employeeId}:${rec.date.getTime()}`] = rec;
+  }
+
+  const breakMap = {};
+  for (const br of allBreaks) {
+    if (br.attendance) {
+      const k = `${br.attendance.employeeId}:${br.attendance.date.getTime()}`;
+      if (!(k in breakMap)) {
+        breakMap[k] = br.duration;
+      }
+    }
+  }
+
   let created = 0, updated = 0, skipped = 0;
+
+  // Process groups and collect DB operations for parallel execution
+  const dbOps = [];
 
   for (const [key, group] of Object.entries(grouped)) {
     const { employee, date: nepalDateStr, events: groupEvents } = group;
@@ -361,10 +411,8 @@ async function syncDevice() {
     const [y, mo, d] = nepalDateStr.split('-').map(Number);
     const dateUtc = new Date(Date.UTC(y, mo - 1, d, 0, 0, 0));
 
-    // Check for existing record
-    const existing = await prisma.attendance.findFirst({
-      where: { workspaceId: WORKSPACE_ID, employeeId: employee.id, date: dateUtc },
-    });
+    // Look up existing record from batch-fetched map
+    const existing = existingMap[`${employee.id}:${dateUtc.getTime()}`];
 
     // Calculate all metrics
     const clockInMin = getNepalMinutes(clockIn);
@@ -383,11 +431,8 @@ async function syncDevice() {
       hours = calculateHours(clockIn, clockOut, 0);
     }
 
-    // Check if a break already exists for this attendance today
-    const existingBreak = await prisma.break.findFirst({
-      where: { workspaceId: WORKSPACE_ID, employeeId: employee.id, attendance: { date: dateUtc } },
-    });
-    const breakMinutes = existingBreak?.duration ?? 0;
+    // Look up break from batch-fetched map
+    const breakMinutes = breakMap[`${employee.id}:${dateUtc.getTime()}`] ?? 0;
     if (breakMinutes > 0) {
       hours = calculateHours(clockIn, clockOut || clockIn, breakMinutes);
     }
@@ -395,47 +440,58 @@ async function syncDevice() {
     if (existing) {
       // Update if missing clockOut or status needs correction
       if (clockOut && !existing.clockOut) {
-        await prisma.attendance.update({
-          where: { id: existing.id },
-          data: {
-            clockIn,
-            clockOut,
-            status,
-            hours,
-            lateMinutes,
-            earlyMinutes,
-            overtime: overtimeMinutes,
-          },
-        });
-        updated++;
-        console.log(`  Updated ${employee.name} on ${nepalDateStr}: ${formatNplTime(clockIn)} → ${formatNplTime(clockOut)} = ${hours}h, status=${status}, OT=${overtimeMinutes}m`);
+        dbOps.push(
+          prisma.attendance.update({
+            where: { id: existing.id },
+            data: {
+              clockIn,
+              clockOut,
+              status,
+              hours,
+              lateMinutes,
+              earlyMinutes,
+              overtime: overtimeMinutes,
+            },
+          }).then(() => {
+            updated++;
+            console.log(`  Updated ${employee.name} on ${nepalDateStr}: ${formatNplTime(clockIn)} → ${formatNplTime(clockOut)} = ${hours}h, status=${status}, OT=${overtimeMinutes}m`);
+          })
+        );
       } else {
         skipped++;
       }
     } else {
-      await prisma.attendance.create({
-        data: {
-          workspaceId: WORKSPACE_ID,
-          employeeId: employee.id,
-          date: dateUtc,
-          clockIn,
-          clockOut,
-          status,
-          hours,
-          overtime: overtimeMinutes,
-          breakMinutes,
-          lateMinutes,
-          earlyMinutes,
-          isHalfDay: false,
-          isHoliday: false,
-          isWeekend: isWeekend(dateUtc),
-          source: 'device',
-          deviceId: device.id,
-        },
-      });
-      created++;
-      console.log(`  Created ${employee.name} on ${nepalDateStr}: ${formatNplTime(clockIn)}${clockOut ? ' → ' + formatNplTime(clockOut) : ''} = ${hours}h, status=${status}, OT=${overtimeMinutes}m`);
+      dbOps.push(
+        prisma.attendance.create({
+          data: {
+            workspaceId: WORKSPACE_ID,
+            employeeId: employee.id,
+            date: dateUtc,
+            clockIn,
+            clockOut,
+            status,
+            hours,
+            overtime: overtimeMinutes,
+            breakMinutes,
+            lateMinutes,
+            earlyMinutes,
+            isHalfDay: false,
+            isHoliday: false,
+            isWeekend: isWeekend(dateUtc),
+            source: 'device',
+            deviceId: device.id,
+          },
+        }).then(() => {
+          created++;
+          console.log(`  Created ${employee.name} on ${nepalDateStr}: ${formatNplTime(clockIn)}${clockOut ? ' → ' + formatNplTime(clockOut) : ''} = ${hours}h, status=${status}, OT=${overtimeMinutes}m`);
+        })
+      );
     }
+  }
+
+  // Execute all DB operations in parallel
+  if (dbOps.length > 0) {
+    await Promise.all(dbOps);
   }
 
   await prisma.attendanceDeviceLog.create({

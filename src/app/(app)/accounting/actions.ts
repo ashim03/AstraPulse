@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/auth";
 import { hasPermission, type PermissionAction } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { writeAudit, ok, fail, type ActionResult } from "@/lib/actions";
-import { postJournalEntry, recomputeAccountBalance } from "@/services/accounting";
+import { postJournalEntry } from "@/services/accounting";
 import { z } from "zod";
 
 async function requirePermission(module: string, action: PermissionAction = "view") {

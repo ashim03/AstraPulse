@@ -16,6 +16,7 @@ export default async function ExpensesPage() {
     where: { workspaceId: session.workspaceId },
     orderBy: { date: "desc" },
     include: { vendor: { select: { name: true } }, employee: { select: { name: true } } },
+    take: 500,
   });
 
   const rows = expenses.map((e) => ({

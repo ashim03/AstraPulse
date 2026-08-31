@@ -14,38 +14,46 @@ export type AttendanceStats = {
 export async function attendanceStatsForDay(workspaceId: string, date: Date): Promise<AttendanceStats> {
   const start = startOfDay(date);
   const end = endOfDay(date);
-  const records = await prisma.attendance.findMany({
-    where: { workspaceId, date: { gte: start, lte: end } },
-  });
-  const activeEmployees = await prisma.employee.count({
-    where: { workspaceId, status: { in: ["active", "on_leave"] } },
-  });
-  const stats: AttendanceStats = {
-    present: 0,
-    absent: 0,
-    late: 0,
-    early: 0,
-    overtime: 0,
-    remote: 0,
-    totalHours: 0,
-  };
-  for (const r of records) {
-    if (r.status === "present") stats.present++;
-    else if (r.status === "late") {
-      stats.late++;
-      stats.present++;
-    } else if (r.status === "early") {
-      stats.early++;
-      stats.present++;
-    } else if (r.status === "remote") {
-      stats.remote++;
-      stats.present++;
-    }
-    stats.totalHours += r.hours;
-    if (r.overtime > 0) stats.overtime++;
+
+  const [grouped, aggResult, activeEmployees] = await Promise.all([
+    prisma.attendance.groupBy({
+      by: ["status"],
+      where: { workspaceId, date: { gte: start, lte: end } },
+      _count: { _all: true },
+    }),
+    prisma.attendance.aggregate({
+      where: { workspaceId, date: { gte: start, lte: end } },
+      _sum: { hours: true },
+      _count: { id: true },
+    }),
+    prisma.employee.count({
+      where: { workspaceId, status: { in: ["active", "on_leave"] } },
+    }),
+  ]);
+
+  const statusCounts: Record<string, number> = {};
+  for (const g of grouped) {
+    statusCounts[g.status] = g._count._all;
   }
-  stats.absent = Math.max(0, activeEmployees - stats.present);
-  return stats;
+
+  const present = (statusCounts["present"] ?? 0)
+    + (statusCounts["late"] ?? 0)
+    + (statusCounts["early"] ?? 0)
+    + (statusCounts["remote"] ?? 0);
+
+  const overtimeCount = await prisma.attendance.count({
+    where: { workspaceId, date: { gte: start, lte: end }, overtime: { gt: 0 } },
+  });
+
+  return {
+    present,
+    absent: Math.max(0, activeEmployees - present),
+    late: statusCounts["late"] ?? 0,
+    early: statusCounts["early"] ?? 0,
+    overtime: overtimeCount,
+    remote: statusCounts["remote"] ?? 0,
+    totalHours: aggResult._sum.hours ?? 0,
+  };
 }
 
 export async function attendanceTrend(workspaceId: string, days = 30) {

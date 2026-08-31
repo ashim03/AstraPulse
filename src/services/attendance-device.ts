@@ -275,26 +275,77 @@ export async function syncDevice(deviceId: string): Promise<{
     eventsByEmployeeDate.get(key)!.push(evt);
   }
 
-  // Process each employee-date group
+  // Collect employee-date pairs for batch queries (also counts unmapped)
+  const employeeDatePairs: { deviceUserId: string; employeeId: string; dateUtc: Date; dateStr: string; events: HikvisionAttendanceEvent[] }[] = [];
   for (const [key, events] of Array.from(eventsByEmployeeDate.entries())) {
     const [deviceUserId, dateStr] = key.split(":");
     const employee = deviceUserMap.get(deviceUserId);
-
-    if (!employee) {
-      unmapped++;
-      continue;
-    }
-
-    // Parse date using Nepal date string for grouping
+    if (!employee) { unmapped++; continue; }
     const [y, mo, d] = dateStr.split("-").map(Number);
     const dateUtc = new Date(Date.UTC(y, mo - 1, d, 0, 0, 0));
+    employeeDatePairs.push({ deviceUserId, employeeId: employee.id, dateUtc, dateStr, events });
+  }
 
-    // Check if already exists
-    const existing = await prisma.attendance.findFirst({
-      where: { employeeId: employee.id, date: dateUtc },
-    });
+  // Batch fetch existing attendance records instead of N individual findFirst calls
+  const existingAttendances = employeeDatePairs.length > 0
+    ? await prisma.attendance.findMany({
+        where: {
+          OR: employeeDatePairs.map(p => ({ employeeId: p.employeeId, date: p.dateUtc })),
+        },
+        select: { employeeId: true, date: true },
+      })
+    : [];
+  const existingAttendanceKeys = new Set(
+    existingAttendances.map(a => `${a.employeeId}:${a.date.getTime()}`)
+  );
 
-    if (existing) {
+  // Batch fetch breaks instead of N individual findFirst calls
+  const uniqueEmployeeIds = Array.from(new Set(employeeDatePairs.map(p => p.employeeId)));
+  const allBreaks = uniqueEmployeeIds.length > 0
+    ? await prisma.break.findMany({
+        where: {
+          workspaceId: device.workspaceId,
+          employeeId: { in: uniqueEmployeeIds },
+        },
+        select: { employeeId: true, duration: true, attendance: { select: { employeeId: true, date: true } } },
+      })
+    : [];
+  const breakMap = new Map<string, number>();
+  for (const br of allBreaks) {
+    if (br.attendance) {
+      const key = `${br.attendance.employeeId}:${br.attendance.date.getTime()}`;
+      if (!breakMap.has(key)) {
+        breakMap.set(key, br.duration);
+      }
+    }
+  }
+
+  // Process each group and collect records to batch-insert
+  const recordsToCreate: Array<{
+    workspaceId: string;
+    employeeId: string;
+    date: Date;
+    clockIn: Date;
+    clockOut: Date | null;
+    status: string;
+    hours: number;
+    overtime: number;
+    breakMinutes: number;
+    lateMinutes: number;
+    earlyMinutes: number;
+    isHalfDay: boolean;
+    isHoliday: boolean;
+    isWeekend: boolean;
+    source: string;
+    deviceId: string;
+    deviceRecordId: string;
+  }> = [];
+
+  for (const pair of employeeDatePairs) {
+    const { deviceUserId, employeeId, dateUtc, dateStr, events } = pair;
+
+    // Skip if already exists
+    if (existingAttendanceKeys.has(`${employeeId}:${dateUtc.getTime()}`)) {
       duplicates++;
       continue;
     }
@@ -310,12 +361,10 @@ export async function syncDevice(deviceId: string): Promise<{
     const clockOut = parsedEvents.length > 1 ? parsedEvents[parsedEvents.length - 1].parsedTime : null;
 
     // Calculate metrics using Nepal time — new rules
-    // Office: 9:30-17:30, Grace: 10min (≤9:40=Present, >9:40=Absent)
-    // OT threshold: 17:35 (check-out >17:35 = Overtime)
-    const OFFICE_START_MIN = 9 * 60 + 30; // 570
-    const OFFICE_END_MIN = 17 * 60 + 30;  // 1050
-    const GRACE_DEADLINE = OFFICE_START_MIN + (settings.graceMinutes || 10); // 580
-    const OT_THRESHOLD = OFFICE_END_MIN + 5; // 1055
+    const OFFICE_START_MIN = 9 * 60 + 30;
+    const OFFICE_END_MIN = 17 * 60 + 30;
+    const GRACE_DEADLINE = OFFICE_START_MIN + (settings.graceMinutes || 10);
+    const OT_THRESHOLD = OFFICE_END_MIN + 5;
 
     let lateMinutes = 0;
     let earlyMinutes = 0;
@@ -326,8 +375,6 @@ export async function syncDevice(deviceId: string): Promise<{
 
     if (clockIn) {
       const clockInNplMin = nepalHours(clockIn) * 60 + nepalMinutes(clockIn);
-
-      // New rule: ≤9:40 = Present, >9:40 = Absent
       if (clockInNplMin <= GRACE_DEADLINE) {
         status = "present";
         lateMinutes = Math.max(0, clockInNplMin - OFFICE_START_MIN);
@@ -337,18 +384,14 @@ export async function syncDevice(deviceId: string): Promise<{
       }
     }
 
-    // Working hours (excluding break)
-    const existingBreak = await prisma.break.findFirst({
-      where: { workspaceId: device.workspaceId, employeeId: employee.id, attendance: { date: dateUtc } },
-    });
-    const breakMinutes = existingBreak?.duration ?? 0;
+    // Look up break from batch-fetched data
+    const breakMinutes = breakMap.get(`${employeeId}:${dateUtc.getTime()}`) ?? 0;
 
     if (clockIn && clockOut) {
       const totalMinutes = (clockOut.getTime() - clockIn.getTime()) / 60000;
       hours = Math.max(0, (totalMinutes - breakMinutes) / 60);
     }
 
-    // Early departure & overtime using Nepal time
     let overtimeMinutes = 0;
     if (clockOut) {
       const clockOutNplMin = nepalHours(clockOut) * 60 + nepalMinutes(clockOut);
@@ -358,32 +401,34 @@ export async function syncDevice(deviceId: string): Promise<{
 
     overtime = overtimeMinutes / 60;
 
-    try {
-      await prisma.attendance.create({
-        data: {
-          workspaceId: device.workspaceId,
-          employeeId: employee.id,
-          date: dateUtc,
-          clockIn,
-          clockOut,
-          status,
-          hours: Math.round(hours * 100) / 100,
-          overtime: Math.round(overtime * 100) / 100,
-          breakMinutes: 0,
-          lateMinutes,
-          earlyMinutes,
-          isHalfDay,
-          isHoliday: false,
-          isWeekend: !isWorkingDay(settings, dateUtc),
-          source: "device",
-          deviceId: device.id,
-          deviceRecordId: `HIK-${deviceUserId}-${dateStr}-${events.length}`,
-        },
-      });
+    recordsToCreate.push({
+      workspaceId: device.workspaceId,
+      employeeId,
+      date: dateUtc,
+      clockIn,
+      clockOut,
+      status,
+      hours: Math.round(hours * 100) / 100,
+      overtime: Math.round(overtime * 100) / 100,
+      breakMinutes: 0,
+      lateMinutes,
+      earlyMinutes,
+      isHalfDay,
+      isHoliday: false,
+      isWeekend: !isWorkingDay(settings, dateUtc),
+      source: "device",
+      deviceId: device.id,
+      deviceRecordId: `HIK-${deviceUserId}-${dateStr}-${events.length}`,
+    });
+  }
 
-      newRecords++;
+  // Batch insert all new records
+  if (recordsToCreate.length > 0) {
+    try {
+      await prisma.attendance.createMany({ data: recordsToCreate, skipDuplicates: true });
+      newRecords = recordsToCreate.length;
     } catch (e) {
-      failed++;
+      failed = recordsToCreate.length;
     }
   }
 

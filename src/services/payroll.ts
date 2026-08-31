@@ -287,13 +287,19 @@ export async function calculateEmployeePayroll(employeeId: string, month: string
     }
   }
 
+  const leaveTypeIds = Array.from(new Set(leaveRequests.map((l) => l.typeId)));
+  const leaveTypes = await prisma.leaveType.findMany({
+    where: { id: { in: leaveTypeIds } },
+  });
+  const leaveTypeMap = new Map(leaveTypes.map((lt) => [lt.id, lt]));
+
   let paidLeaveDays = 0;
   let unpaidLeaveDays = 0;
   for (const leave of leaveRequests) {
     const leaveStart = leave.startDate > startDate ? leave.startDate : startDate;
     const leaveEnd = leave.endDate < endDate ? leave.endDate : endDate;
     const days = Math.ceil((leaveEnd.getTime() - leaveStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
-    const leaveType = await prisma.leaveType.findUnique({ where: { id: leave.typeId } });
+    const leaveType = leaveTypeMap.get(leave.typeId);
     if (leaveType && leaveType.daysPerYear > 0) {
       paidLeaveDays += days;
     } else {

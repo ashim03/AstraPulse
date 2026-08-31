@@ -8,14 +8,19 @@ export type LedgerAccount = {
   balance: number;
 };
 
-// Recompute an account balance from opening balance + journal lines.
-export async function recomputeAccountBalance(accountId: string): Promise<number> {
-  const account = await prisma.account.findUnique({ where: { id: accountId }, include: { journalLines: true } });
-  if (!account) return 0;
-  const net = account.journalLines.reduce((acc, line) => acc + line.debit - line.credit, 0);
-  const balance =
-    account.type === "asset" || account.type === "expense" ? account.openingBalance + net : account.openingBalance - net;
-  return Math.round(balance * 100) / 100;
+export async function recomputeAccountBalances(accountIds: string[]): Promise<Map<string, number>> {
+  const accounts = await prisma.account.findMany({
+    where: { id: { in: accountIds } },
+    include: { journalLines: true },
+  });
+  const balances = new Map<string, number>();
+  for (const account of accounts) {
+    const net = account.journalLines.reduce((acc, line) => acc + line.debit - line.credit, 0);
+    const balance =
+      account.type === "asset" || account.type === "expense" ? account.openingBalance + net : account.openingBalance - net;
+    balances.set(account.id, Math.round(balance * 100) / 100);
+  }
+  return balances;
 }
 
 export async function postJournalEntry(entryId: string, workspaceId: string) {
@@ -28,10 +33,13 @@ export async function postJournalEntry(entryId: string, workspaceId: string) {
   const credit = entry.lines.reduce((a, l) => a + l.credit, 0);
   if (Math.abs(debit - credit) > 0.001) throw new Error("Debits and credits must balance");
 
-  for (const line of entry.lines) {
-    const balance = await recomputeAccountBalance(line.accountId);
-    await prisma.account.update({ where: { id: line.accountId }, data: { balance } });
-  }
+  const accountIds = Array.from(new Set(entry.lines.map((l) => l.accountId)));
+  const balances = await recomputeAccountBalances(accountIds);
+  await Promise.all(
+    entry.lines.map((line) =>
+      prisma.account.update({ where: { id: line.accountId }, data: { balance: balances.get(line.accountId)! } })
+    )
+  );
   await prisma.journalEntry.update({ where: { id: entryId }, data: { status: "posted" } });
 }
 
@@ -67,11 +75,13 @@ export async function createAutoJournal(opts: {
     },
   });
 
-  for (const line of opts.lines) {
-    const accountId = byCode.get(line.accountCode)!;
-    const balance = await recomputeAccountBalance(accountId);
-    await prisma.account.update({ where: { id: accountId }, data: { balance } });
-  }
+  const affectedAccountIds = Array.from(new Set(opts.lines.map((l) => byCode.get(l.accountCode)!)));
+  const balances = await recomputeAccountBalances(affectedAccountIds);
+  await Promise.all(
+    affectedAccountIds.map((accountId) =>
+      prisma.account.update({ where: { id: accountId }, data: { balance: balances.get(accountId)! } })
+    )
+  );
   return entry;
 }
 

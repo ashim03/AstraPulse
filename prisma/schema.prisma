@@ -116,6 +116,7 @@ model Role {
   users       User[]
 
   @@unique([workspaceId, name])
+  @@index([workspaceId])
 }
 
 model Department {
@@ -133,6 +134,7 @@ model Department {
   tasks         Task[]
 
   @@unique([workspaceId, name])
+  @@index([workspaceId])
 }
 
 model Position {
@@ -222,6 +224,8 @@ model SalaryComponent {
   effectiveFrom DateTime @default(now())
   recurring     Boolean  @default(true)
   employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
 }
 
 model Attendance {
@@ -304,6 +308,7 @@ model LeaveRequest {
   @@index([workspaceId])
   @@index([workspaceId, employeeId])
   @@index([workspaceId, status])
+  @@index([workspaceId, employeeId, status])
 }
 
 model Holiday {
@@ -317,6 +322,8 @@ model Holiday {
   endDate     DateTime?
   type        String    @default("public")
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model Task {
@@ -368,6 +375,7 @@ model WorkRecord {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([workspaceId, employeeId])
 }
 
 model EmployeeAdvance {
@@ -387,6 +395,7 @@ model EmployeeAdvance {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([workspaceId, status])
 }
 
 model Payroll {
@@ -443,6 +452,9 @@ model PayrollItem {
   workingDays      Float    @default(0)
   employee         Employee @relation(fields: [employeeId], references: [id])
   payroll          Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+
+  @@index([payrollId])
+  @@index([employeeId])
 }
 
 model Expense {
@@ -652,6 +664,7 @@ model AuditLog {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([workspaceId, createdAt])
 }
 
 model Announcement {
@@ -1022,6 +1035,7 @@ model PayrollPeriod {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([workspaceId, isCurrent])
 }
 
 model SalaryConfig {
@@ -1046,6 +1060,7 @@ model SalaryConfig {
   workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([employeeId])
 }
 
 model AttendanceReminder {

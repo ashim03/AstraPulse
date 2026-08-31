@@ -33,6 +33,7 @@ export default async function TasksPage() {
       where: taskWhere,
       include: { assignee: { include: { department: true } }, department: true },
       orderBy: { createdAt: "desc" },
+      take: 500,
     }),
     prisma.employee.findMany({ where: { workspaceId: session.workspaceId, status: "active" }, orderBy: { name: "asc" } }),
     prisma.department.findMany({ where: { workspaceId: session.workspaceId }, orderBy: { name: "asc" } }),

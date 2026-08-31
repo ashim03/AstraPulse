@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { AccountingManager, type AccountOption } from "./accounting-manager";
-import { recomputeAccountBalance } from "@/services/accounting";
+
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +13,12 @@ export default async function AccountingPage() {
   if (!hasPermission(session, "accounting", "view")) {
     redirect("/?error=access_denied");
   }
-  const [accounts, journals, banks] = await Promise.all([
-    prisma.account.findMany({ where: { workspaceId: session.workspaceId }, orderBy: { code: "asc" } }),
+  const [accountsWithJournals, journals, banks] = await Promise.all([
+    prisma.account.findMany({
+      where: { workspaceId: session.workspaceId },
+      include: { journalLines: true },
+      orderBy: { code: "asc" },
+    }),
     prisma.journalEntry.findMany({
       where: { workspaceId: session.workspaceId },
       orderBy: { date: "desc" },
@@ -23,11 +27,12 @@ export default async function AccountingPage() {
     prisma.bankAccount.findMany({ where: { workspaceId: session.workspaceId }, orderBy: { name: "asc" } }),
   ]);
 
-  const accountsWithBalance: AccountOption[] = [];
-  for (const a of accounts) {
-    const balance = await recomputeAccountBalance(a.id);
-    accountsWithBalance.push({ id: a.id, code: a.code, name: a.name, type: a.type, balance });
-  }
+  const accountsWithBalance: AccountOption[] = accountsWithJournals.map((a) => {
+    const net = a.journalLines.reduce((acc, line) => acc + line.debit - line.credit, 0);
+    const balance =
+      a.type === "asset" || a.type === "expense" ? a.openingBalance + net : a.openingBalance - net;
+    return { id: a.id, code: a.code, name: a.name, type: a.type, balance: Math.round(balance * 100) / 100 };
+  });
 
   return (
     <div className="space-y-6">

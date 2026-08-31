@@ -24,6 +24,7 @@ export default async function LeavePage() {
       where: { workspaceId: wsId },
       include: { employee: { include: { department: true } }, type: true },
       orderBy: { createdAt: "desc" },
+      take: 500,
     }),
     prisma.leaveType.findMany({ where: { workspaceId: wsId }, orderBy: { name: "asc" } }),
     prisma.employee.findMany({ where: { workspaceId: wsId, status: "active" }, orderBy: { name: "asc" } }),

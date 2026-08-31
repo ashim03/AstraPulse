@@ -614,7 +614,7 @@ export default async function DashboardPage() {
   const isHR = session.role === "HR Manager" || session.role === "HR Staff";
 
   if (isHR && !isManager) {
-    const [hrEmployees, hrTodayAttendance, hrPendingLeave, hrRecentLeave] =
+    const [hrEmployees, hrTodayAttendance, hrPendingLeave, hrRecentLeave, hrNewThisMonth] =
       await Promise.all([
         prisma.employee.findMany({
           where: { workspaceId: wsId },
@@ -628,13 +628,13 @@ export default async function DashboardPage() {
           orderBy: { createdAt: "desc" },
           take: 5,
         }),
+        prisma.employee.count({
+          where: { workspaceId: wsId, joinDate: { gte: startOfMonth(now) } },
+        }),
       ]);
 
     const hrActive = hrEmployees.filter((e) => e.status === "active").length;
     const hrOnLeave = hrEmployees.filter((e) => e.status === "on_leave").length;
-    const hrNewThisMonth = await prisma.employee.count({
-      where: { workspaceId: wsId, joinDate: { gte: startOfMonth(now) } },
-    });
 
     return (
       <>

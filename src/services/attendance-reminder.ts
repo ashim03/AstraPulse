@@ -72,6 +72,22 @@ export async function sendReminders(workspaceId: string): Promise<number> {
 
   const missingEmployees = await checkMissingAttendance(workspaceId);
 
+  // Batch-load all users for missing employees to avoid N+1 queries
+  const employeeIds = missingEmployees.map(emp => emp.id);
+  const allUsers = employeeIds.length > 0
+    ? await prisma.user.findMany({
+        where: { employeeId: { in: employeeIds } },
+        select: { id: true, employeeId: true },
+      })
+    : [];
+  const usersByEmployee = new Map<string, { id: string }[]>();
+  for (const user of allUsers) {
+    if (!user.employeeId) continue;
+    const list = usersByEmployee.get(user.employeeId) || [];
+    list.push(user);
+    usersByEmployee.set(user.employeeId, list);
+  }
+
   let sentCount = 0;
 
   for (const emp of missingEmployees) {
@@ -93,10 +109,7 @@ export async function sendReminders(workspaceId: string): Promise<number> {
       });
 
       if (settings.reminderEmailEnabled) {
-        const users = await prisma.user.findMany({
-          where: { employeeId: emp.id },
-          select: { id: true },
-        });
+        const users = usersByEmployee.get(emp.id) || [];
 
         for (const user of users) {
           await notify(
